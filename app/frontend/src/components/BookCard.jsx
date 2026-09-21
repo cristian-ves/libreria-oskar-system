@@ -62,7 +62,7 @@ export default function BookCard({ data, bodegaNombre }) {
               <div className="flex items-center gap-1.5">
                 <Tag className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
                 <span className="text-slate-400">Precio Ref.:</span>
-                <span className="font-semibold text-white">Q {Number(libro.precio).toFixed(2)}</span>
+                <span className="font-semibold text-white">{Number(libro.precio) > 0 ? 'Q ' + Number(libro.precio).toFixed(2) : 'Precio por confirmar'}</span>
               </div>
             </div>
 
