@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Toast from './components/Toast';
+import ProtectedRoute from './components/ProtectedRoute';
 import RegistrarLibro from './views/RegistrarLibro';
 import Catalogo from './views/Catalogo';
 import Inventario from './views/Inventario';
+import Login from './views/Login';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('registrar');
   const [toast, setToast] = useState(null);
+  const navigate = useNavigate();
 
   const showToast = (toastData) => {
     setToast(toastData);
@@ -23,19 +26,35 @@ export default function App() {
       <Toast toast={toast} onClose={closeToast} />
 
       {/* Barra de Navegación */}
-      <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Navbar />
 
-      {/* Contenido Dinámico de la SPA */}
-      <main className="flex-1">
-        {activeTab === 'registrar' && (
-          <RegistrarLibro onShowToast={showToast} />
-        )}
-        {activeTab === 'catalogo' && (
-          <Catalogo onNavigateToScanner={() => setActiveTab('registrar')} />
-        )}
-        {activeTab === 'inventario' && (
-          <Inventario />
-        )}
+      {/* Contenido Dinámico con React Router */}
+      <main className="flex-1 flex flex-col">
+        <Routes>
+          <Route path="/" element={<Navigate to="/catalogo" replace />} />
+          <Route
+            path="/catalogo"
+            element={<Catalogo onNavigateToScanner={() => navigate('/registrar')} />}
+          />
+          <Route path="/login" element={<Login />} />
+          <Route
+            path="/registrar"
+            element={
+              <ProtectedRoute roles={['Administrador', 'Empleado']}>
+                <RegistrarLibro onShowToast={showToast} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/inventario"
+            element={
+              <ProtectedRoute roles={['Administrador', 'Empleado']}>
+                <Inventario />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="*" element={<Navigate to="/catalogo" replace />} />
+        </Routes>
       </main>
 
       {/* Footer */}
