@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
 import { Search, BookOpen, User, Tag, Layers, SlidersHorizontal, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -343,11 +344,12 @@ function EtiquetasFiltros({ searchTerm, categoriaNombre, onQuitarBusqueda, onQui
 
 export default function Catalogo({ onNavigateToScanner }) {
   const { user, loading: authLoading } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [libros, setLibros] = useState([]);
   const [categorias, setCategorias] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [categoriaId, setCategoriaId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState(() => searchParams.get('q') || '');
+  const [categoriaId, setCategoriaId] = useState(() => searchParams.get('categoriaId') || null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -368,6 +370,13 @@ export default function Catalogo({ onNavigateToScanner }) {
     const timer = setTimeout(async () => {
       try {
         setLoading(true);
+
+        // Sincronizar URL omitiendo parámetros vacíos
+        const nextParams = {};
+        if (searchTerm.trim()) nextParams.q = searchTerm.trim();
+        if (categoriaId) nextParams.categoriaId = categoriaId;
+        setSearchParams(nextParams, { replace: true });
+
         const params = new URLSearchParams();
         if (searchTerm.trim()) params.set('q', searchTerm.trim());
         if (categoriaId) params.set('categoriaId', categoriaId);
@@ -390,7 +399,7 @@ export default function Catalogo({ onNavigateToScanner }) {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [searchTerm, categoriaId]);
+  }, [searchTerm, categoriaId, setSearchParams]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const hayFiltros = searchTerm.trim() !== '' || categoriaId !== null;
@@ -585,9 +594,10 @@ export default function Catalogo({ onNavigateToScanner }) {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6 w-full">
               {libros.map((libro) => (
-                <div
+                <Link
                   key={libro.id}
-                  className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl hover:border-emerald-500/40 transition-all flex flex-col justify-between group"
+                  to={`/catalogo/${libro.ref || libro.id}`}
+                  className="block bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl hover:border-emerald-500/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition-all flex flex-col justify-between group cursor-pointer"
                 >
                   <div>
                     <div className="flex gap-4 mb-4">
@@ -642,7 +652,7 @@ export default function Catalogo({ onNavigateToScanner }) {
                         : 'Precio por confirmar'}
                     </span>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}
