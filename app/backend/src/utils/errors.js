@@ -25,6 +25,8 @@ class ConflictError extends AppError {
     super(message, 409);
   }
 }
+/** Código de error de Postgres para unique_violation */
+ConflictError.PG_UNIQUE_VIOLATION = '23505';
 
 class UnauthorizedError extends AppError {
   constructor(message = 'No autorizado') {
