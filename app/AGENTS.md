@@ -36,3 +36,22 @@ Este documento define la configuración del equipo de perfiles especializados pa
   - Orquestación local con `docker-compose.yml`.
   - Despliegue en Google Cloud Run y conexión a Cloud SQL.
   - Pipelines de integración y despliegue continuo (CI/CD) con GitHub Actions hacia Artifact Registry y Cloud Run.
+
+## Contexto del proyecto (Librería Oskar)
+
+- Web de inventario interno + catálogo informativo. Sin carrito, reservas ni pagos.
+- Todo el código vive en `app/` (`frontend/`, `backend/`, `database/schema.sql`). No usar `src/`.
+- Frontend: React 18 + Vite + Tailwind 3 + lucide-react + html5-qrcode. JSX, sin TypeScript. Vite hace proxy de `/api` a `localhost:3000`.
+- Backend: Express en capas (routes → controllers → services → repositories), PostgreSQL con UUID. Respuestas: `{ status: 'success', data }`.
+- El backend está incompleto: los endpoints que falten se crean en `app/backend` cuando el prompt lo pida.
+- Roles: Administrador (todo), Empleado (escaneo, salidas, ajustes, consulta de stock; sin precios ni usuarios), Usuario (solo catálogo público).
+- Registro de libros: escaneo de ISBN con cámara (html5-qrcode) y opción de ingreso manual.
+- UI: mobile-first, en español, cargas < 2 s. Reutilizar y extender `Navbar`, `BookCard`, `Toast`, `BarcodeScanner`, `LoadingSpinner`.
+- Mockups: catálogo con búsqueda, categorías y cuadrícula de portadas con etiqueta de disponibilidad; ficha con sinopsis y botón "Visitar tienda"; dashboard con tarjetas (total, bajo stock, obsoletos, ingresos), dona por categoría y línea de movimientos; tabla de inventario con filtros Todos/En stock/Bajo stock/Obsoleto.
+
+### Reglas para ahorrar tokens
+- Leer solo los archivos necesarios para la tarea; no explorar el repo completo.
+- No reescribir lo que ya funciona; extender.
+- No instalar dependencias, correr builds ni tests salvo que se pida.
+- No inventar endpoints ni datos: si falta algo, decirlo y detenerse.
+- Terminar con un resumen de máximo 5 líneas: archivos tocados y qué falta.
