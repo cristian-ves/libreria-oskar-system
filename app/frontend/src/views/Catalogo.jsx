@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Search, BookOpen, User, Tag, Layers, SlidersHorizontal, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 function BtnCategoria({ id, label, activo, onSelect }) {
   return (
     <button
+      type="button"
       onClick={() => onSelect(id)}
       className={`w-full text-left text-xs px-3 rounded-lg transition-all min-h-[40px] flex items-center ${
         activo
@@ -109,6 +110,7 @@ function PanelFiltros({
       {hayFiltros && (
         <div className="flex-shrink-0 pt-3 border-t border-slate-800/60 mt-2">
           <button
+            type="button"
             onClick={onLimpiarFiltros}
             className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-emerald-400 transition-colors min-h-[40px]"
           >
@@ -116,6 +118,221 @@ function PanelFiltros({
             Limpiar filtros
           </button>
         </div>
+      )}
+    </div>
+  );
+}
+
+function DrawerFiltros({
+  isOpen,
+  onClose,
+  searchTerm,
+  categoriaId,
+  categorias,
+  onApplySearch,
+  onSelectCategoryWithSearch,
+  onLimpiarFiltros,
+}) {
+  const [draftSearch, setDraftSearch] = useState(searchTerm);
+
+  useEffect(() => {
+    if (isOpen) {
+      setDraftSearch(searchTerm);
+      document.body.style.overflow = 'hidden';
+      const handleKeyDown = (e) => {
+        if (e.key === 'Escape') onClose();
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = '';
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    } else {
+      document.body.style.overflow = '';
+    }
+  }, [isOpen, searchTerm, onClose]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onApplySearch(draftSearch);
+    onClose();
+  };
+
+  const ramasDerecho = categorias.filter((c) =>
+    c.nombre.toLowerCase().startsWith('derecho')
+  );
+  const otrasCateg = categorias.filter(
+    (c) => !c.nombre.toLowerCase().startsWith('derecho')
+  );
+
+  const hayFiltrosEnCajon = draftSearch.trim() !== '' || categoriaId !== null;
+
+  return (
+    <div className="lg:hidden">
+      {/* Fondo semitransparente */}
+      <div
+        onClick={onClose}
+        className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-all duration-300 ${
+          isOpen ? 'opacity-100 pointer-events-auto visible' : 'opacity-0 pointer-events-none invisible'
+        }`}
+      />
+
+      {/* Cajón lateral */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-[85%] max-w-sm bg-slate-900 border-r border-slate-800 overflow-y-auto transition-all duration-300 transform ${
+          isOpen ? 'translate-x-0 visible opacity-100' : '-translate-x-full invisible opacity-0'
+        }`}
+      >
+        <form onSubmit={handleSubmit} className="flex flex-col min-h-full p-4">
+          {/* Encabezado */}
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-4">
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal className="w-4 h-4 text-emerald-400" />
+              <h2 className="text-sm font-bold text-white uppercase tracking-wider">Filtros</h2>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+              aria-label="Cerrar filtros"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Buscador con estado borrador */}
+          <div className="relative mb-5">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Título, autor o ISBN..."
+              value={draftSearch}
+              onChange={(e) => setDraftSearch(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-700 text-white placeholder-slate-400 text-xs rounded-xl pl-9 pr-3 py-2.5 min-h-[40px] outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+            />
+          </div>
+
+          {/* Lista de categorías */}
+          <div className="flex-1 mb-5">
+            <p className="text-[10px] font-mono uppercase tracking-widest text-slate-500 mb-2">Categorías</p>
+            <ul className="flex flex-col gap-0.5">
+              <li>
+                <BtnCategoria
+                  id={null}
+                  label="Todas"
+                  activo={categoriaId === null}
+                  onSelect={(id) => onSelectCategoryWithSearch(id, draftSearch)}
+                />
+              </li>
+
+              {ramasDerecho.length > 0 && (
+                <>
+                  <li className="pt-3 pb-1">
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-slate-500">
+                      Ramas del Derecho
+                    </span>
+                  </li>
+                  {ramasDerecho.map((cat) => (
+                    <li key={cat.id}>
+                      <BtnCategoria
+                        id={cat.id}
+                        label={cat.nombre}
+                        activo={categoriaId === cat.id}
+                        onSelect={(id) => onSelectCategoryWithSearch(id, draftSearch)}
+                      />
+                    </li>
+                  ))}
+                </>
+              )}
+
+              {otrasCateg.length > 0 && (
+                <>
+                  <li className="pt-3 pb-1">
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-slate-500">
+                      Otras categorías
+                    </span>
+                  </li>
+                  {otrasCateg.map((cat) => (
+                    <li key={cat.id}>
+                      <BtnCategoria
+                        id={cat.id}
+                        label={cat.nombre}
+                        activo={categoriaId === cat.id}
+                        onSelect={(id) => onSelectCategoryWithSearch(id, draftSearch)}
+                      />
+                    </li>
+                  ))}
+                </>
+              )}
+            </ul>
+          </div>
+
+          {/* Botones de acción */}
+          <div className="pt-3 border-t border-slate-800/80 space-y-2 mt-auto">
+            <button
+              type="submit"
+              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-3 px-4 rounded-xl min-h-[44px] flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-950/40 cursor-pointer"
+            >
+              <Search className="w-4 h-4" />
+              <span>Buscar</span>
+            </button>
+
+            {hayFiltrosEnCajon && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDraftSearch('');
+                  onLimpiarFiltros();
+                  onClose();
+                }}
+                className="w-full text-center text-xs text-slate-400 hover:text-emerald-400 py-2.5 transition-colors min-h-[40px] flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Limpiar filtros</span>
+              </button>
+            )}
+          </div>
+        </form>
+      </aside>
+    </div>
+  );
+}
+
+function EtiquetasFiltros({ searchTerm, categoriaNombre, onQuitarBusqueda, onQuitarCategoria }) {
+  const tieneBusqueda = searchTerm.trim() !== '';
+  const tieneCategoria = Boolean(categoriaNombre);
+
+  if (!tieneBusqueda && !tieneCategoria) return null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-4">
+      {tieneBusqueda && (
+        <span className="inline-flex items-center gap-1.5 text-xs bg-slate-900 text-slate-200 border border-slate-700 px-3 py-1 rounded-lg">
+          <span className="text-slate-400 font-mono text-[11px]">Búsqueda:</span>
+          <span className="font-semibold text-white">"{searchTerm.trim()}"</span>
+          <button
+            type="button"
+            onClick={onQuitarBusqueda}
+            title="Quitar filtro de búsqueda"
+            className="text-slate-400 hover:text-white ml-0.5 p-0.5 rounded-full hover:bg-slate-800 transition-colors"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </span>
+      )}
+      {tieneCategoria && (
+        <span className="inline-flex items-center gap-1.5 text-xs bg-emerald-950/60 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-lg">
+          <span className="text-emerald-400/70 font-mono text-[11px]">Categoría:</span>
+          <span className="font-semibold text-emerald-200">{categoriaNombre}</span>
+          <button
+            type="button"
+            onClick={onQuitarCategoria}
+            title="Quitar filtro de categoría"
+            className="text-emerald-400 hover:text-emerald-100 ml-0.5 p-0.5 rounded-full hover:bg-emerald-900/50 transition-colors"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </span>
       )}
     </div>
   );
@@ -174,16 +391,34 @@ export default function Catalogo({ onNavigateToScanner }) {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const hayFiltros = searchTerm.trim() !== '' || categoriaId !== null;
+  const totalFiltrosActivos = (searchTerm.trim() !== '' ? 1 : 0) + (categoriaId !== null ? 1 : 0);
 
-  const limpiarFiltros = () => {
+  const limpiarFiltros = useCallback(() => {
     setSearchTerm('');
     setCategoriaId(null);
-  };
+  }, []);
 
-  const elegirCategoria = (id) => {
+  const elegirCategoria = useCallback((id) => {
     setCategoriaId(id);
-    setSidebarOpen(false); // cierra panel móvil al elegir
-  };
+  }, []);
+
+  const handleApplySearchFromDrawer = useCallback((term) => {
+    setSearchTerm(term);
+  }, []);
+
+  const handleSelectCategoryWithSearchFromDrawer = useCallback((catId, draftTerm) => {
+    setCategoriaId(catId);
+    setSearchTerm(draftTerm);
+    setSidebarOpen(false);
+  }, []);
+
+  const quitarBusqueda = useCallback(() => {
+    setSearchTerm('');
+  }, []);
+
+  const quitarCategoria = useCallback(() => {
+    setCategoriaId(null);
+  }, []);
 
   const categoriaNombre = categoriaId
     ? (categorias.find((c) => c.id === categoriaId)?.nombre ?? '')
@@ -192,6 +427,18 @@ export default function Catalogo({ onNavigateToScanner }) {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:pt-4 lg:pb-8">
+      {/* Cajón lateral móvil */}
+      <DrawerFiltros
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        searchTerm={searchTerm}
+        categoriaId={categoriaId}
+        categorias={categorias}
+        onApplySearch={handleApplySearchFromDrawer}
+        onSelectCategoryWithSearch={handleSelectCategoryWithSearchFromDrawer}
+        onLimpiarFiltros={limpiarFiltros}
+      />
+
       {/* Layout principal — grid de dos columnas en lg+; el encabezado vive en la columna derecha */}
       <div className="grid grid-cols-1 lg:grid-cols-[16rem_minmax(0,1fr)] gap-6 items-start">
 
@@ -230,19 +477,23 @@ export default function Catalogo({ onNavigateToScanner }) {
             <div className="flex items-center gap-3 flex-shrink-0">
               {/* Botón "Filtros" — solo visible en móvil */}
               <button
-                onClick={() => setSidebarOpen((v) => !v)}
-                className="lg:hidden inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white text-xs font-semibold px-3 min-h-[40px] rounded-xl transition-all"
+                type="button"
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white text-xs font-semibold px-3.5 min-h-[40px] rounded-xl transition-all"
               >
                 <SlidersHorizontal className="w-4 h-4" />
-                Filtros
-                {hayFiltros && (
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 ml-0.5" />
+                <span>Filtros</span>
+                {totalFiltrosActivos > 0 && (
+                  <span className="w-5 h-5 rounded-full bg-emerald-500 text-slate-950 text-[10px] font-bold flex items-center justify-center font-mono">
+                    {totalFiltrosActivos}
+                  </span>
                 )}
               </button>
 
               {/* Botón "Escanear" — solo cuando hay sesión y AuthContext terminó de cargar */}
               {!authLoading && user && (
                 <button
+                  type="button"
                   onClick={onNavigateToScanner}
                   className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 min-h-[40px] rounded-xl shadow-lg shadow-emerald-950/40 transition-all cursor-pointer"
                 >
@@ -252,29 +503,13 @@ export default function Catalogo({ onNavigateToScanner }) {
             </div>
           </div>
 
-          {/* Panel móvil de filtros */}
-          {sidebarOpen && (
-            <div className="lg:hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 mb-6 max-h-[70vh] overflow-y-auto">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-semibold text-white">Filtros</span>
-                <button
-                  onClick={() => setSidebarOpen(false)}
-                  className="text-slate-400 hover:text-white transition-colors p-1"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <PanelFiltros
-                searchTerm={searchTerm}
-                setSearchTerm={setSearchTerm}
-                categorias={categorias}
-                categoriaId={categoriaId}
-                onElegirCategoria={elegirCategoria}
-                onLimpiarFiltros={limpiarFiltros}
-                hayFiltros={hayFiltros}
-              />
-            </div>
-          )}
+          {/* Fila de etiquetas de filtros activos */}
+          <EtiquetasFiltros
+            searchTerm={searchTerm}
+            categoriaNombre={categoriaNombre}
+            onQuitarBusqueda={quitarBusqueda}
+            onQuitarCategoria={quitarCategoria}
+          />
 
           {/* Contador de resultados */}
           {!loading && (
@@ -324,8 +559,9 @@ export default function Catalogo({ onNavigateToScanner }) {
                 </p>
                 {hayFiltros ? (
                   <button
+                    type="button"
                     onClick={limpiarFiltros}
-                    className="text-xs font-bold text-emerald-400 hover:underline"
+                    className="text-xs font-bold text-emerald-400 hover:underline cursor-pointer"
                   >
                     Limpiar filtros
                   </button>
@@ -333,8 +569,9 @@ export default function Catalogo({ onNavigateToScanner }) {
                   /* Enlace al escáner solo si hay sesión y AuthContext terminó */
                   !authLoading && user && (
                     <button
+                      type="button"
                       onClick={onNavigateToScanner}
-                      className="text-xs font-bold text-emerald-400 hover:underline"
+                      className="text-xs font-bold text-emerald-400 hover:underline cursor-pointer"
                     >
                       Ir a Registrar Libro con Escáner →
                     </button>
