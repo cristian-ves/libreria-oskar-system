@@ -17,20 +17,15 @@ export default function Navbar() {
   return (
     <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between min-h-16 gap-2">
           {/* Logo y título */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-900/30">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-900/30 shrink-0">
               <BookOpen className="w-5 h-5 text-white" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-white text-lg tracking-tight">Librería Oskar</span>
-                <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                  Fase 2
-                </span>
-              </div>
-              <p className="text-xs text-slate-400">Sistema de Inventario y Catálogo</p>
+            <div className="min-w-0">
+              <span className="font-bold text-white text-lg tracking-tight truncate block">Librería Oskar</span>
+              <p className="text-xs text-slate-400 hidden sm:block truncate">Sistema de Inventario y Catálogo</p>
             </div>
           </div>
 
@@ -53,7 +48,7 @@ export default function Navbar() {
                   <Icon className="w-4 h-4" />
                   <span>{link.label}</span>
                   {link.badge && (
-                    <span className="text-[10px] px-1.5 py-0.2 bg-emerald-500 text-slate-950 font-bold rounded-full">
+                    <span className="text-[10px] px-1.5 py-0.5 bg-emerald-500 text-slate-950 font-bold rounded-full">
                       {link.badge}
                     </span>
                   )}
@@ -63,20 +58,31 @@ export default function Navbar() {
           </nav>
 
           {/* Usuario / Sesión activa */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {user ? (
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 text-xs bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700">
+                {/* Avatar con inicial en móvil */}
+                <div
+                  className="sm:hidden flex items-center justify-center w-8 h-8 rounded-full bg-slate-800 border border-slate-700 text-xs font-semibold text-emerald-400"
+                  title={`${user.nombre_completo} (${user.rol})`}
+                >
+                  {user.nombre_completo ? user.nombre_completo.charAt(0).toUpperCase() : 'U'}
+                </div>
+
+                {/* Bloque completo en pantallas sm o mayores */}
+                <div className="hidden sm:flex items-center gap-2 text-xs bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                   <span className="text-slate-300 font-medium truncate max-w-[130px] sm:max-w-[180px]">
                     {user.nombre_completo}
                   </span>
                   <span className="text-slate-500 font-mono text-[11px]">({user.rol})</span>
                 </div>
+
                 <button
                   onClick={logout}
                   title="Cerrar sesión"
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors border border-transparent hover:border-red-500/20"
+                  aria-label="Cerrar sesión"
+                  className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors border border-transparent hover:border-red-500/20"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Salir</span>
@@ -85,7 +91,7 @@ export default function Navbar() {
             ) : (
               <Link
                 to="/login"
-                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-slate-950 bg-emerald-500 hover:bg-emerald-400 rounded-lg transition-colors shadow-sm"
+                className="flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 text-xs font-semibold text-slate-950 bg-emerald-500 hover:bg-emerald-400 rounded-lg transition-colors shadow-sm"
               >
                 <LogIn className="w-3.5 h-3.5" />
                 <span>Iniciar sesión</span>
@@ -114,7 +120,7 @@ export default function Navbar() {
               <Icon className="w-3.5 h-3.5" />
               <span>{link.label}</span>
               {link.badge && (
-                <span className="text-[9px] px-1.5 py-0.2 bg-emerald-500 text-slate-950 font-bold rounded-full">
+                <span className="text-[9px] px-1.5 py-0.5 bg-emerald-500 text-slate-950 font-bold rounded-full">
                   {link.badge}
                 </span>
               )}
