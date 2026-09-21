@@ -151,3 +151,7 @@ Content-Type: application/json
   }
 }
 ```
+
+## Migraciones de Base de Datos
+Ejecuta `npm run migrate` para aplicar en orden alfabético y transaccional los scripts pendientes registrados en `schema_migrations`.
+Para añadir una nueva migración, crea un archivo `NNN_nombre.sql` en `database/migrations` estructurado con sentencias idempotentes (`IF NOT EXISTS`).

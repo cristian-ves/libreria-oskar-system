@@ -17,30 +17,40 @@ async function seed() {
     `);
 
     // 2. Asegurar sucursal por defecto
-    const sucursalRes = await client.query(`
-      INSERT INTO sucursales (nombre, direccion, telefono)
-      VALUES ('Sucursal Central', 'Zona 1, Ciudad de Guatemala', '+502 2222-3333')
-      ON CONFLICT DO NOTHING
-      RETURNING id, nombre;
-    `);
-
     let sucursalId;
-    if (sucursalRes.rows.length > 0) {
-      sucursalId = sucursalRes.rows[0].id;
+    const sucursalExistente = await client.query(
+      'SELECT id FROM sucursales WHERE nombre = $1 LIMIT 1;',
+      ['Sucursal Central']
+    );
+
+    if (sucursalExistente.rows.length > 0) {
+      sucursalId = sucursalExistente.rows[0].id;
     } else {
-      const existing = await client.query('SELECT id FROM sucursales LIMIT 1;');
-      sucursalId = existing.rows[0].id;
+      const nuevaSucursal = await client.query(`
+        INSERT INTO sucursales (nombre, direccion, telefono)
+        VALUES ($1, $2, $3)
+        RETURNING id;
+      `, ['Sucursal Central', 'Zona 1, Ciudad de Guatemala', '+502 2222-3333']);
+      sucursalId = nuevaSucursal.rows[0].id;
     }
 
     // 3. Asegurar bodega por defecto
-    const bodegaRes = await client.query(`
-      INSERT INTO bodegas (sucursal_id, nombre, descripcion)
-      VALUES ($1, 'Bodega Principal', 'Bodega central de almacenamiento y recepción')
-      ON CONFLICT (sucursal_id, nombre) DO UPDATE SET nombre = EXCLUDED.nombre
-      RETURNING id, nombre;
-    `, [sucursalId]);
+    let bodegaId;
+    const bodegaExistente = await client.query(
+      'SELECT id FROM bodegas WHERE nombre = $1 LIMIT 1;',
+      ['Bodega Principal']
+    );
 
-    const bodegaId = bodegaRes.rows[0].id;
+    if (bodegaExistente.rows.length > 0) {
+      bodegaId = bodegaExistente.rows[0].id;
+    } else {
+      const nuevaBodega = await client.query(`
+        INSERT INTO bodegas (sucursal_id, nombre, descripcion)
+        VALUES ($1, $2, $3)
+        RETURNING id;
+      `, [sucursalId, 'Bodega Principal', 'Bodega central de almacenamiento y recepción']);
+      bodegaId = nuevaBodega.rows[0].id;
+    }
 
     // 4. Asegurar usuario por defecto
     const rolEmpleado = await client.query("SELECT id FROM roles WHERE nombre = 'Empleado' LIMIT 1;");
