@@ -25,10 +25,26 @@ class ConflictError extends AppError {
     super(message, 409);
   }
 }
+/** Código de error de Postgres para unique_violation */
+ConflictError.PG_UNIQUE_VIOLATION = '23505';
+
+class UnauthorizedError extends AppError {
+  constructor(message = 'No autorizado') {
+    super(message, 401);
+  }
+}
+
+class ForbiddenError extends AppError {
+  constructor(message = 'Acceso denegado') {
+    super(message, 403);
+  }
+}
 
 module.exports = {
   AppError,
   ValidationError,
   NotFoundError,
   ConflictError,
+  UnauthorizedError,
+  ForbiddenError,
 };

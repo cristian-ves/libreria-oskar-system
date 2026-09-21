@@ -44,6 +44,8 @@ services:
       DB_PASSWORD: postgres
       DB_NAME: libreria_oskar
       GOOGLE_BOOKS_API_KEY: ""
+      JWT_SECRET: ${JWT_SECRET:-secreto-solo-para-desarrollo-local}
+      JWT_EXPIRES_IN: 8h
     ports:
       - "3000:8080"
 

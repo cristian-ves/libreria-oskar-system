@@ -80,10 +80,17 @@ CREATE TABLE IF NOT EXISTS editoriales (
     creado_en TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS categorias (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    nombre VARCHAR(100) UNIQUE NOT NULL,
+    creado_en TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS libros (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     autor_id UUID REFERENCES autores(id) ON DELETE SET NULL,
     editorial_id UUID REFERENCES editoriales(id) ON DELETE SET NULL,
+    categoria_id UUID REFERENCES categorias(id) ON DELETE SET NULL,
     titulo VARCHAR(255) NOT NULL,
     isbn VARCHAR(20) UNIQUE,
     resena TEXT NOT NULL, -- Reseña descriptiva obligatoria para incentivar la compra
@@ -216,6 +223,7 @@ CREATE INDEX IF NOT EXISTS idx_libros_titulo ON libros(titulo);
 CREATE INDEX IF NOT EXISTS idx_libros_isbn ON libros(isbn);
 CREATE INDEX IF NOT EXISTS idx_libros_autor ON libros(autor_id);
 CREATE INDEX IF NOT EXISTS idx_libros_editorial ON libros(editorial_id);
+CREATE INDEX IF NOT EXISTS idx_libros_categoria ON libros(categoria_id);
 CREATE INDEX IF NOT EXISTS idx_libros_catalogo_activo ON libros(activo, precio);
 
 -- Monitoreo instantáneo de alertas de stock mínimo (Índice Parcial Condicional)
@@ -251,4 +259,14 @@ INSERT INTO tipo_movimientos (nombre, descripcion) VALUES
 ('Ingreso', 'Entrada de stock por compras de mercancía a proveedores o transferencias.'),
 ('Salida', 'Disminución de stock por venta a cliente presencial u obsolescencia/daño.'),
 ('Ajuste', 'Corrección de inventario tras auditoría o recuento físico directo.')
+ON CONFLICT (nombre) DO NOTHING;
+
+-- Categorías temáticas de libros
+INSERT INTO categorias (nombre) VALUES
+('Derecho Penal'),
+('Derecho Civil'),
+('Derecho Constitucional'),
+('Derecho Mercantil'),
+('Literatura'),
+('Otros')
 ON CONFLICT (nombre) DO NOTHING;

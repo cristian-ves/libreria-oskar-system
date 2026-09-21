@@ -1,6 +1,9 @@
 const { Router } = require('express');
+const authRoutes = require('./auth.routes');
 const libroRoutes = require('./libro.routes');
 const db = require('../config/db');
+const categoriaRepository = require('../repositories/categoria.repository');
+const { authenticate, authorize } = require('../middlewares/auth');
 
 const router = Router();
 
@@ -48,8 +51,8 @@ router.get('/bodegas', async (req, res, next) => {
   }
 });
 
-// Listado de usuarios/empleados para asignación de operaciones
-router.get('/usuarios', async (req, res, next) => {
+// Listado de usuarios/empleados para asignación de operaciones (Solo Administrador)
+router.get('/usuarios', authenticate, authorize('Administrador'), async (req, res, next) => {
   try {
     const text = `
       SELECT u.id, u.nombre_completo, u.email, r.nombre AS rol_nombre
@@ -65,7 +68,23 @@ router.get('/usuarios', async (req, res, next) => {
   }
 });
 
+// Listado de categorías temáticas para catálogo y filtros
+router.get('/categorias', async (req, res, next) => {
+  try {
+    const categorias = await categoriaRepository.findAll();
+    res.status(200).json({
+      status: 'success',
+      data: categorias,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Rutas de módulos
+router.use('/auth', authRoutes);
 router.use('/libros', libroRoutes);
+router.use('/inventario', require('./inventario.routes'));
+router.use('/movimientos', require('./movimiento.routes'));
 
 module.exports = router;

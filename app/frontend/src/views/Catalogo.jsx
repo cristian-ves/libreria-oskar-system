@@ -1,150 +1,663 @@
-import React, { useState, useEffect } from 'react';
-import { Search, BookOpen, User, Building2, Tag, Layers, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
+import { Search, BookOpen, User, Tag, Layers, SlidersHorizontal, X } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
-export default function Catalogo({ onNavigateToScanner }) {
-  const [libros, setLibros] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(true);
+// ── Componentes auxiliares fuera de Catalogo a nivel de módulo ──────────────
+function BtnCategoria({ id, label, activo, onSelect }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(id)}
+      className={`w-full text-left text-xs px-3 rounded-lg transition-all min-h-[40px] flex items-center ${
+        activo
+          ? 'bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/30'
+          : 'text-slate-300 hover:bg-slate-800'
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
 
-  // Búsqueda con debounce en tiempo real
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      cargarLibros(searchTerm);
-    }, 300);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchTerm]);
-
-  const cargarLibros = async (query = '') => {
-    try {
-      setLoading(true);
-      const url = query.trim()
-        ? `/api/libros?q=${encodeURIComponent(query.trim())}`
-        : '/api/libros';
-      const res = await fetch(url);
-      if (res.ok) {
-        const json = await res.json();
-        setLibros(json.data || []);
-      }
-    } catch (err) {
-      console.error('[CATALOG ERROR]:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+function PanelFiltros({
+  searchTerm,
+  setSearchTerm,
+  categorias,
+  categoriaId,
+  onElegirCategoria,
+  onLimpiarFiltros,
+  hayFiltros,
+}) {
+  const ramasDerecho = categorias.filter((c) =>
+    c.nombre.toLowerCase().startsWith('derecho')
+  );
+  const otrasCateg = categorias.filter(
+    (c) => !c.nombre.toLowerCase().startsWith('derecho')
+  );
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Encabezado */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <div>
-          <div className="flex items-center gap-2 text-emerald-400 text-xs font-mono uppercase tracking-wider mb-1">
-            <BookOpen className="w-4 h-4" />
-            <span>Catálogo General</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-            Libros Disponibles
-          </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            Explora títulos, autores y existencias consolidadas en todas las bodegas.
-          </p>
-        </div>
-
-        <button
-          onClick={onNavigateToScanner}
-          className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-emerald-950/40 transition-all cursor-pointer"
-        >
-          <span>Escanear Nuevo Ejemplar</span>
-        </button>
-      </div>
-
-      {/* Barra de Búsqueda con Debounce */}
-      <div className="mb-6 relative max-w-lg">
-        <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 transform -translate-y-1/2" />
+    <div className="flex flex-col h-full">
+      {/* Buscador — fijo arriba */}
+      <div className="relative flex-shrink-0">
+        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
         <input
           type="text"
-          placeholder="Buscar por título, autor o ISBN en tiempo real..."
+          placeholder="Título, autor o ISBN..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full bg-slate-900 border border-slate-700 text-white placeholder-slate-400 text-xs sm:text-sm rounded-xl pl-10 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+          className="w-full bg-slate-950 border border-slate-700 text-white placeholder-slate-400 text-xs rounded-xl pl-9 pr-3 py-2.5 min-h-[40px] outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
         />
       </div>
 
-      {/* Grid de Libros */}
-      {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map((n) => (
-            <div key={n} className="h-64 bg-slate-900/60 rounded-2xl border border-slate-800 animate-pulse p-4" />
-          ))}
-        </div>
-      ) : libros.length === 0 ? (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center">
-          <BookOpen className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-          <h3 className="text-base font-semibold text-white mb-1">No se encontraron libros</h3>
-          <p className="text-xs text-slate-400 max-w-sm mx-auto mb-4">
-            {searchTerm
-              ? `No hay coincidencias para "${searchTerm}".`
-              : 'Aún no se han registrado libros en el inventario.'}
-          </p>
+      {/* Lista de categorías — scrollable, ocupa el espacio restante */}
+      <div className="flex-1 overflow-y-auto mt-4 pr-0.5">
+        <ul className="flex flex-col gap-0.5">
+          {/* Todas */}
+          <li>
+            <BtnCategoria
+              id={null}
+              label="Todas"
+              activo={categoriaId === null}
+              onSelect={onElegirCategoria}
+            />
+          </li>
+
+          {/* Ramas del Derecho */}
+          {ramasDerecho.length > 0 && (
+            <>
+              <li className="pt-3 pb-1">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-slate-500">
+                  Ramas del Derecho
+                </span>
+              </li>
+              {ramasDerecho.map((cat) => (
+                <li key={cat.id}>
+                  <BtnCategoria
+                    id={cat.id}
+                    label={cat.nombre}
+                    activo={categoriaId === cat.id}
+                    onSelect={onElegirCategoria}
+                  />
+                </li>
+              ))}
+            </>
+          )}
+
+          {/* Otras categorías */}
+          {otrasCateg.length > 0 && (
+            <>
+              <li className="pt-3 pb-1">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-slate-500">
+                  Otras categorías
+                </span>
+              </li>
+              {otrasCateg.map((cat) => (
+                <li key={cat.id}>
+                  <BtnCategoria
+                    id={cat.id}
+                    label={cat.nombre}
+                    activo={categoriaId === cat.id}
+                    onSelect={onElegirCategoria}
+                  />
+                </li>
+              ))}
+            </>
+          )}
+        </ul>
+      </div>
+
+      {/* Limpiar filtros — fijo abajo */}
+      {hayFiltros && (
+        <div className="flex-shrink-0 pt-3 border-t border-slate-800/60 mt-2">
           <button
-            onClick={onNavigateToScanner}
-            className="text-xs font-bold text-emerald-400 hover:underline"
+            type="button"
+            onClick={onLimpiarFiltros}
+            className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-emerald-400 transition-colors min-h-[40px]"
           >
-            Ir a Registrar Libro con Escáner →
+            <X className="w-3.5 h-3.5" />
+            Limpiar filtros
           </button>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {libros.map((libro) => (
-            <div
-              key={libro.id}
-              className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl hover:border-emerald-500/40 transition-all flex flex-col justify-between group"
-            >
-              <div>
-                <div className="flex gap-4 mb-4">
-                  <div className="w-20 h-28 bg-slate-950 rounded-lg overflow-hidden flex-shrink-0 border border-slate-800 flex items-center justify-center">
-                    {libro.imagen_url ? (
-                      <img
-                        src={libro.imagen_url}
-                        alt={libro.titulo}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                      />
-                    ) : (
-                      <BookOpen className="w-6 h-6 text-slate-600" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                      {libro.isbn}
-                    </span>
-                    <h3 className="font-bold text-white text-sm mt-1.5 line-clamp-2 leading-snug">
-                      {libro.titulo}
-                    </h3>
-                    <p className="text-xs text-slate-300 mt-1 flex items-center gap-1">
-                      <User className="w-3 h-3 text-slate-400 flex-shrink-0" />
-                      <span className="truncate">{libro.autor_nombre || 'Desconocido'}</span>
-                    </p>
-                  </div>
-                </div>
+      )}
+    </div>
+  );
+}
 
-                <p className="text-xs text-slate-400 line-clamp-2 mb-4 leading-relaxed">
-                  {libro.resena}
-                </p>
+function DrawerFiltros({
+  isOpen,
+  onClose,
+  searchTerm,
+  categoriaId,
+  categorias,
+  onApplySearch,
+  onSelectCategoryWithSearch,
+  onLimpiarFiltros,
+}) {
+  const [draftSearch, setDraftSearch] = useState(searchTerm);
+
+  useEffect(() => {
+    if (isOpen) {
+      setDraftSearch(searchTerm);
+      document.body.style.overflow = 'hidden';
+      const handleKeyDown = (e) => {
+        if (e.key === 'Escape') onClose();
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = '';
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    } else {
+      document.body.style.overflow = '';
+    }
+  }, [isOpen, searchTerm, onClose]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onApplySearch(draftSearch);
+    onClose();
+  };
+
+  const ramasDerecho = categorias.filter((c) =>
+    c.nombre.toLowerCase().startsWith('derecho')
+  );
+  const otrasCateg = categorias.filter(
+    (c) => !c.nombre.toLowerCase().startsWith('derecho')
+  );
+
+  const hayFiltrosEnCajon = draftSearch.trim() !== '' || categoriaId !== null;
+
+  return (
+    <div className="lg:hidden">
+      {/* Fondo semitransparente */}
+      <div
+        onClick={onClose}
+        className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-all duration-300 ${
+          isOpen ? 'opacity-100 pointer-events-auto visible' : 'opacity-0 pointer-events-none invisible'
+        }`}
+      />
+
+      {/* Cajón lateral */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-[85%] max-w-sm h-screen h-[100dvh] bg-slate-900 border-r border-slate-800 flex flex-col transition-all duration-300 transform ${
+          isOpen ? 'translate-x-0 visible opacity-100' : '-translate-x-full invisible opacity-0'
+        }`}
+      >
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          {/* Zona superior fija (shrink-0): Encabezado + Fila de búsqueda */}
+          <div className="p-4 pb-3 border-b border-slate-800/80 shrink-0 space-y-3">
+            {/* Encabezado */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal className="w-4 h-4 text-emerald-400" />
+                <h2 className="text-sm font-bold text-white uppercase tracking-wider">Filtros</h2>
               </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+                aria-label="Cerrar filtros"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-              <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-1.5 text-emerald-400 font-mono font-bold">
-                  <Layers className="w-3.5 h-3.5" />
-                  <span>Stock Total: {libro.stock_total || 0}</span>
-                </div>
-                <span className="font-semibold text-white">
-                  Q {Number(libro.precio).toFixed(2)}
-                </span>
+            {/* Fila única: Buscador + Botón Buscar */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1 min-w-0">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Título, autor o ISBN..."
+                  value={draftSearch}
+                  onChange={(e) => setDraftSearch(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 text-white placeholder-slate-400 text-xs rounded-xl pl-9 pr-3 py-2.5 min-h-[44px] outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                />
+              </div>
+              <button
+                type="submit"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 rounded-xl min-h-[44px] flex items-center justify-center gap-1.5 shrink-0 transition-all shadow-lg shadow-emerald-950/40 cursor-pointer"
+              >
+                <Search className="w-4 h-4" />
+                <span>Buscar</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Zona central: Lista de categorías con scroll exclusivo */}
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4">
+            <p className="text-[10px] font-mono uppercase tracking-widest text-slate-500 mb-2">Categorías</p>
+            <ul className="flex flex-col gap-0.5">
+              <li>
+                <BtnCategoria
+                  id={null}
+                  label="Todas"
+                  activo={categoriaId === null}
+                  onSelect={(id) => onSelectCategoryWithSearch(id, draftSearch)}
+                />
+              </li>
+
+              {ramasDerecho.length > 0 && (
+                <>
+                  <li className="pt-3 pb-1">
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-slate-500">
+                      Ramas del Derecho
+                    </span>
+                  </li>
+                  {ramasDerecho.map((cat) => (
+                    <li key={cat.id}>
+                      <BtnCategoria
+                        id={cat.id}
+                        label={cat.nombre}
+                        activo={categoriaId === cat.id}
+                        onSelect={(id) => onSelectCategoryWithSearch(id, draftSearch)}
+                      />
+                    </li>
+                  ))}
+                </>
+              )}
+
+              {otrasCateg.length > 0 && (
+                <>
+                  <li className="pt-3 pb-1">
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-slate-500">
+                      Otras categorías
+                    </span>
+                  </li>
+                  {otrasCateg.map((cat) => (
+                    <li key={cat.id}>
+                      <BtnCategoria
+                        id={cat.id}
+                        label={cat.nombre}
+                        activo={categoriaId === cat.id}
+                        onSelect={(id) => onSelectCategoryWithSearch(id, draftSearch)}
+                      />
+                    </li>
+                  ))}
+                </>
+              )}
+            </ul>
+          </div>
+
+          {/* Zona inferior fija (shrink-0): Botón Limpiar filtros */}
+          <div className="p-4 border-t border-slate-800/80 shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <button
+              type="button"
+              onClick={() => {
+                setDraftSearch('');
+                onLimpiarFiltros();
+                onClose();
+              }}
+              disabled={!hayFiltrosEnCajon}
+              className="w-full text-center text-xs text-slate-400 hover:text-emerald-400 disabled:opacity-40 disabled:hover:text-slate-400 py-2.5 px-4 rounded-xl border border-slate-800 hover:border-slate-700 bg-slate-950/60 transition-colors min-h-[40px] flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Limpiar filtros</span>
+            </button>
+          </div>
+        </form>
+      </aside>
+    </div>
+  );
+}
+
+function EtiquetasFiltros({ searchTerm, categoriaNombre, onQuitarBusqueda, onQuitarCategoria }) {
+  const tieneBusqueda = searchTerm.trim() !== '';
+  const tieneCategoria = Boolean(categoriaNombre);
+
+  if (!tieneBusqueda && !tieneCategoria) return null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-4">
+      {tieneBusqueda && (
+        <span className="inline-flex items-center gap-1.5 text-xs bg-slate-900 text-slate-200 border border-slate-700 px-3 py-1 rounded-lg">
+          <span className="text-slate-400 font-mono text-[11px]">Búsqueda:</span>
+          <span className="font-semibold text-white">"{searchTerm.trim()}"</span>
+          <button
+            type="button"
+            onClick={onQuitarBusqueda}
+            title="Quitar filtro de búsqueda"
+            className="text-slate-400 hover:text-white ml-0.5 p-0.5 rounded-full hover:bg-slate-800 transition-colors"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </span>
+      )}
+      {tieneCategoria && (
+        <span className="inline-flex items-center gap-1.5 text-xs bg-emerald-950/60 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-lg">
+          <span className="text-emerald-400/70 font-mono text-[11px]">Categoría:</span>
+          <span className="font-semibold text-emerald-200">{categoriaNombre}</span>
+          <button
+            type="button"
+            onClick={onQuitarCategoria}
+            title="Quitar filtro de categoría"
+            className="text-emerald-400 hover:text-emerald-100 ml-0.5 p-0.5 rounded-full hover:bg-emerald-900/50 transition-colors"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </span>
+      )}
+    </div>
+  );
+}
+
+export default function Catalogo({ onNavigateToScanner }) {
+  const { user, loading: authLoading } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [libros, setLibros] = useState([]);
+  const [categorias, setCategorias] = useState([]);
+  const [searchTerm, setSearchTerm] = useState(() => searchParams.get('q') || '');
+  const [categoriaId, setCategoriaId] = useState(() => searchParams.get('categoriaId') || null);
+  const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // ── Carga de categorías al montar (fallo silencioso) ──────────────────────
+  useEffect(() => {
+    fetch('/api/categorias')
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((json) => setCategorias(json.data || []))
+      .catch(() => {
+        // La sidebar sigue funcionando sin categorías
+      });
+  }, []);
+
+  // ── Búsqueda con debounce 300 ms + bandera de cancelación ─────────────────
+  useEffect(() => {
+    let cancelled = false;
+
+    const timer = setTimeout(async () => {
+      try {
+        setLoading(true);
+
+        // Sincronizar URL omitiendo parámetros vacíos
+        const nextParams = {};
+        if (searchTerm.trim()) nextParams.q = searchTerm.trim();
+        if (categoriaId) nextParams.categoriaId = categoriaId;
+        setSearchParams(nextParams, { replace: true });
+
+        const params = new URLSearchParams();
+        if (searchTerm.trim()) params.set('q', searchTerm.trim());
+        if (categoriaId) params.set('categoriaId', categoriaId);
+        const qs = params.toString();
+        const url = qs ? `/api/libros?${qs}` : '/api/libros';
+
+        const res = await fetch(url);
+        if (!cancelled && res.ok) {
+          const json = await res.json();
+          setLibros(json.data || []);
+        }
+      } catch (err) {
+        if (!cancelled) console.error('[CATALOG ERROR]:', err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [searchTerm, categoriaId, setSearchParams]);
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  const hayFiltros = searchTerm.trim() !== '' || categoriaId !== null;
+  const totalFiltrosActivos = (searchTerm.trim() !== '' ? 1 : 0) + (categoriaId !== null ? 1 : 0);
+
+  const limpiarFiltros = useCallback(() => {
+    setSearchTerm('');
+    setCategoriaId(null);
+  }, []);
+
+  const elegirCategoria = useCallback((id) => {
+    setCategoriaId(id);
+  }, []);
+
+  const handleApplySearchFromDrawer = useCallback((term) => {
+    setSearchTerm(term);
+  }, []);
+
+  const handleSelectCategoryWithSearchFromDrawer = useCallback((catId, draftTerm) => {
+    setCategoriaId(catId);
+    setSearchTerm(draftTerm);
+    setSidebarOpen(false);
+  }, []);
+
+  const quitarBusqueda = useCallback(() => {
+    setSearchTerm('');
+  }, []);
+
+  const quitarCategoria = useCallback(() => {
+    setCategoriaId(null);
+  }, []);
+
+  const categoriaNombre = categoriaId
+    ? (categorias.find((c) => c.id === categoriaId)?.nombre ?? '')
+    : '';
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  return (
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:pt-4 lg:pb-8">
+      {/* Cajón lateral móvil */}
+      <DrawerFiltros
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        searchTerm={searchTerm}
+        categoriaId={categoriaId}
+        categorias={categorias}
+        onApplySearch={handleApplySearchFromDrawer}
+        onSelectCategoryWithSearch={handleSelectCategoryWithSearchFromDrawer}
+        onLimpiarFiltros={limpiarFiltros}
+      />
+
+      {/* Layout principal — grid de dos columnas en lg+; el encabezado vive en la columna derecha */}
+      <div className="grid grid-cols-1 lg:grid-cols-[16rem_minmax(0,1fr)] gap-6 items-start">
+
+        {/* Sidebar — solo visible en lg+ */}
+        <aside className="hidden lg:flex flex-col lg:sticky lg:top-20 lg:h-[calc(100vh-6rem)]">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col flex-1 overflow-hidden">
+            <PanelFiltros
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              categorias={categorias}
+              categoriaId={categoriaId}
+              onElegirCategoria={elegirCategoria}
+              onLimpiarFiltros={limpiarFiltros}
+              hayFiltros={hayFiltros}
+            />
+          </div>
+        </aside>
+
+        {/* Columna de contenido — encabezado primero, luego controles móvil y resultados */}
+        <div className="w-full min-w-0">
+          {/* Encabezado */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <div className="flex items-center gap-2 text-emerald-400 text-xs font-mono uppercase tracking-wider mb-1">
+                <BookOpen className="w-4 h-4" />
+                <span>Catálogo General</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+                Libros Disponibles
+              </h1>
+              <p className="text-sm text-slate-400 mt-1">
+                Explora títulos, autores y existencias consolidadas en todas las bodegas.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 flex-shrink-0">
+              {/* Botón "Filtros" — solo visible en móvil */}
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white text-xs font-semibold px-3.5 min-h-[40px] rounded-xl transition-all"
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                <span>Filtros</span>
+                {totalFiltrosActivos > 0 && (
+                  <span className="w-5 h-5 rounded-full bg-emerald-500 text-slate-950 text-[10px] font-bold flex items-center justify-center font-mono">
+                    {totalFiltrosActivos}
+                  </span>
+                )}
+              </button>
+
+              {/* Botón "Escanear" — solo cuando hay sesión y AuthContext terminó de cargar */}
+              {!authLoading && user && (
+                <button
+                  type="button"
+                  onClick={onNavigateToScanner}
+                  className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 min-h-[40px] rounded-xl shadow-lg shadow-emerald-950/40 transition-all cursor-pointer"
+                >
+                  <span>Escanear Nuevo Ejemplar</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Fila de etiquetas de filtros activos */}
+          <EtiquetasFiltros
+            searchTerm={searchTerm}
+            categoriaNombre={categoriaNombre}
+            onQuitarBusqueda={quitarBusqueda}
+            onQuitarCategoria={quitarCategoria}
+          />
+
+          {/* Contador de resultados */}
+          {!loading && (
+            <p className="text-xs text-slate-400 mb-4">
+              {libros.length === 0 ? (
+                'Sin resultados'
+              ) : categoriaNombre ? (
+                <>
+                  <span className="text-white font-semibold">{libros.length}</span>
+                  {libros.length === 1 ? ' libro' : ' libros'} en{' '}
+                  <span className="text-emerald-400 font-semibold">{categoriaNombre}</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-white font-semibold">{libros.length}</span>
+                  {libros.length === 1 ? ' libro encontrado' : ' libros encontrados'}
+                </>
+              )}
+            </p>
+          )}
+
+          {/* Estados: cargando / vacío / grid */}
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6 w-full min-h-[50vh]">
+              {[1, 2, 3, 4, 5, 6].map((n) => (
+                <div
+                  key={n}
+                  className="h-64 bg-slate-900/60 rounded-2xl border border-slate-800 animate-pulse p-4"
+                />
+              ))}
+            </div>
+          ) : libros.length === 0 ? (
+            <div className="w-full min-h-[50vh] flex items-center justify-center">
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center w-full">
+                <BookOpen className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+                <h3 className="text-base font-semibold text-white mb-1">
+                  No se encontraron libros
+                </h3>
+                <p className="text-xs text-slate-400 max-w-sm mx-auto mb-4">
+                  {searchTerm && categoriaNombre
+                    ? `No hay coincidencias para "${searchTerm}" en ${categoriaNombre}.`
+                    : searchTerm
+                    ? `No hay coincidencias para "${searchTerm}".`
+                    : categoriaNombre
+                    ? `No hay libros registrados en ${categoriaNombre}.`
+                    : 'Aún no se han registrado libros en el inventario.'}
+                </p>
+                {hayFiltros ? (
+                  <button
+                    type="button"
+                    onClick={limpiarFiltros}
+                    className="text-xs font-bold text-emerald-400 hover:underline cursor-pointer"
+                  >
+                    Limpiar filtros
+                  </button>
+                ) : (
+                  /* Enlace al escáner solo si hay sesión y AuthContext terminó */
+                  !authLoading && user && (
+                    <button
+                      type="button"
+                      onClick={onNavigateToScanner}
+                      className="text-xs font-bold text-emerald-400 hover:underline cursor-pointer"
+                    >
+                      Ir a Registrar Libro con Escáner →
+                    </button>
+                  )
+                )}
               </div>
             </div>
-          ))}
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6 w-full">
+              {libros.map((libro) => (
+                <Link
+                  key={libro.id}
+                  to={`/catalogo/${libro.ref || libro.id}`}
+                  className="block bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl hover:border-emerald-500/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition-all flex flex-col justify-between group cursor-pointer"
+                >
+                  <div>
+                    <div className="flex gap-4 mb-4">
+                      <div className="w-20 h-28 bg-slate-950 rounded-lg overflow-hidden flex-shrink-0 border border-slate-800 flex items-center justify-center">
+                        {libro.imagen_url ? (
+                          <img
+                            src={libro.imagen_url}
+                            alt={libro.titulo}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          />
+                        ) : (
+                          <BookOpen className="w-6 h-6 text-slate-600" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        {/* Etiqueta ISBN: se oculta si es nulo o vacío */}
+                        {libro.isbn && (
+                          <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                            {libro.isbn}
+                          </span>
+                        )}
+                        <h3 className="font-bold text-white text-sm mt-1.5 line-clamp-2 leading-snug">
+                          {libro.titulo}
+                        </h3>
+                        <p className="text-xs text-slate-300 mt-1 flex items-center gap-1">
+                          <User className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                          <span className="truncate">{libro.autor_nombre || 'Desconocido'}</span>
+                        </p>
+                        {/* Etiqueta de categoría */}
+                        {libro.categoria_nombre && (
+                          <span className="inline-flex items-center gap-1 mt-1.5 text-[10px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
+                            <Tag className="w-2.5 h-2.5" />
+                            {libro.categoria_nombre}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-slate-400 line-clamp-2 mb-4 leading-relaxed">
+                      {libro.resena}
+                    </p>
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-1.5 text-emerald-400 font-mono font-bold">
+                      <Layers className="w-3.5 h-3.5" />
+                      <span>Stock Total: {libro.stock_total || 0}</span>
+                    </div>
+                    <span className="font-semibold text-white">
+                      {Number(libro.precio) > 0
+                        ? 'Q ' + Number(libro.precio).toFixed(2)
+                        : 'Precio por confirmar'}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

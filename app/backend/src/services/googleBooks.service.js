@@ -1,5 +1,8 @@
 const env = require('../config/env');
 
+/** Nombre de autor canónico cuando ningún proveedor externo aporta autores reales. */
+const AUTOR_PLACEHOLDER = 'Autor de Biblioteca Internacional';
+
 // Catálogo bibliográfico de referencia para contingencia / modo sin cuota
 const FALLBACK_CATALOG = {
   '9780132350884': {
@@ -120,7 +123,7 @@ class GoogleBooksService {
       const contingencyBook = {
         isbn,
         titulo: `Libro ISBN ${isbn}`,
-        autor: 'Autor Pendiente de Catalogación',
+        autor: AUTOR_PLACEHOLDER,
         editorial: 'Editorial Independiente',
         resena: `Ejemplar registrado en contingencia offline con ISBN ${isbn}. Metadatos detallados pendientes de sincronización por límite de cuota externa.`,
         imagen_url: null,
@@ -178,7 +181,7 @@ class GoogleBooksService {
     const titulo = info.title || 'Título sin especificar';
     const autor = Array.isArray(info.authors) && info.authors.length > 0
       ? info.authors.join(', ')
-      : 'Autor Desconocido';
+      : AUTOR_PLACEHOLDER;
     const editorial = info.publisher || 'Editorial Desconocida';
     
     // Reseña obligatoria según el esquema relacional
@@ -215,6 +218,8 @@ class GoogleBooksService {
 
   /**
    * Proveedor de respaldo secundario (OpenLibrary) en caso de cuota excedida en Google Books.
+   * Resuelve autores consultando individualmente cada clave `/authors/OLxxA.json` con
+   * Promise.allSettled; los fallos individuales se ignoran sin lanzar error.
    * @private
    */
   async _consultarFallbackOpenLibrary(isbn, timeoutMs = 3000) {
@@ -251,10 +256,41 @@ class GoogleBooksService {
       imagen_url = `https://covers.openlibrary.org/b/id/${data.covers[0]}-L.jpg`;
     }
 
+    // Resolver autores desde claves /authors/OLxxA usando Promise.allSettled (máx 3)
+    let autorResuelto = AUTOR_PLACEHOLDER;
+    if (Array.isArray(data.authors) && data.authors.length > 0) {
+      const claves = data.authors
+        .slice(0, 3)
+        .map((a) => (a && typeof a.key === 'string' ? a.key : null))
+        .filter(Boolean);
+
+      if (claves.length > 0) {
+        const resultados = await Promise.allSettled(
+          claves.map(async (key) => {
+            const r = await fetch(`https://openlibrary.org${key}.json`, {
+              signal: AbortSignal.timeout(3000),
+              headers: { 'Accept': 'application/json' },
+            });
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            const autorData = await r.json();
+            return typeof autorData.name === 'string' ? autorData.name.trim() : null;
+          })
+        );
+
+        const nombres = resultados
+          .filter((r) => r.status === 'fulfilled' && r.value)
+          .map((r) => r.value);
+
+        if (nombres.length > 0) {
+          autorResuelto = nombres.join(', ').substring(0, 150);
+        }
+      }
+    }
+
     return {
       isbn,
       titulo: titulo.substring(0, 255),
-      autor: 'Autor de Biblioteca Internacional',
+      autor: autorResuelto,
       editorial: editorial.substring(0, 150),
       resena,
       imagen_url,

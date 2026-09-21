@@ -72,6 +72,97 @@ class MovimientoRepository {
     const res = await executor.query(text, values);
     return res.rows[0];
   }
+
+  /**
+   * Consulta el kardex / movimientos de inventario con filtros y paginación.
+   * @param {{
+   *   libroId?: string,
+   *   bodegaId?: string,
+   *   tipo?: string,
+   *   limit?: number,
+   *   offset?: number
+   * }} filters
+   * @param {import('pg').PoolClient | import('pg').Pool} [executor]
+   */
+  async findAllWithFilters({ libroId = null, bodegaId = null, tipo = null, limit = 50, offset = 0 }, executor = db.pool) {
+    const params = [];
+    const whereConditions = [];
+
+    if (libroId && typeof libroId === 'string' && libroId.trim()) {
+      params.push(libroId.trim());
+      whereConditions.push(`inv.libro_id = $${params.length}`);
+    }
+
+    if (bodegaId && typeof bodegaId === 'string' && bodegaId.trim()) {
+      params.push(bodegaId.trim());
+      whereConditions.push(`inv.bodega_id = $${params.length}`);
+    }
+
+    if (tipo && typeof tipo === 'string' && tipo.trim()) {
+      params.push(tipo.trim());
+      whereConditions.push(`LOWER(tm.nombre) = LOWER($${params.length})`);
+    }
+
+    let whereClause = '';
+    if (whereConditions.length > 0) {
+      whereClause = `WHERE ${whereConditions.join(' AND ')}`;
+    }
+
+    // Consulta de total
+    const countSql = `
+      SELECT COUNT(*)::INTEGER AS total
+      FROM movimientos_inventario m
+      JOIN tipo_movimientos tm ON tm.id = m.tipo_movimiento_id
+      JOIN inventarios inv ON inv.id = m.inventario_id
+      ${whereClause}
+    `;
+
+    // Consulta de filas
+    params.push(limit);
+    const limitIdx = params.length;
+    params.push(offset);
+    const offsetIdx = params.length;
+
+    const dataSql = `
+      SELECT
+        m.id,
+        m.fecha_movimiento,
+        tm.nombre AS tipo,
+        m.cantidad,
+        m.motivo_detalle,
+        l.id AS libro_id,
+        l.titulo,
+        l.isbn,
+        b.nombre AS bodega_nombre,
+        s.nombre AS sucursal_nombre,
+        u.nombre_completo AS usuario_nombre
+      FROM movimientos_inventario m
+      JOIN tipo_movimientos tm ON tm.id = m.tipo_movimiento_id
+      JOIN inventarios inv ON inv.id = m.inventario_id
+      JOIN libros l ON l.id = inv.libro_id
+      JOIN bodegas b ON b.id = inv.bodega_id
+      LEFT JOIN sucursales s ON s.id = b.sucursal_id
+      LEFT JOIN usuarios u ON u.id = m.usuario_id
+      ${whereClause}
+      ORDER BY m.fecha_movimiento DESC
+      LIMIT $${limitIdx} OFFSET $${offsetIdx};
+    `;
+
+    const countParams = params.slice(0, params.length - 2);
+    const [countRes, dataRes] = await Promise.all([
+      executor.query(countSql, countParams),
+      executor.query(dataSql, params),
+    ]);
+
+    const total = countRes.rows[0]?.total || 0;
+
+    return {
+      total,
+      limit,
+      offset,
+      movimientos: dataRes.rows,
+    };
+  }
 }
 
 module.exports = new MovimientoRepository();
