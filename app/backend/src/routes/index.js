@@ -1,7 +1,9 @@
 const { Router } = require('express');
+const authRoutes = require('./auth.routes');
 const libroRoutes = require('./libro.routes');
 const db = require('../config/db');
 const categoriaRepository = require('../repositories/categoria.repository');
+const { authenticate, authorize } = require('../middlewares/auth');
 
 const router = Router();
 
@@ -49,8 +51,8 @@ router.get('/bodegas', async (req, res, next) => {
   }
 });
 
-// Listado de usuarios/empleados para asignación de operaciones
-router.get('/usuarios', async (req, res, next) => {
+// Listado de usuarios/empleados para asignación de operaciones (Solo Administrador)
+router.get('/usuarios', authenticate, authorize('Administrador'), async (req, res, next) => {
   try {
     const text = `
       SELECT u.id, u.nombre_completo, u.email, r.nombre AS rol_nombre
@@ -80,6 +82,7 @@ router.get('/categorias', async (req, res, next) => {
 });
 
 // Rutas de módulos
+router.use('/auth', authRoutes);
 router.use('/libros', libroRoutes);
 
 module.exports = router;

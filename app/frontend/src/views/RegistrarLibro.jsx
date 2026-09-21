@@ -3,16 +3,18 @@ import { Camera, Warehouse, UserCheck, Barcode, CheckCircle, Clock, ArrowRight, 
 import BarcodeScanner from '../components/BarcodeScanner';
 import BookCard from '../components/BookCard';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { useAuth } from '../context/AuthContext';
+import { apiFetch } from '../api/client';
 
 export default function RegistrarLibro({ onShowToast }) {
+  const { user } = useAuth();
+  const usuarioId = user?.id || '';
+  const usuarioNombre = user?.nombre_completo || '';
+
   // Estado de bodegas y selección previa
   const [bodegas, setBodegas] = useState([]);
   const [selectedBodegaId, setSelectedBodegaId] = useState('');
   const [loadingBodegas, setLoadingBodegas] = useState(true);
-
-  // Estado del usuario activo (Bodeguero / Empleado)
-  const [usuarioId, setUsuarioId] = useState('');
-  const [usuarioNombre, setUsuarioNombre] = useState('Carlos Empleado');
 
   // Control del escáner y cámara
   const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -23,13 +25,13 @@ export default function RegistrarLibro({ onShowToast }) {
   const [ultimoResultado, setUltimoResultado] = useState(null);
   const [historialEscaneos, setHistorialEscaneos] = useState([]);
 
-  // Cargar bodegas y usuario por defecto al montar
+  // Cargar bodegas al montar
   useEffect(() => {
     async function cargarDatosIniciales() {
       try {
         setLoadingBodegas(true);
-        // Intentar cargar bodegas desde el backend
-        const resBodegas = await fetch('/api/bodegas');
+        // Intentar cargar bodegas desde el backend con apiFetch
+        const resBodegas = await apiFetch('/api/bodegas');
         if (resBodegas.ok) {
           const json = await resBodegas.json();
           if (json.data && json.data.length > 0) {
@@ -41,21 +43,6 @@ export default function RegistrarLibro({ onShowToast }) {
         console.warn('[BODEGAS FETCH]: Usando datos por defecto:', err.message);
       } finally {
         setLoadingBodegas(false);
-      }
-
-      // Cargar usuario activo
-      try {
-        const resUsuarios = await fetch('/api/usuarios');
-        if (resUsuarios.ok) {
-          const json = await resUsuarios.json();
-          if (json.data && json.data.length > 0) {
-            const empleado = json.data.find(u => u.rol_nombre === 'Empleado') || json.data[0];
-            setUsuarioId(empleado.id);
-            setUsuarioNombre(empleado.nombre_completo);
-          }
-        }
-      } catch (err) {
-        console.warn('[USUARIO FETCH]:', err.message);
       }
     }
 
@@ -83,7 +70,7 @@ export default function RegistrarLibro({ onShowToast }) {
     );
 
     try {
-      const response = await fetch('/api/libros/escanear', {
+      const response = await apiFetch('/api/libros/escanear', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -204,7 +191,7 @@ export default function RegistrarLibro({ onShowToast }) {
                 </div>
               </div>
               <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-emerald-400 font-mono border border-emerald-500/30">
-                Rol: Empleado
+                Rol: {user?.rol || 'Empleado'}
               </span>
             </div>
           </div>

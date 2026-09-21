@@ -26,9 +26,23 @@ class ConflictError extends AppError {
   }
 }
 
+class UnauthorizedError extends AppError {
+  constructor(message = 'No autorizado') {
+    super(message, 401);
+  }
+}
+
+class ForbiddenError extends AppError {
+  constructor(message = 'Acceso denegado') {
+    super(message, 403);
+  }
+}
+
 module.exports = {
   AppError,
   ValidationError,
   NotFoundError,
   ConflictError,
+  UnauthorizedError,
+  ForbiddenError,
 };
