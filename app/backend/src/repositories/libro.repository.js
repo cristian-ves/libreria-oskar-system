@@ -263,6 +263,95 @@ class LibroRepository {
     const res = await exec.query(text, params);
     return res.rows;
   }
+
+  /**
+   * Busca el detalle completo y disponibilidad de un libro por su parsed ref ({ id } o { shortId }).
+   * Solo incluye libros activos y bodegas/sucursales activas.
+   *
+   * @param {{ id?: string, shortId?: string }} parsed
+   * @param {import('pg').PoolClient | import('pg').Pool} [executor]
+   */
+  async findDetalleByRef(parsed, executor = db.pool) {
+    if (!parsed || (!parsed.id && !parsed.shortId)) {
+      return null;
+    }
+
+    let whereCondition = '';
+    const params = [];
+
+    if (parsed.id) {
+      params.push(parsed.id);
+      whereCondition = `l.id = $${params.length}`;
+    } else if (parsed.shortId) {
+      const s = parsed.shortId.toLowerCase();
+      const lower = `${s.slice(0, 8)}-${s.slice(8, 12)}-0000-0000-000000000000`;
+      const upper = `${s.slice(0, 8)}-${s.slice(8, 12)}-ffff-ffff-ffffffffffff`;
+      params.push(lower, upper);
+      whereCondition = `l.id BETWEEN $1::uuid AND $2::uuid`;
+    }
+
+    const libroQuery = `
+      SELECT 
+        l.id,
+        l.titulo,
+        l.isbn,
+        l.resena,
+        l.imagen_url,
+        l.precio,
+        l.creado_en,
+        a.nombre AS autor_nombre,
+        e.nombre AS editorial_nombre,
+        l.categoria_id,
+        c.nombre AS categoria_nombre
+      FROM libros l
+      LEFT JOIN autores a ON l.autor_id = a.id
+      LEFT JOIN editoriales e ON l.editorial_id = e.id
+      LEFT JOIN categorias c ON l.categoria_id = c.id
+      WHERE l.activo = true AND ${whereCondition}
+      ORDER BY l.creado_en ASC
+      LIMIT 1;
+    `;
+
+    const libroRes = await executor.query(libroQuery, params);
+    if (libroRes.rowCount === 0) {
+      return null;
+    }
+
+    const libro = libroRes.rows[0];
+
+    const dispQuery = `
+      SELECT 
+        s.nombre AS sucursal_nombre,
+        s.direccion AS sucursal_direccion,
+        s.telefono AS sucursal_telefono,
+        b.nombre AS bodega_nombre,
+        inv.stock_actual
+      FROM inventarios inv
+      JOIN bodegas b ON inv.bodega_id = b.id
+      JOIN sucursales s ON b.sucursal_id = s.id
+      WHERE inv.libro_id = $1
+        AND b.activo = true
+        AND s.activo = true
+      ORDER BY s.nombre ASC, b.nombre ASC;
+    `;
+
+    const dispRes = await executor.query(dispQuery, [libro.id]);
+    const disponibilidad = dispRes.rows.map((row) => ({
+      sucursal_nombre: row.sucursal_nombre,
+      sucursal_direccion: row.sucursal_direccion,
+      sucursal_telefono: row.sucursal_telefono,
+      bodega_nombre: row.bodega_nombre,
+      stock_actual: Number(row.stock_actual) || 0,
+    }));
+
+    const stock_total = disponibilidad.reduce((acc, curr) => acc + curr.stock_actual, 0);
+
+    return {
+      ...libro,
+      disponibilidad,
+      stock_total,
+    };
+  }
 }
 
 module.exports = new LibroRepository();

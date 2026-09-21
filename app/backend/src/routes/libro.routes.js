@@ -67,4 +67,11 @@ router.post(
   libroController.ingreso.bind(libroController)
 );
 
+/**
+ * @route   GET /api/libros/:ref
+ * @desc    Obtiene el detalle público de un libro por su ref (slug-shortId) o UUID
+ * @access  Público
+ */
+router.get('/:ref', libroController.detalle.bind(libroController));
+
 module.exports = router;
