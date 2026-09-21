@@ -138,7 +138,7 @@ export default function Catalogo({ onNavigateToScanner }) {
                   <span>Stock Total: {libro.stock_total || 0}</span>
                 </div>
                 <span className="font-semibold text-white">
-                  Q {Number(libro.precio).toFixed(2)}
+                  {Number(libro.precio) > 0 ? 'Q ' + Number(libro.precio).toFixed(2) : 'Precio por confirmar'}
                 </span>
               </div>
             </div>
