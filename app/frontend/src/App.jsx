@@ -5,6 +5,7 @@ import Toast from './components/Toast';
 import ProtectedRoute from './components/ProtectedRoute';
 import RegistrarLibro from './views/RegistrarLibro';
 import Catalogo from './views/Catalogo';
+import LibroDetalle from './views/LibroDetalle';
 import Inventario from './views/Inventario';
 import Login from './views/Login';
 
@@ -36,6 +37,7 @@ export default function App() {
             path="/catalogo"
             element={<Catalogo onNavigateToScanner={() => navigate('/registrar')} />}
           />
+          <Route path="/catalogo/:ref" element={<LibroDetalle />} />
           <Route path="/login" element={<Login />} />
           <Route
             path="/registrar"

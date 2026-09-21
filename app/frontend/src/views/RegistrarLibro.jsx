@@ -105,6 +105,7 @@ export default function RegistrarLibro({ onShowToast }) {
     categoriaId: '', resena: '', imagenUrl: '',
     precio: '', cantidad: 1, stockMinimo: 5, bodegaId: '',
   });
+  const [fieldErrors, setFieldErrors] = useState({});
   const [imgError, setImgError] = useState(false);
   const [regResultado, setRegResultado] = useState(null);
 
@@ -184,6 +185,7 @@ export default function RegistrarLibro({ onShowToast }) {
           imagenUrl: sug?.imagen_url || '',
           precio: '',
         }));
+        setFieldErrors({});
         setImgError(false);
         setPaso('noExiste');
       }
@@ -205,6 +207,7 @@ export default function RegistrarLibro({ onShowToast }) {
   // ── agregar manualmente (salta sin consultar) ───────────────────────────────
   const handleAgregarManual = () => {
     setErrorBox(null);
+    setFieldErrors({});
     setSugerencia(null);
     setRegForm(f => ({
       ...f,
@@ -227,6 +230,7 @@ export default function RegistrarLibro({ onShowToast }) {
     setIngresoResultado(null);
     setRegResultado(null);
     setErrorBox(null);
+    setFieldErrors({});
   };
 
   // ── enviar ingreso (libro existente) ────────────────────────────────────────
@@ -273,9 +277,29 @@ export default function RegistrarLibro({ onShowToast }) {
   const handleRegistrar = async (e) => {
     e.preventDefault();
     setErrorBox(null);
+    setFieldErrors({});
 
-    // Validaciones mínimas en cliente
-    if (!regForm.titulo.trim()) { setErrorBox({ message: 'El título es obligatorio.' }); return; }
+    const autorTrim = regForm.autor.trim();
+    const nuevosFieldErrors = {};
+
+    if (!autorTrim) {
+      nuevosFieldErrors.autor = 'El autor es obligatorio.';
+    } else if (autorTrim === AUTOR_PLACEHOLDER) {
+      nuevosFieldErrors.autor = `Ingresa el nombre real del autor (no se permite "${AUTOR_PLACEHOLDER}").`;
+    }
+
+    if (!regForm.categoriaId) {
+      nuevosFieldErrors.categoriaId = 'Debes seleccionar una categoría.';
+    }
+
+    if (!regForm.titulo.trim()) {
+      setErrorBox({ message: 'El título es obligatorio.' });
+      return;
+    }
+    if (Object.keys(nuevosFieldErrors).length > 0) {
+      setFieldErrors(nuevosFieldErrors);
+      return;
+    }
     if (!regForm.resena.trim()) { setErrorBox({ message: 'La reseña es obligatoria.' }); return; }
     if (!regForm.bodegaId) { setErrorBox({ message: 'Selecciona una bodega.' }); return; }
     if (!regForm.cantidad || Number(regForm.cantidad) < 1) {
@@ -287,9 +311,9 @@ export default function RegistrarLibro({ onShowToast }) {
       const body = {
         isbn: orNull(regForm.isbn),
         titulo: regForm.titulo.trim(),
-        autor: orNull(regForm.autor),
+        autor: autorTrim,
         editorial: orNull(regForm.editorial),
-        categoriaId: orNull(regForm.categoriaId),
+        categoriaId: regForm.categoriaId,
         resena: regForm.resena.trim(),
         imagenUrl: orNull(regForm.imagenUrl),
         cantidad: Number(regForm.cantidad),
@@ -308,7 +332,8 @@ export default function RegistrarLibro({ onShowToast }) {
       const json = await res.json();
 
       if (!res.ok) {
-        setErrorBox({ message: json.message || 'Error al registrar el libro.', details: json.details });
+        const details = Array.isArray(json.details) ? json.details : (json.details ? [json.details] : undefined);
+        setErrorBox({ message: json.message || 'Error al registrar el libro.', details });
         return;
       }
       const resultado = json.data;
@@ -708,6 +733,18 @@ export default function RegistrarLibro({ onShowToast }) {
 
   // ─── PASO: LIBRO NO EXISTE ────────────────────────────────────────────────────
   if (paso === 'noExiste') {
+    const ramasDerecho = categorias
+      .filter(c => c.nombre && c.nombre.toLowerCase().startsWith('derecho'))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+
+    const otrasCategorias = categorias
+      .filter(c => c.nombre && !c.nombre.toLowerCase().startsWith('derecho'))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+
+    const autorValido = regForm.autor.trim() !== '' && regForm.autor.trim() !== AUTOR_PLACEHOLDER;
+    const categoriaValida = Boolean(regForm.categoriaId);
+    const botonGuardarDeshabilitado = isLoading || !autorValido || !categoriaValida;
+
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {isLoading && <LoadingSpinner message="Registrando libro..." />}
@@ -816,14 +853,24 @@ export default function RegistrarLibro({ onShowToast }) {
                   {/* Autor / Editorial */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <FieldLabel>Autor</FieldLabel>
+                      <FieldLabel required>Autor</FieldLabel>
                       <Input
                         type="text"
                         value={regForm.autor}
-                        onChange={e => setRegForm(f => ({ ...f, autor: e.target.value }))}
+                        onChange={e => {
+                          setRegForm(f => ({ ...f, autor: e.target.value }));
+                          if (fieldErrors.autor) setFieldErrors(fe => ({ ...fe, autor: null }));
+                        }}
                         disabled={isLoading}
                         placeholder="Nombre del autor"
+                        className={fieldErrors.autor ? 'border-red-500/50' : ''}
                       />
+                      {fieldErrors.autor && (
+                        <p className="text-[11px] text-red-400 mt-1 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3 shrink-0" />
+                          {fieldErrors.autor}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <FieldLabel>Editorial</FieldLabel>
@@ -839,17 +886,42 @@ export default function RegistrarLibro({ onShowToast }) {
 
                   {/* Categoría */}
                   <div>
-                    <FieldLabel>Categoría</FieldLabel>
+                    <FieldLabel required>Categoría</FieldLabel>
                     <Select
                       value={regForm.categoriaId}
-                      onChange={e => setRegForm(f => ({ ...f, categoriaId: e.target.value }))}
+                      onChange={e => {
+                        setRegForm(f => ({ ...f, categoriaId: e.target.value }));
+                        if (fieldErrors.categoriaId) setFieldErrors(fe => ({ ...fe, categoriaId: null }));
+                      }}
                       disabled={isLoading || loadingMaestros}
+                      className={fieldErrors.categoriaId ? 'border-red-500/50' : ''}
                     >
-                      <option value="">— Sin categoría —</option>
-                      {categorias.map(c => (
-                        <option key={c.id} value={c.id}>{c.nombre}</option>
-                      ))}
+                      <option value="" disabled>Selecciona una categoría</option>
+                      {ramasDerecho.length > 0 && (
+                        <optgroup label="Ramas del Derecho" className="bg-slate-900 text-slate-300 font-semibold">
+                          {ramasDerecho.map(c => (
+                            <option key={c.id} value={c.id} className="bg-slate-950 text-white font-normal">
+                              {c.nombre}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {otrasCategorias.length > 0 && (
+                        <optgroup label="Otras categorías" className="bg-slate-900 text-slate-300 font-semibold">
+                          {otrasCategorias.map(c => (
+                            <option key={c.id} value={c.id} className="bg-slate-950 text-white font-normal">
+                              {c.nombre}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
                     </Select>
+                    {fieldErrors.categoriaId && (
+                      <p className="text-[11px] text-red-400 mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3 shrink-0" />
+                        {fieldErrors.categoriaId}
+                      </p>
+                    )}
                   </div>
 
                   {/* Reseña */}
@@ -957,8 +1029,8 @@ export default function RegistrarLibro({ onShowToast }) {
 
                   <button
                     type="submit"
-                    disabled={isLoading}
-                    className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white text-sm font-bold px-5 py-3 rounded-xl shadow-lg transition-all active:scale-95 cursor-pointer"
+                    disabled={botonGuardarDeshabilitado}
+                    className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white text-sm font-bold px-5 py-3 rounded-xl shadow-lg transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed"
                   >
                     <BookOpen className="w-4 h-4" />
                     {isLoading ? 'Guardando...' : 'Registrar Libro'}

@@ -245,9 +245,9 @@ class LibroService {
    * @param {{
    *   isbn?: string,
    *   titulo: string,
-   *   autor?: string,
+   *   autor: string,
    *   editorial?: string,
-   *   categoriaId?: string,
+   *   categoriaId: string,
    *   resena: string,
    *   imagenUrl?: string,
    *   precio?: number,

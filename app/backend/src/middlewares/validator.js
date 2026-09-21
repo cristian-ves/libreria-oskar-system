@@ -3,6 +3,12 @@ const { ValidationError } = require('../utils/errors');
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
+ * Valor canónico de marcador de posición para autor; debe coincidir con
+ * AUTOR_PLACEHOLDER definido en googleBooks.service.js.
+ */
+const AUTOR_PLACEHOLDER_VALIDATOR = 'Autor de Biblioteca Internacional';
+
+/**
  * Middleware para validar el payload de escaneo de libros.
  */
 const validateEscanearLibro = (req, res, next) => {
@@ -55,10 +61,10 @@ const validateConsultarLibro = (req, res, next) => {
 /**
  * Middleware para validar el payload de registro manual de un libro.
  * POST /api/libros/registrar
- * body: { isbn?, titulo, autor?, editorial?, categoriaId?, resena, imagenUrl?, precio?, cantidad, stockMinimo?, bodegaId }
+ * body: { isbn?, titulo, autor, editorial?, categoriaId, resena, imagenUrl?, precio?, cantidad, stockMinimo?, bodegaId }
  */
 const validateRegistrarLibro = (req, res, next) => {
-  const { isbn, titulo, categoriaId, resena, cantidad, stockMinimo, precio, bodegaId } = req.body || {};
+  const { isbn, titulo, autor, categoriaId, resena, cantidad, stockMinimo, precio, bodegaId } = req.body || {};
   const errors = [];
 
   // isbn es opcional: si viene, debe ser string no vacío
@@ -71,6 +77,13 @@ const validateRegistrarLibro = (req, res, next) => {
   // titulo obligatorio y no vacío
   if (!titulo || typeof titulo !== 'string' || titulo.trim() === '') {
     errors.push('El campo "titulo" es obligatorio y debe ser una cadena no vacía.');
+  }
+
+  // autor obligatorio, no vacío y distinto del nombre de placeholder canónico
+  if (!autor || typeof autor !== 'string' || autor.trim() === '') {
+    errors.push('El campo "autor" es obligatorio y debe ser una cadena no vacía.');
+  } else if (autor.trim() === AUTOR_PLACEHOLDER_VALIDATOR) {
+    errors.push(`El campo "autor" no puede ser el valor de marcador de posición ("${AUTOR_PLACEHOLDER_VALIDATOR}"). Ingresa el nombre real del autor.`);
   }
 
   // resena obligatoria y no vacía
@@ -109,11 +122,11 @@ const validateRegistrarLibro = (req, res, next) => {
     errors.push('El campo "bodegaId" debe ser un UUID válido.');
   }
 
-  // categoriaId opcional, pero si viene debe ser UUID válido
-  if (categoriaId !== undefined && categoriaId !== null && categoriaId !== '') {
-    if (!UUID_REGEX.test(categoriaId)) {
-      errors.push('El campo "categoriaId" debe ser un UUID válido.');
-    }
+  // categoriaId obligatorio y UUID válido
+  if (!categoriaId || (typeof categoriaId === 'string' && categoriaId.trim() === '')) {
+    errors.push('El campo "categoriaId" es obligatorio.');
+  } else if (!UUID_REGEX.test(categoriaId)) {
+    errors.push('El campo "categoriaId" debe ser un UUID válido.');
   }
 
   if (errors.length > 0) {

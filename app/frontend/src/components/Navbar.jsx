@@ -1,7 +1,7 @@
 import React from 'react';
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { BookOpen, Barcode, Warehouse, ShieldCheck, LogIn, LogOut } from 'lucide-react';
+import { BookOpen, Barcode, Warehouse, ShieldCheck, LogOut } from 'lucide-react';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -59,7 +59,7 @@ export default function Navbar() {
 
           {/* Usuario / Sesión activa */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {user ? (
+            {user && (
               <div className="flex items-center gap-2">
                 {/* Avatar con inicial en móvil */}
                 <div
@@ -88,14 +88,6 @@ export default function Navbar() {
                   <span className="hidden sm:inline">Salir</span>
                 </button>
               </div>
-            ) : (
-              <Link
-                to="/login"
-                className="flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 text-xs font-semibold text-slate-950 bg-emerald-500 hover:bg-emerald-400 rounded-lg transition-colors shadow-sm"
-              >
-                <LogIn className="w-3.5 h-3.5" />
-                <span>Iniciar sesión</span>
-              </Link>
             )}
           </div>
         </div>
