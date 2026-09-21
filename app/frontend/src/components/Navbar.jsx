@@ -1,18 +1,22 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { BookOpen, Barcode, Warehouse, ShieldCheck, LogOut } from 'lucide-react';
+import { BookOpen, Barcode, Warehouse, ShieldCheck, LogOut, Info } from 'lucide-react';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
 
   const navLinks = user
     ? [
-        { path: '/registrar', label: 'Registrar Libro', icon: Barcode, badge: 'Escáner' },
-        { path: '/catalogo', label: 'Catálogo de Libros', icon: BookOpen },
+        { path: '/registrar', label: 'Registrar', icon: Barcode, badge: 'Escáner' },
+        { path: '/catalogo', label: 'Catálogo', icon: BookOpen },
         { path: '/inventario', label: 'Inventario', icon: Warehouse },
+        { path: '/nosotros', label: 'Nosotros', icon: Info },
       ]
-    : [{ path: '/catalogo', label: 'Catálogo de Libros', icon: BookOpen }];
+    : [
+        { path: '/catalogo', label: 'Catálogo', icon: BookOpen },
+        { path: '/nosotros', label: 'Nosotros', icon: Info },
+      ];
 
   return (
     <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-40">

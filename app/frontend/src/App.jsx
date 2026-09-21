@@ -6,6 +6,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import RegistrarLibro from './views/RegistrarLibro';
 import Catalogo from './views/Catalogo';
 import LibroDetalle from './views/LibroDetalle';
+import Nosotros from './views/Nosotros';
 import Inventario from './views/Inventario';
 import Login from './views/Login';
 
@@ -38,6 +39,7 @@ export default function App() {
             element={<Catalogo onNavigateToScanner={() => navigate('/registrar')} />}
           />
           <Route path="/catalogo/:ref" element={<LibroDetalle />} />
+          <Route path="/nosotros" element={<Nosotros />} />
           <Route path="/login" element={<Login />} />
           <Route
             path="/registrar"
@@ -58,13 +60,6 @@ export default function App() {
           <Route path="*" element={<Navigate to="/catalogo" replace />} />
         </Routes>
       </main>
-
-      {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950 py-6 text-center text-xs text-slate-400">
-        <div className="max-w-7xl mx-auto px-4">
-          <span>Librería Oskar &copy; 2026 · Sistema de Inventario y Catálogo</span>
-        </div>
-      </footer>
     </div>
   );
 }
