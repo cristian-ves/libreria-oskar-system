@@ -22,7 +22,7 @@ router.get('/', libroController.listar.bind(libroController));
  *          e ingresa 1 unidad al inventario de la bodega con transacción ACID.
  * @access  Público / Empleado / Administrador
  */
-router.post('/escanear', validateEscanearLibro, libroController.escanear.bind(libroController));
+router.post('/escanear', authenticate, validateEscanearLibro, libroController.escanear.bind(libroController));
 
 /**
  * @route   POST /api/libros/consultar
