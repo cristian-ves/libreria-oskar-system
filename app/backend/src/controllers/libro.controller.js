@@ -67,7 +67,7 @@ class LibroController {
 
   /**
    * Endpoint: POST /api/libros/registrar
-   * body: { isbn?, titulo, autor?, editorial?, categoriaId?, resena, imagenUrl?, precio?, cantidad, stockMinimo?, bodegaId }
+   * body: { isbn?, titulo, autor, editorial?, categoriaId, resena, imagenUrl?, precio?, cantidad, stockMinimo?, bodegaId }
    * usuarioId y rol tomados siempre de req.user (inyectado por authenticate).
    */
   async registrar(req, res, next) {
