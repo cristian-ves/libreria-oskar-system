@@ -31,7 +31,7 @@ async function seed() {
         INSERT INTO sucursales (nombre, direccion, telefono)
         VALUES ($1, $2, $3)
         RETURNING id;
-      `, ['Sucursal Central', 'Zona 1, Ciudad de Guatemala', '+502 2222-3333']);
+      `, ['Sucursal Central', 'Centro Comercial Paulinos Local L6, Quetzaltenango', '+502 5614 7611']);
       sucursalId = nuevaSucursal.rows[0].id;
     }
 
