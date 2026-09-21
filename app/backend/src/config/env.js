@@ -34,7 +34,8 @@ const env = {
     apiKey: process.env.GOOGLE_BOOKS_API_KEY || null,
     baseUrl: 'https://www.googleapis.com/books/v1/volumes',
     timeoutMs: 5000,
-  }
+  },
+  diasStockObsoleto: parseInt(process.env.DIAS_STOCK_OBSOLETO || '90', 10),
 };
 
 module.exports = env;

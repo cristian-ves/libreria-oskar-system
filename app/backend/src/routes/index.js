@@ -84,5 +84,7 @@ router.get('/categorias', async (req, res, next) => {
 // Rutas de módulos
 router.use('/auth', authRoutes);
 router.use('/libros', libroRoutes);
+router.use('/inventario', require('./inventario.routes'));
+router.use('/movimientos', require('./movimiento.routes'));
 
 module.exports = router;
