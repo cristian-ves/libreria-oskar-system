@@ -171,75 +171,74 @@ export default function Catalogo({ onNavigateToScanner }) {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Encabezado */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <div>
-          <div className="flex items-center gap-2 text-emerald-400 text-xs font-mono uppercase tracking-wider mb-1">
-            <BookOpen className="w-4 h-4" />
-            <span>Catálogo General</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-            Libros Disponibles
-          </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            Explora títulos, autores y existencias consolidadas en todas las bodegas.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {/* Botón "Filtros" — solo visible en móvil */}
-          <button
-            onClick={() => setSidebarOpen((v) => !v)}
-            className="lg:hidden inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white text-xs font-semibold px-3 min-h-[40px] rounded-xl transition-all"
-          >
-            <SlidersHorizontal className="w-4 h-4" />
-            Filtros
-            {hayFiltros && (
-              <span className="w-2 h-2 rounded-full bg-emerald-400 ml-0.5" />
-            )}
-          </button>
-
-          {/* Botón "Escanear" — solo cuando hay sesión y AuthContext terminó de cargar */}
-          {!authLoading && user && (
-            <button
-              onClick={onNavigateToScanner}
-              className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 min-h-[40px] rounded-xl shadow-lg shadow-emerald-950/40 transition-all cursor-pointer"
-            >
-              <span>Escanear Nuevo Ejemplar</span>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Panel móvil de filtros */}
-      {sidebarOpen && (
-        <div className="lg:hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 mb-6 max-h-[70vh] overflow-y-auto">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-semibold text-white">Filtros</span>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="text-slate-400 hover:text-white transition-colors p-1"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <PanelFiltros />
-        </div>
-      )}
-
-      {/* Layout principal — grid de dos columnas en lg+ */}
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:pt-4 lg:pb-8">
+      {/* Layout principal — grid de dos columnas en lg+; el encabezado vive en la columna derecha */}
       <div className="grid grid-cols-1 lg:grid-cols-[16rem_minmax(0,1fr)] gap-6 items-start">
 
         {/* Sidebar — solo visible en lg+ */}
-        <aside className="hidden lg:flex flex-col sticky top-[4rem] h-[calc(100vh-4rem)]">
+        <aside className="hidden lg:flex flex-col lg:sticky lg:top-20 lg:h-[calc(100vh-6rem)]">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col flex-1 overflow-hidden">
             <PanelFiltros />
           </div>
         </aside>
 
-        {/* Columna de contenido — ancho estable */}
+        {/* Columna de contenido — encabezado primero, luego controles móvil y resultados */}
         <div className="w-full min-w-0">
+          {/* Encabezado */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <div className="flex items-center gap-2 text-emerald-400 text-xs font-mono uppercase tracking-wider mb-1">
+                <BookOpen className="w-4 h-4" />
+                <span>Catálogo General</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+                Libros Disponibles
+              </h1>
+              <p className="text-sm text-slate-400 mt-1">
+                Explora títulos, autores y existencias consolidadas en todas las bodegas.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 flex-shrink-0">
+              {/* Botón "Filtros" — solo visible en móvil */}
+              <button
+                onClick={() => setSidebarOpen((v) => !v)}
+                className="lg:hidden inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white text-xs font-semibold px-3 min-h-[40px] rounded-xl transition-all"
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                Filtros
+                {hayFiltros && (
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 ml-0.5" />
+                )}
+              </button>
+
+              {/* Botón "Escanear" — solo cuando hay sesión y AuthContext terminó de cargar */}
+              {!authLoading && user && (
+                <button
+                  onClick={onNavigateToScanner}
+                  className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 min-h-[40px] rounded-xl shadow-lg shadow-emerald-950/40 transition-all cursor-pointer"
+                >
+                  <span>Escanear Nuevo Ejemplar</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Panel móvil de filtros */}
+          {sidebarOpen && (
+            <div className="lg:hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 mb-6 max-h-[70vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs font-semibold text-white">Filtros</span>
+                <button
+                  onClick={() => setSidebarOpen(false)}
+                  className="text-slate-400 hover:text-white transition-colors p-1"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <PanelFiltros />
+            </div>
+          )}
           {/* Contador de resultados */}
           {!loading && (
             <p className="text-xs text-slate-400 mb-4">
