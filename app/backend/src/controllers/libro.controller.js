@@ -28,13 +28,14 @@ class LibroController {
 
   /**
    * Endpoint: GET /api/libros
-   * Lista libros y busca por término opcional ?q=...
+   * Lista libros y busca por término opcional ?q=... y categoría opcional ?categoriaId=...
    */
   async listar(req, res, next) {
     try {
-      const { q } = req.query;
+      const { q, categoriaId, categoria_id } = req.query;
+      const catId = categoriaId || categoria_id || null;
       const libroRepository = require('../repositories/libro.repository');
-      const libros = await libroRepository.searchAndList(q);
+      const libros = await libroRepository.searchAndList(q, catId);
       return res.status(200).json({
         status: 'success',
         results: libros.length,

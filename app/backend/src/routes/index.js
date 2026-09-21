@@ -1,6 +1,7 @@
 const { Router } = require('express');
 const libroRoutes = require('./libro.routes');
 const db = require('../config/db');
+const categoriaRepository = require('../repositories/categoria.repository');
 
 const router = Router();
 
@@ -60,6 +61,19 @@ router.get('/usuarios', async (req, res, next) => {
     `;
     const result = await db.query(text);
     res.status(200).json({ status: 'success', data: result.rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Listado de categorías temáticas para catálogo y filtros
+router.get('/categorias', async (req, res, next) => {
+  try {
+    const categorias = await categoriaRepository.findAll();
+    res.status(200).json({
+      status: 'success',
+      data: categorias,
+    });
   } catch (err) {
     next(err);
   }
