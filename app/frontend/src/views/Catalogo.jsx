@@ -179,41 +179,53 @@ function DrawerFiltros({
 
       {/* Cajón lateral */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-[85%] max-w-sm bg-slate-900 border-r border-slate-800 overflow-y-auto transition-all duration-300 transform ${
+        className={`fixed inset-y-0 left-0 z-50 w-[85%] max-w-sm h-screen h-[100dvh] bg-slate-900 border-r border-slate-800 flex flex-col transition-all duration-300 transform ${
           isOpen ? 'translate-x-0 visible opacity-100' : '-translate-x-full invisible opacity-0'
         }`}
       >
-        <form onSubmit={handleSubmit} className="flex flex-col min-h-full p-4">
-          {/* Encabezado */}
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-4">
-            <div className="flex items-center gap-2">
-              <SlidersHorizontal className="w-4 h-4 text-emerald-400" />
-              <h2 className="text-sm font-bold text-white uppercase tracking-wider">Filtros</h2>
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          {/* Zona superior fija (shrink-0): Encabezado + Fila de búsqueda */}
+          <div className="p-4 pb-3 border-b border-slate-800/80 shrink-0 space-y-3">
+            {/* Encabezado */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal className="w-4 h-4 text-emerald-400" />
+                <h2 className="text-sm font-bold text-white uppercase tracking-wider">Filtros</h2>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+                aria-label="Cerrar filtros"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
-              aria-label="Cerrar filtros"
-            >
-              <X className="w-5 h-5" />
-            </button>
+
+            {/* Fila única: Buscador + Botón Buscar */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1 min-w-0">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Título, autor o ISBN..."
+                  value={draftSearch}
+                  onChange={(e) => setDraftSearch(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 text-white placeholder-slate-400 text-xs rounded-xl pl-9 pr-3 py-2.5 min-h-[44px] outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                />
+              </div>
+              <button
+                type="submit"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 rounded-xl min-h-[44px] flex items-center justify-center gap-1.5 shrink-0 transition-all shadow-lg shadow-emerald-950/40 cursor-pointer"
+              >
+                <Search className="w-4 h-4" />
+                <span>Buscar</span>
+              </button>
+            </div>
           </div>
 
-          {/* Buscador con estado borrador */}
-          <div className="relative mb-5">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Título, autor o ISBN..."
-              value={draftSearch}
-              onChange={(e) => setDraftSearch(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-700 text-white placeholder-slate-400 text-xs rounded-xl pl-9 pr-3 py-2.5 min-h-[40px] outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
-            />
-          </div>
-
-          {/* Lista de categorías */}
-          <div className="flex-1 mb-5">
+          {/* Zona central: Lista de categorías con scroll exclusivo */}
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4">
             <p className="text-[10px] font-mono uppercase tracking-widest text-slate-500 mb-2">Categorías</p>
             <ul className="flex flex-col gap-0.5">
               <li>
@@ -267,30 +279,21 @@ function DrawerFiltros({
             </ul>
           </div>
 
-          {/* Botones de acción */}
-          <div className="pt-3 border-t border-slate-800/80 space-y-2 mt-auto">
+          {/* Zona inferior fija (shrink-0): Botón Limpiar filtros */}
+          <div className="p-4 border-t border-slate-800/80 shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             <button
-              type="submit"
-              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-3 px-4 rounded-xl min-h-[44px] flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-950/40 cursor-pointer"
+              type="button"
+              onClick={() => {
+                setDraftSearch('');
+                onLimpiarFiltros();
+                onClose();
+              }}
+              disabled={!hayFiltrosEnCajon}
+              className="w-full text-center text-xs text-slate-400 hover:text-emerald-400 disabled:opacity-40 disabled:hover:text-slate-400 py-2.5 px-4 rounded-xl border border-slate-800 hover:border-slate-700 bg-slate-950/60 transition-colors min-h-[40px] flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
             >
-              <Search className="w-4 h-4" />
-              <span>Buscar</span>
+              <X className="w-3.5 h-3.5" />
+              <span>Limpiar filtros</span>
             </button>
-
-            {hayFiltrosEnCajon && (
-              <button
-                type="button"
-                onClick={() => {
-                  setDraftSearch('');
-                  onLimpiarFiltros();
-                  onClose();
-                }}
-                className="w-full text-center text-xs text-slate-400 hover:text-emerald-400 py-2.5 transition-colors min-h-[40px] flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <X className="w-3.5 h-3.5" />
-                <span>Limpiar filtros</span>
-              </button>
-            )}
           </div>
         </form>
       </aside>
