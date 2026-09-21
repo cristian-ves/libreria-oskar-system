@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes pulse-scan {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateY(180px);
+    opacity: 0.3;
+  }
+}
+
+.animate-scan-line {
+  animation: pulse-scan 2s ease-in-out infinite;
+}
+
+#reader {
+  width: 100%;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+#reader video {
+  width: 100% !important;
+  border-radius: 0.75rem !important;
+  object-fit: cover !important;
+}
+
+#reader __scan_region {
+  border: 2px dashed #22c55e !important;
+}

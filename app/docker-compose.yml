@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  # --------------------------------------------------------------------------
+  # Base de Datos Relacional PostgreSQL con Esquema Precargado
+  # --------------------------------------------------------------------------
+  db:
+    image: postgres:15-alpine
+    container_name: libreria-db-local
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: libreria_oskar
+    ports:
+      - "5434:5432"
+    volumes:
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d libreria_oskar"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # --------------------------------------------------------------------------
+  # API Backend RESTful en Node.js / Express
+  # --------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: libreria-backend-local
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: libreria_oskar
+      GOOGLE_BOOKS_API_KEY: ""
+    ports:
+      - "3000:8080"
+
+volumes:
+  pgdata:

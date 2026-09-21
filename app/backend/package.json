@@ -1,0 +1,33 @@
+{
+  "name": "libreria-oskar-backend",
+  "version": "1.0.0",
+  "description": "Backend API RESTful para el Sistema de Inventario y Catálogo de Libros - Librería Oskar",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "seed": "node src/database/seed.js",
+    "test": "node --test tests/**/*.test.js"
+  },
+  "keywords": [
+    "express",
+    "postgresql",
+    "clean-architecture",
+    "google-books-api",
+    "inventory",
+    "acid-transactions"
+  ],
+  "author": "Equipo de Ingeniería - Fase 2",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "helmet": "^8.0.0",
+    "morgan": "^1.10.0",
+    "pg": "^8.13.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}
