@@ -137,6 +137,65 @@ class LibroRepository {
   }
 
   /**
+   * Inserta un libro nuevo sin ON CONFLICT (para registros manuales donde isbn puede ser null).
+   * @param {import('pg').PoolClient | import('pg').Pool} executor
+   * @param {{
+   *   autor_id?: string,
+   *   editorial_id?: string,
+   *   categoria_id?: string,
+   *   titulo: string,
+   *   isbn?: string,
+   *   resena: string,
+   *   imagen_url?: string,
+   *   precio?: number,
+   *   activo?: boolean
+   * }} data
+   */
+  async create(executor, data) {
+    const {
+      autor_id = null,
+      editorial_id = null,
+      categoria_id = null,
+      titulo,
+      isbn = null,
+      resena,
+      imagen_url = null,
+      precio = 0.00,
+      activo = true,
+    } = data;
+
+    const text = `
+      INSERT INTO libros (
+        autor_id,
+        editorial_id,
+        categoria_id,
+        titulo,
+        isbn,
+        resena,
+        imagen_url,
+        precio,
+        activo
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING *;
+    `;
+
+    const values = [
+      autor_id,
+      editorial_id,
+      categoria_id,
+      titulo.trim(),
+      isbn ? isbn.trim() : null,
+      resena.trim(),
+      imagen_url || null,
+      parseFloat(precio) || 0.00,
+      activo,
+    ];
+
+    const res = await executor.query(text, values);
+    return res.rows[0];
+  }
+
+  /**
    * Lista y busca libros en el catálogo con filtro opcional por término y/o categoría.
    * @param {string} [queryStr]
    * @param {string} [categoriaId]
