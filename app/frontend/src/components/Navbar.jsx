@@ -10,7 +10,7 @@ export default function Navbar() {
     ? [
         { path: '/registrar', label: 'Registrar Libro', icon: Barcode, badge: 'Escáner' },
         { path: '/catalogo', label: 'Catálogo de Libros', icon: BookOpen },
-        { path: '/inventario', label: 'Bodegas y Stock', icon: Warehouse },
+        { path: '/inventario', label: 'Inventario', icon: Warehouse },
       ]
     : [{ path: '/catalogo', label: 'Catálogo de Libros', icon: BookOpen }];
 
