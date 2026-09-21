@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Search, BookOpen, User, Tag, Layers, SlidersHorizontal, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import Footer from '../components/Footer';
 
 // ── Componentes auxiliares fuera de Catalogo a nivel de módulo ──────────────
 function BtnCategoria({ id, label, activo, onSelect }) {
@@ -656,6 +657,11 @@ export default function Catalogo({ onNavigateToScanner }) {
               ))}
             </div>
           )}
+
+          {/* Footer al final de la vista de catálogo */}
+          <div className="mt-12">
+            <Footer />
+          </div>
         </div>
       </div>
     </div>
