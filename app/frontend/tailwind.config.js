@@ -6,14 +6,17 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['"Fira Sans"', 'sans-serif'],
+      },
       colors: {
-        brand: {
-          50: '#f0fdf4',
-          100: '#dcfce7',
-          500: '#22c55e',
-          600: '#16a34a',
-          700: '#15803d',
-          900: '#14532d',
+        // Paleta Corporativa Librería Oskar
+        oskar: {
+          gold:    '#e8c85e', // dorado para títulos y resaltados
+          bronze:  '#b07c19', // dorado leve para hovers de botones y filtros
+          amber:   '#e19922', // dorado cálido para acentos/CTAs activos
+          dark:    '#252525', // negro/gris oscuro para tipografías principales
+          light:   '#f3f3f3', // fondo general claro
         },
       },
     },

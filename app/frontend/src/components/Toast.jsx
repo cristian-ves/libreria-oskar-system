@@ -18,51 +18,51 @@ export default function Toast({ toast, onClose }) {
   return (
     <div className="fixed top-5 right-5 z-50 max-w-md w-full animate-bounce-in transition-all duration-300">
       <div
-        className={`p-4 rounded-xl shadow-2xl border backdrop-blur-md flex items-start gap-3.5 ${
+        className={`p-4 rounded-2xl shadow-xl border flex items-start gap-3.5 bg-white ${
           isSuccess
-            ? 'bg-emerald-950/90 border-emerald-500/50 text-white'
+            ? 'border-amber-400 text-[#252525]'
             : isError
-            ? 'bg-rose-950/90 border-rose-500/50 text-white'
-            : 'bg-slate-900/90 border-slate-700 text-white'
+            ? 'border-red-400 text-[#252525]'
+            : 'border-gray-200 text-[#252525]'
         }`}
       >
         <div className="flex-shrink-0 mt-0.5">
-          {isSuccess && <CheckCircle2 className="w-6 h-6 text-emerald-400" />}
-          {isError && <AlertCircle className="w-6 h-6 text-rose-400" />}
-          {!isSuccess && !isError && <Info className="w-6 h-6 text-blue-400" />}
+          {isSuccess && <CheckCircle2 className="w-6 h-6 text-[#e19922]" />}
+          {isError && <AlertCircle className="w-6 h-6 text-red-600" />}
+          {!isSuccess && !isError && <Info className="w-6 h-6 text-[#b07c19]" />}
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-bold text-white tracking-wide">
+            <h4 className="text-sm font-bold text-[#252525] tracking-wide">
               {toast.title || (isSuccess ? '¡Operación Exitosa!' : 'Atención')}
             </h4>
             <button
               onClick={onClose}
-              className="text-slate-400 hover:text-white transition-colors p-1 -mr-1"
+              className="text-gray-400 hover:text-[#252525] transition-colors p-1 -mr-1 rounded-lg hover:bg-gray-100"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
           {toast.bookTitle && (
-            <div className="mt-1.5 p-2 bg-black/30 rounded-lg border border-white/10 flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-emerald-300 flex-shrink-0" />
-              <p className="text-sm font-semibold text-emerald-200 truncate">
+            <div className="mt-1.5 p-2 bg-[#f3f3f3] rounded-xl border border-gray-200 flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-[#b07c19] flex-shrink-0" />
+              <p className="text-sm font-bold text-[#252525] truncate">
                 {toast.bookTitle}
               </p>
             </div>
           )}
 
           {toast.message && (
-            <p className="mt-1 text-xs text-slate-300 leading-relaxed">
+            <p className="mt-1 text-xs text-gray-600 leading-relaxed font-medium">
               {toast.message}
             </p>
           )}
 
           {toast.stockInfo && (
-            <div className="mt-2 flex items-center gap-2 text-xs font-mono text-emerald-300">
-              <Layers className="w-3.5 h-3.5" />
+            <div className="mt-2 flex items-center gap-2 text-xs font-mono font-bold text-[#b07c19]">
+              <Layers className="w-3.5 h-3.5 text-[#e19922]" />
               <span>Stock en bodega: {toast.stockInfo.actual} (+1 ingresado)</span>
             </div>
           )}

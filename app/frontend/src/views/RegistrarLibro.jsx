@@ -2,17 +2,15 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Camera, Warehouse, UserCheck, Barcode, CheckCircle,
   Clock, ArrowRight, ShieldCheck, AlertCircle, PlusCircle,
-  PackagePlus, RefreshCw, BookOpen, Eye, EyeOff,
+  PackagePlus, RefreshCw, BookOpen,
 } from 'lucide-react';
 import BarcodeScanner from '../components/BarcodeScanner';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../api/client';
 
-// ─── constantes ──────────────────────────────────────────────────────────────
 const AUTOR_PLACEHOLDER = 'Autor de Biblioteca Internacional';
 
-// ─── helpers ─────────────────────────────────────────────────────────────────
 function orNull(val) {
   if (val === undefined || val === null) return null;
   const s = String(val).trim();
@@ -24,16 +22,15 @@ function toNum(val, fallback = 0) {
   return isNaN(n) ? fallback : n;
 }
 
-// ─── sub-componentes pequeños ─────────────────────────────────────────────────
 function ErrorBox({ error }) {
   if (!error) return null;
   return (
-    <div className="flex items-start gap-2.5 p-3.5 bg-red-500/10 border border-red-500/30 rounded-xl text-xs text-red-400">
-      <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+    <div className="flex items-start gap-2.5 p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700">
+      <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-red-600" />
       <div className="min-w-0">
-        <p className="font-semibold">{error.message}</p>
+        <p className="font-bold">{error.message}</p>
         {Array.isArray(error.details) && error.details.length > 0 && (
-          <ul className="mt-1 list-disc list-inside space-y-0.5 text-red-300">
+          <ul className="mt-1 list-disc list-inside space-y-0.5 text-red-600">
             {error.details.map((d, i) => <li key={i}>{d}</li>)}
           </ul>
         )}
@@ -44,8 +41,8 @@ function ErrorBox({ error }) {
 
 function FieldLabel({ children, required }) {
   return (
-    <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-      {children}{required && <span className="text-emerald-400 ml-0.5">*</span>}
+    <label className="block text-xs font-bold text-[#252525] mb-1.5">
+      {children}{required && <span className="text-[#e19922] ml-0.5">*</span>}
     </label>
   );
 }
@@ -53,7 +50,7 @@ function FieldLabel({ children, required }) {
 function Input({ className = '', ...props }) {
   return (
     <input
-      className={`w-full bg-slate-950 border border-slate-700 text-white text-sm rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 transition-all placeholder:text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+      className={`w-full bg-[#f3f3f3] border border-gray-200 text-[#252525] text-sm rounded-xl px-3.5 py-2.5 outline-none focus:border-[#b07c19] focus:ring-1 focus:ring-[#b07c19] transition-all placeholder:text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
       {...props}
     />
   );
@@ -62,7 +59,7 @@ function Input({ className = '', ...props }) {
 function Select({ children, className = '', ...props }) {
   return (
     <select
-      className={`w-full bg-slate-950 border border-slate-700 text-white text-sm rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+      className={`w-full bg-[#f3f3f3] border border-gray-200 text-[#252525] text-sm rounded-xl px-3.5 py-2.5 outline-none focus:border-[#b07c19] focus:ring-1 focus:ring-[#b07c19] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed font-medium ${className}`}
       {...props}
     >
       {children}
@@ -70,36 +67,28 @@ function Select({ children, className = '', ...props }) {
   );
 }
 
-// ─── componente principal ─────────────────────────────────────────────────────
 export default function RegistrarLibro({ onShowToast }) {
   const { user } = useAuth();
   const esAdmin = user?.rol === 'Administrador';
 
-  // ── datos maestros ──────────────────────────────────────────────────────────
   const [bodegas, setBodegas] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [loadingMaestros, setLoadingMaestros] = useState(true);
 
-  // ── escáner ─────────────────────────────────────────────────────────────────
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isbnInput, setIsbnInput] = useState('');
 
-  // ── estados del flujo ───────────────────────────────────────────────────────
-  // 'consulta' | 'existe' | 'noExiste'
   const [paso, setPaso] = useState('consulta');
   const [isLoading, setIsLoading] = useState(false);
   const [errorBox, setErrorBox] = useState(null);
 
-  // ── resultado de /consultar ─────────────────────────────────────────────────
-  const [libroExistente, setLibroExistente] = useState(null);   // data.libro
-  const [inventarios, setInventarios] = useState([]);           // data.inventarios
-  const [sugerencia, setSugerencia] = useState(null);           // data.sugerencia
+  const [libroExistente, setLibroExistente] = useState(null);
+  const [inventarios, setInventarios] = useState([]);
+  const [sugerencia, setSugerencia] = useState(null);
 
-  // ── formulario de ingreso (libro existente) ─────────────────────────────────
   const [ingresoForm, setIngresoForm] = useState({ bodegaId: '', cantidad: 1 });
   const [ingresoResultado, setIngresoResultado] = useState(null);
 
-  // ── formulario de registro (libro nuevo) ───────────────────────────────────
   const [regForm, setRegForm] = useState({
     isbn: '', titulo: '', autor: '', editorial: '',
     categoriaId: '', resena: '', imagenUrl: '',
@@ -109,10 +98,8 @@ export default function RegistrarLibro({ onShowToast }) {
   const [imgError, setImgError] = useState(false);
   const [regResultado, setRegResultado] = useState(null);
 
-  // ── historial sesión ────────────────────────────────────────────────────────
   const [historial, setHistorial] = useState([]);
 
-  // ── cargar datos maestros al montar ────────────────────────────────────────
   useEffect(() => {
     async function cargar() {
       setLoadingMaestros(true);
@@ -142,7 +129,6 @@ export default function RegistrarLibro({ onShowToast }) {
     cargar();
   }, []);
 
-  // ── acción consultar ────────────────────────────────────────────────────────
   const handleConsultar = useCallback(async (isbnValue) => {
     const isbn = (isbnValue || isbnInput).trim();
     if (!isbn) {
@@ -174,7 +160,6 @@ export default function RegistrarLibro({ onShowToast }) {
         setPaso('existe');
       } else {
         setSugerencia(sug);
-        // Precargar formulario con sugerencia
         setRegForm(f => ({
           ...f,
           isbn: sug?.isbn || isbn,
@@ -196,7 +181,6 @@ export default function RegistrarLibro({ onShowToast }) {
     }
   }, [isbnInput]);
 
-  // ── cámara detecta ISBN ─────────────────────────────────────────────────────
   const handleScanSuccess = useCallback(async (scannedIsbn) => {
     if (!scannedIsbn || isLoading) return;
     setIsbnInput(scannedIsbn);
@@ -204,7 +188,6 @@ export default function RegistrarLibro({ onShowToast }) {
     await handleConsultar(scannedIsbn);
   }, [isLoading, handleConsultar]);
 
-  // ── agregar manualmente (salta sin consultar) ───────────────────────────────
   const handleAgregarManual = () => {
     setErrorBox(null);
     setFieldErrors({});
@@ -220,7 +203,6 @@ export default function RegistrarLibro({ onShowToast }) {
     setPaso('noExiste');
   };
 
-  // ── reiniciar flujo ─────────────────────────────────────────────────────────
   const reiniciar = () => {
     setPaso('consulta');
     setIsbnInput('');
@@ -233,7 +215,6 @@ export default function RegistrarLibro({ onShowToast }) {
     setFieldErrors({});
   };
 
-  // ── enviar ingreso (libro existente) ────────────────────────────────────────
   const handleIngreso = async (e) => {
     e.preventDefault();
     setErrorBox(null);
@@ -273,7 +254,6 @@ export default function RegistrarLibro({ onShowToast }) {
     }
   };
 
-  // ── enviar registro (libro nuevo) ───────────────────────────────────────────
   const handleRegistrar = async (e) => {
     e.preventDefault();
     setErrorBox(null);
@@ -320,7 +300,6 @@ export default function RegistrarLibro({ onShowToast }) {
         stockMinimo: toNum(regForm.stockMinimo, 5),
         bodegaId: regForm.bodegaId,
       };
-      // Precio: solo si es Administrador
       if (esAdmin) {
         body.precio = toNum(regForm.precio, 0);
       }
@@ -354,52 +333,48 @@ export default function RegistrarLibro({ onShowToast }) {
     }
   };
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Render helpers
-  // ─────────────────────────────────────────────────────────────────────────────
-
   const bodegaNombrePorId = (id) => {
     const b = bodegas.find(x => x.id === id);
     return b ? `${b.nombre}${b.sucursal_nombre ? ` (${b.sucursal_nombre})` : ''}` : id;
   };
 
-  // ─── panel izquierdo: siempre visible ────────────────────────────────────────
+  // ─── panel izquierdo ──────────────────────────────────────────────────────────
   const PanelIzquierdo = () => (
     <div className="lg:col-span-4 space-y-5">
       {/* Operador */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between gap-3">
+      <div className="bg-white border border-gray-200 rounded-2xl p-4 flex items-center justify-between gap-3 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
-            <UserCheck className="w-4 h-4" />
+          <div className="w-8 h-8 rounded-xl bg-[#e8c85e] flex items-center justify-center shrink-0">
+            <UserCheck className="w-4 h-4 text-[#252525]" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-white">{user?.nombre_completo}</p>
-            <p className="text-[10px] text-slate-400 font-mono">Operador activo</p>
+            <p className="text-xs font-bold text-[#252525]">{user?.nombre_completo}</p>
+            <p className="text-[10px] text-gray-500 font-mono">Operador activo</p>
           </div>
         </div>
-        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-emerald-400 font-mono border border-emerald-500/30 shrink-0">
+        <span className="text-[10px] px-2.5 py-0.5 rounded-lg bg-[#f3f3f3] text-[#252525] font-bold font-mono border border-gray-200 shrink-0">
           {user?.rol}
         </span>
       </div>
 
       {/* Escáner */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
-        <h2 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-          <Camera className="w-4 h-4 text-emerald-400" />
+      <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+        <h2 className="text-sm font-bold text-[#252525] uppercase tracking-wider mb-4 flex items-center gap-2">
+          <Camera className="w-4 h-4 text-[#e19922]" />
           Escanear ISBN
         </h2>
         {!isCameraOpen ? (
-          <div className="text-center py-5 px-3 bg-slate-950/60 rounded-xl border-2 border-dashed border-slate-800 hover:border-emerald-500/40 transition-colors">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto mb-3">
-              <Camera className="w-6 h-6" />
+          <div className="text-center py-5 px-3 bg-[#f3f3f3] rounded-xl border-2 border-dashed border-gray-300 transition-colors">
+            <div className="w-12 h-12 rounded-2xl bg-[#e8c85e] flex items-center justify-center mx-auto mb-3 shadow-xs">
+              <Camera className="w-6 h-6 text-[#252525]" />
             </div>
-            <p className="text-xs text-slate-400 mb-3 max-w-xs mx-auto">
+            <p className="text-xs text-gray-600 mb-3 max-w-xs mx-auto">
               Activa la cámara para capturar el ISBN automáticamente.
             </p>
             <button
               type="button"
               onClick={() => setIsCameraOpen(true)}
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-emerald-950/50 transition-all active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-2 bg-[#e19922] hover:bg-[#b07c19] text-[#252525] hover:text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs transition-all hover:-translate-y-0.5 cursor-pointer"
             >
               <Camera className="w-4 h-4" />
               Activar Cámara
@@ -416,27 +391,27 @@ export default function RegistrarLibro({ onShowToast }) {
 
       {/* Historial sesión */}
       {historial.length > 0 && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl">
-          <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2 mb-3">
-            <Clock className="w-4 h-4 text-emerald-400" />
+        <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+          <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2 mb-3">
+            <Clock className="w-4 h-4 text-[#b07c19]" />
             Historial ({historial.length})
           </h3>
           <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
             {historial.map((item, idx) => (
               <div
                 key={`${item.libro?.id || idx}-${idx}`}
-                className="p-2.5 bg-slate-950/70 rounded-xl border border-slate-800 flex items-center justify-between gap-2 text-xs"
+                className="p-2.5 bg-[#f3f3f3] rounded-xl border border-gray-200 flex items-center justify-between gap-2 text-xs"
               >
                 <div className="min-w-0">
-                  <p className="font-semibold text-white truncate">{item.libro?.titulo}</p>
-                  <p className="text-[10px] text-slate-400 font-mono truncate">
+                  <p className="font-bold text-[#252525] truncate">{item.libro?.titulo}</p>
+                  <p className="text-[10px] text-gray-500 font-mono truncate">
                     {item.tipo === 'registro' ? 'Registro nuevo' : 'Ingreso'} ·{' '}
                     {item.movimiento?.fecha_movimiento
                       ? new Date(item.movimiento.fecha_movimiento).toLocaleTimeString()
                       : ''}
                   </p>
                 </div>
-                <span className="font-mono text-emerald-400 font-bold shrink-0">
+                <span className="font-mono text-[#b07c19] font-bold shrink-0">
                   +{item.movimiento?.cantidad}
                 </span>
               </div>
@@ -455,14 +430,14 @@ export default function RegistrarLibro({ onShowToast }) {
 
         {/* Encabezado */}
         <div className="mb-8">
-          <div className="flex items-center gap-2 text-emerald-400 text-xs font-mono uppercase tracking-wider mb-1">
-            <Barcode className="w-4 h-4" />
+          <div className="flex items-center gap-2 text-[#b07c19] text-xs font-bold uppercase tracking-wider mb-1">
+            <Barcode className="w-4 h-4 text-[#e19922]" />
             <span>Módulo de Recepción e Inventario</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#252525] tracking-tight">
             Registrar Libro en Bodega
           </h1>
-          <p className="text-sm text-slate-400 mt-1 max-w-2xl">
+          <p className="text-sm text-gray-500 mt-1 max-w-2xl">
             Ingresa o escanea el ISBN para consultar si el libro existe en el sistema. Si no existe, podrás registrarlo manualmente.
           </p>
         </div>
@@ -470,11 +445,11 @@ export default function RegistrarLibro({ onShowToast }) {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <PanelIzquierdo />
 
-          {/* Panel derecho: formulario de consulta */}
+          {/* Panel derecho */}
           <div className="lg:col-span-8 space-y-5">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-              <h2 className="text-sm font-bold text-white uppercase tracking-wider mb-5 flex items-center gap-2">
-                <Barcode className="w-4 h-4 text-emerald-400" />
+            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+              <h2 className="text-sm font-bold text-[#252525] uppercase tracking-wider mb-5 flex items-center gap-2">
+                <Barcode className="w-4 h-4 text-[#e19922]" />
                 Paso 1 — Consultar ISBN
               </h2>
 
@@ -496,42 +471,42 @@ export default function RegistrarLibro({ onShowToast }) {
                       type="button"
                       onClick={() => handleConsultar()}
                       disabled={isLoading || !isbnInput.trim()}
-                      className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all active:scale-95 cursor-pointer whitespace-nowrap"
+                      className="inline-flex items-center gap-1.5 bg-[#e19922] hover:bg-[#b07c19] disabled:opacity-50 text-[#252525] hover:text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all hover:-translate-y-0.5 cursor-pointer whitespace-nowrap shadow-xs"
                     >
                       <ArrowRight className="w-4 h-4" />
                       Consultar
                     </button>
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-1.5">
+                  <p className="text-[11px] text-gray-500 mt-1.5">
                     Puedes teclear el ISBN manualmente o capturarlo con la cámara.
                   </p>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className="flex-1 border-t border-slate-800" />
-                  <span className="text-xs text-slate-500">o</span>
-                  <div className="flex-1 border-t border-slate-800" />
+                  <div className="flex-1 border-t border-gray-200" />
+                  <span className="text-xs text-gray-400 font-bold">o</span>
+                  <div className="flex-1 border-t border-gray-200" />
                 </div>
 
                 <button
                   type="button"
                   onClick={handleAgregarManual}
                   disabled={isLoading}
-                  className="w-full flex items-center justify-center gap-2 border border-slate-700 hover:border-emerald-500/50 hover:bg-slate-800/50 disabled:opacity-50 text-slate-300 hover:text-white text-xs font-medium px-4 py-3 rounded-xl transition-all cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2 border border-gray-200 hover:border-[#b07c19] hover:bg-[#f3f3f3] disabled:opacity-50 text-gray-700 hover:text-[#252525] text-xs font-bold px-4 py-3 rounded-xl transition-all cursor-pointer shadow-2xs"
                 >
-                  <PlusCircle className="w-4 h-4 text-emerald-400" />
+                  <PlusCircle className="w-4 h-4 text-[#e19922]" />
                   Agregar manualmente sin ISBN
                 </button>
               </div>
             </div>
 
             {/* Placeholder espera */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center shadow-xl">
-              <div className="w-16 h-16 rounded-2xl bg-slate-800/80 flex items-center justify-center mx-auto mb-4">
-                <BookOpen className="w-8 h-8 text-emerald-400/50" />
+            <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center shadow-sm">
+              <div className="w-16 h-16 rounded-2xl bg-[#f3f3f3] border border-gray-200 flex items-center justify-center mx-auto mb-4">
+                <BookOpen className="w-8 h-8 text-gray-400" />
               </div>
-              <h3 className="text-base font-semibold text-white mb-1">Esperando ISBN</h3>
-              <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+              <h3 className="text-base font-bold text-[#252525] mb-1">Esperando ISBN</h3>
+              <p className="text-xs text-gray-500 max-w-md mx-auto leading-relaxed">
                 Cuando consultes un ISBN el sistema verificará si el libro ya está en el catálogo local.
                 Si existe, podrás ingresar unidades directamente; si no, se abrirá el formulario de registro.
               </p>
@@ -551,16 +526,16 @@ export default function RegistrarLibro({ onShowToast }) {
 
         <div className="mb-6 flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <div className="flex items-center gap-2 text-emerald-400 text-xs font-mono uppercase tracking-wider mb-1">
-              <CheckCircle className="w-4 h-4" />
+            <div className="flex items-center gap-2 text-[#b07c19] text-xs font-bold uppercase tracking-wider mb-1">
+              <CheckCircle className="w-4 h-4 text-[#e19922]" />
               <span>Libro encontrado en catálogo</span>
             </div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">Ingresar Unidades</h1>
+            <h1 className="text-2xl font-extrabold text-[#252525] tracking-tight">Ingresar Unidades</h1>
           </div>
           <button
             type="button"
             onClick={reiniciar}
-            className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white border border-slate-700 hover:border-slate-600 px-3 py-2 rounded-xl transition-all cursor-pointer"
+            className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-[#252525] bg-white border border-gray-200 px-3 py-2 rounded-xl transition-all cursor-pointer shadow-2xs font-semibold"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             Registrar otro
@@ -572,41 +547,40 @@ export default function RegistrarLibro({ onShowToast }) {
 
           <div className="lg:col-span-8 space-y-5">
             {/* Tarjeta del libro */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+            <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
               <div className="flex gap-4">
-                {/* Portada */}
                 {libroExistente.imagen_url && (
                   <div className="shrink-0">
                     <img
                       src={libroExistente.imagen_url}
                       alt={libroExistente.titulo}
-                      className="w-20 h-28 object-cover rounded-xl border border-slate-700 shadow-lg"
+                      className="w-20 h-28 object-cover rounded-xl border border-gray-200 shadow-xs"
                       onError={e => { e.target.style.display = 'none'; }}
                     />
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-mono">
+                    <span className="text-[10px] px-2.5 py-0.5 rounded-md bg-[#e8c85e] text-[#252525] font-bold">
                       En catálogo
                     </span>
                   </div>
-                  <h2 className="text-lg font-bold text-white leading-snug mb-1 line-clamp-2">
+                  <h2 className="text-lg font-bold text-[#252525] leading-snug mb-1 line-clamp-2">
                     {libroExistente.titulo}
                   </h2>
                   {libroExistente.autor_nombre && (
-                    <p className="text-sm text-slate-300 mb-0.5">{libroExistente.autor_nombre}</p>
+                    <p className="text-sm text-gray-600 mb-0.5 font-medium">{libroExistente.autor_nombre}</p>
                   )}
                   {libroExistente.editorial_nombre && (
-                    <p className="text-xs text-slate-500">{libroExistente.editorial_nombre}</p>
+                    <p className="text-xs text-gray-400">{libroExistente.editorial_nombre}</p>
                   )}
                   {esAdmin && (
-                    <p className="text-xs text-emerald-400 font-mono mt-1">
-                      Precio: ${precio.toFixed(2)}
+                    <p className="text-xs text-[#b07c19] font-mono font-bold mt-1">
+                      Precio: Q{precio.toFixed(2)}
                     </p>
                   )}
                   {libroExistente.isbn && (
-                    <p className="text-[10px] text-slate-500 font-mono mt-1">ISBN: {libroExistente.isbn}</p>
+                    <p className="text-[10px] text-gray-400 font-mono mt-1 font-medium">ISBN: {libroExistente.isbn}</p>
                   )}
                 </div>
               </div>
@@ -614,28 +588,28 @@ export default function RegistrarLibro({ onShowToast }) {
 
             {/* Stock por bodega */}
             {inventarios.length > 0 && (
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
-                <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-2">
-                  <Warehouse className="w-4 h-4 text-emerald-400" />
+              <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+                <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <Warehouse className="w-4 h-4 text-[#e19922]" />
                   Stock actual por bodega
                 </h3>
                 <div className="space-y-2">
                   {inventarios.map(inv => (
                     <div
                       key={inv.bodega_id}
-                      className="flex items-center justify-between px-3.5 py-2.5 bg-slate-950/70 rounded-xl border border-slate-800 text-xs"
+                      className="flex items-center justify-between px-3.5 py-2.5 bg-[#f3f3f3] rounded-xl border border-gray-200 text-xs"
                     >
                       <div>
-                        <span className="font-semibold text-white">{inv.bodega_nombre}</span>
+                        <span className="font-bold text-[#252525]">{inv.bodega_nombre}</span>
                         {inv.sucursal_nombre && (
-                          <span className="text-slate-500 ml-1.5">· {inv.sucursal_nombre}</span>
+                          <span className="text-gray-500 ml-1.5">· {inv.sucursal_nombre}</span>
                         )}
                       </div>
                       <div className="text-right">
-                        <span className={`font-mono font-bold ${inv.stock_actual <= inv.stock_minimo ? 'text-amber-400' : 'text-emerald-400'}`}>
+                        <span className={`font-mono font-extrabold ${inv.stock_actual <= inv.stock_minimo ? 'text-amber-600' : 'text-[#252525]'}`}>
                           {inv.stock_actual} uds.
                         </span>
-                        <span className="text-slate-600 ml-1">(mín. {inv.stock_minimo})</span>
+                        <span className="text-gray-400 ml-1">(mín. {inv.stock_minimo})</span>
                       </div>
                     </div>
                   ))}
@@ -645,9 +619,9 @@ export default function RegistrarLibro({ onShowToast }) {
 
             {/* Formulario ingreso */}
             {!ingresoResultado ? (
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <PackagePlus className="w-4 h-4 text-emerald-400" />
+              <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+                <h3 className="text-sm font-bold text-[#252525] uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <PackagePlus className="w-4 h-4 text-[#e19922]" />
                   Ingresar Unidades
                 </h3>
                 <ErrorBox error={errorBox} />
@@ -655,7 +629,7 @@ export default function RegistrarLibro({ onShowToast }) {
                   <div>
                     <FieldLabel required>Bodega de destino</FieldLabel>
                     {loadingMaestros ? (
-                      <div className="h-10 bg-slate-800 rounded-lg animate-pulse" />
+                      <div className="h-10 bg-gray-200 rounded-lg animate-pulse" />
                     ) : (
                       <Select
                         value={ingresoForm.bodegaId}
@@ -686,7 +660,7 @@ export default function RegistrarLibro({ onShowToast }) {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white text-sm font-bold px-5 py-3 rounded-xl shadow-lg transition-all active:scale-95 cursor-pointer"
+                    className="w-full flex items-center justify-center gap-2 bg-[#e19922] hover:bg-[#b07c19] text-[#252525] hover:text-white disabled:opacity-50 text-sm font-bold px-5 py-3 rounded-xl shadow-xs transition-all hover:-translate-y-0.5 cursor-pointer"
                   >
                     <PackagePlus className="w-4 h-4" />
                     {isLoading ? 'Registrando...' : 'Confirmar Ingreso'}
@@ -694,31 +668,30 @@ export default function RegistrarLibro({ onShowToast }) {
                 </form>
               </div>
             ) : (
-              /* Resultado ingreso */
-              <div className="bg-slate-900 border border-emerald-500/30 rounded-2xl p-5 shadow-xl">
+              <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
                 <div className="flex items-center gap-2 mb-3">
-                  <CheckCircle className="w-5 h-5 text-emerald-400" />
-                  <h3 className="text-sm font-bold text-emerald-400 uppercase tracking-wider">
+                  <CheckCircle className="w-5 h-5 text-[#b07c19]" />
+                  <h3 className="text-sm font-bold text-[#252525] uppercase tracking-wider">
                     Ingreso Registrado
                   </h3>
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-xs mb-4">
-                  <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800">
-                    <p className="text-slate-400 mb-0.5">Unidades ingresadas</p>
-                    <p className="text-lg font-bold text-emerald-400">+{ingresoResultado.movimiento.cantidad}</p>
+                  <div className="p-3 bg-[#f3f3f3] rounded-xl border border-gray-200">
+                    <p className="text-gray-500 mb-0.5 font-medium">Unidades ingresadas</p>
+                    <p className="text-lg font-bold text-[#b07c19]">+{ingresoResultado.movimiento.cantidad}</p>
                   </div>
-                  <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800">
-                    <p className="text-slate-400 mb-0.5">Stock actual</p>
-                    <p className="text-lg font-bold text-white">{ingresoResultado.inventario.stock_actual}</p>
+                  <div className="p-3 bg-[#f3f3f3] rounded-xl border border-gray-200">
+                    <p className="text-gray-500 mb-0.5 font-medium">Stock actual</p>
+                    <p className="text-lg font-bold text-[#252525]">{ingresoResultado.inventario.stock_actual}</p>
                   </div>
                 </div>
-                <p className="text-xs text-slate-400 mb-4">
-                  Bodega: <span className="text-white font-medium">{bodegaNombrePorId(ingresoResultado.inventario.bodega_id)}</span>
+                <p className="text-xs text-gray-500 mb-4">
+                  Bodega: <span className="text-[#252525] font-bold">{bodegaNombrePorId(ingresoResultado.inventario.bodega_id)}</span>
                 </p>
                 <button
                   type="button"
                   onClick={reiniciar}
-                  className="w-full flex items-center justify-center gap-2 border border-slate-700 hover:border-emerald-500/40 hover:bg-slate-800/50 text-slate-300 hover:text-white text-xs font-medium px-4 py-2.5 rounded-xl transition-all cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2 border border-gray-200 hover:border-[#b07c19] hover:bg-[#f3f3f3] text-gray-700 hover:text-[#252525] text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-2xs"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
                   Registrar otro libro
@@ -751,16 +724,16 @@ export default function RegistrarLibro({ onShowToast }) {
 
         <div className="mb-6 flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <div className="flex items-center gap-2 text-amber-400 text-xs font-mono uppercase tracking-wider mb-1">
-              <AlertCircle className="w-4 h-4" />
+            <div className="flex items-center gap-2 text-[#b07c19] text-xs font-bold uppercase tracking-wider mb-1">
+              <AlertCircle className="w-4 h-4 text-[#e19922]" />
               <span>{sugerencia ? 'Sugerencia de Google Books' : 'Libro no encontrado'}</span>
             </div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">Registrar Libro Nuevo</h1>
+            <h1 className="text-2xl font-extrabold text-[#252525] tracking-tight">Registrar Libro Nuevo</h1>
           </div>
           <button
             type="button"
             onClick={reiniciar}
-            className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white border border-slate-700 hover:border-slate-600 px-3 py-2 rounded-xl transition-all cursor-pointer"
+            className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-[#252525] bg-white border border-gray-200 px-3 py-2 rounded-xl transition-all cursor-pointer shadow-2xs font-semibold"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             Volver
@@ -771,62 +744,58 @@ export default function RegistrarLibro({ onShowToast }) {
           <PanelIzquierdo />
 
           <div className="lg:col-span-8 space-y-5">
-            {/* Aviso si no hay sugerencia */}
             {!sugerencia && (
-              <div className="flex items-start gap-2.5 p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-400">
-                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+              <div className="flex items-start gap-2.5 p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-[#b07c19]" />
                 <span>No se encontró información en Google Books ni Open Library. Completa los datos manualmente.</span>
               </div>
             )}
 
-            {/* Resultado del registro exitoso */}
             {regResultado ? (
-              <div className="bg-slate-900 border border-emerald-500/30 rounded-2xl p-5 shadow-xl">
+              <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
                 <div className="flex items-center gap-2 mb-3">
-                  <CheckCircle className="w-5 h-5 text-emerald-400" />
-                  <h3 className="text-sm font-bold text-emerald-400 uppercase tracking-wider">
+                  <CheckCircle className="w-5 h-5 text-[#b07c19]" />
+                  <h3 className="text-sm font-bold text-[#252525] uppercase tracking-wider">
                     Libro Registrado Exitosamente
                   </h3>
                 </div>
                 {regResultado.precio_pendiente && (
-                  <div className="flex items-start gap-2.5 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-400 mb-3">
-                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                  <div className="flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 mb-3 font-medium">
+                    <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-[#b07c19]" />
                     <span>El libro quedó pendiente de asignación de precio por el Administrador.</span>
                   </div>
                 )}
                 <div className="grid grid-cols-2 gap-3 text-xs mb-4">
-                  <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800">
-                    <p className="text-slate-400 mb-0.5">Stock inicial</p>
-                    <p className="text-lg font-bold text-emerald-400">{regResultado.inventario.stock_actual}</p>
+                  <div className="p-3 bg-[#f3f3f3] rounded-xl border border-gray-200">
+                    <p className="text-gray-500 mb-0.5 font-medium">Stock inicial</p>
+                    <p className="text-lg font-bold text-[#b07c19]">{regResultado.inventario.stock_actual}</p>
                   </div>
-                  <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800">
-                    <p className="text-slate-400 mb-0.5">Stock mínimo</p>
-                    <p className="text-lg font-bold text-white">{regResultado.inventario.stock_minimo}</p>
+                  <div className="p-3 bg-[#f3f3f3] rounded-xl border border-gray-200">
+                    <p className="text-gray-500 mb-0.5 font-medium">Stock mínimo</p>
+                    <p className="text-lg font-bold text-[#252525]">{regResultado.inventario.stock_minimo}</p>
                   </div>
                 </div>
-                <p className="text-xs font-semibold text-white mb-1 truncate">{regResultado.libro.titulo}</p>
-                <p className="text-xs text-slate-400 mb-4 font-mono">ISBN: {regResultado.libro.isbn || '(sin ISBN)'}</p>
+                <p className="text-xs font-bold text-[#252525] mb-1 truncate">{regResultado.libro.titulo}</p>
+                <p className="text-xs text-gray-500 mb-4 font-mono">ISBN: {regResultado.libro.isbn || '(sin ISBN)'}</p>
                 <button
                   type="button"
                   onClick={reiniciar}
-                  className="w-full flex items-center justify-center gap-2 border border-slate-700 hover:border-emerald-500/40 hover:bg-slate-800/50 text-slate-300 hover:text-white text-xs font-medium px-4 py-2.5 rounded-xl transition-all cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2 border border-gray-200 hover:border-[#b07c19] hover:bg-[#f3f3f3] text-gray-700 hover:text-[#252525] text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-2xs"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
                   Registrar otro libro
                 </button>
               </div>
             ) : (
-              /* Formulario de registro */
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <BookOpen className="w-4 h-4 text-emerald-400" />
+              <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                <h3 className="text-sm font-bold text-[#252525] uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-[#e19922]" />
                   Datos del Libro
                 </h3>
 
                 <ErrorBox error={errorBox} />
 
                 <form onSubmit={handleRegistrar} className="mt-4 space-y-4">
-                  {/* ISBN */}
                   <div>
                     <FieldLabel>ISBN</FieldLabel>
                     <Input
@@ -838,7 +807,6 @@ export default function RegistrarLibro({ onShowToast }) {
                     />
                   </div>
 
-                  {/* Título */}
                   <div>
                     <FieldLabel required>Título</FieldLabel>
                     <Input
@@ -850,7 +818,6 @@ export default function RegistrarLibro({ onShowToast }) {
                     />
                   </div>
 
-                  {/* Autor / Editorial */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <FieldLabel required>Autor</FieldLabel>
@@ -863,10 +830,10 @@ export default function RegistrarLibro({ onShowToast }) {
                         }}
                         disabled={isLoading}
                         placeholder="Nombre del autor"
-                        className={fieldErrors.autor ? 'border-red-500/50' : ''}
+                        className={fieldErrors.autor ? 'border-red-500' : ''}
                       />
                       {fieldErrors.autor && (
-                        <p className="text-[11px] text-red-400 mt-1 flex items-center gap-1">
+                        <p className="text-[11px] text-red-600 mt-1 flex items-center gap-1 font-medium">
                           <AlertCircle className="w-3 h-3 shrink-0" />
                           {fieldErrors.autor}
                         </p>
@@ -884,7 +851,6 @@ export default function RegistrarLibro({ onShowToast }) {
                     </div>
                   </div>
 
-                  {/* Categoría */}
                   <div>
                     <FieldLabel required>Categoría</FieldLabel>
                     <Select
@@ -894,22 +860,22 @@ export default function RegistrarLibro({ onShowToast }) {
                         if (fieldErrors.categoriaId) setFieldErrors(fe => ({ ...fe, categoriaId: null }));
                       }}
                       disabled={isLoading || loadingMaestros}
-                      className={fieldErrors.categoriaId ? 'border-red-500/50' : ''}
+                      className={fieldErrors.categoriaId ? 'border-red-500' : ''}
                     >
                       <option value="" disabled>Selecciona una categoría</option>
                       {ramasDerecho.length > 0 && (
-                        <optgroup label="Ramas del Derecho" className="bg-slate-900 text-slate-300 font-semibold">
+                        <optgroup label="Ramas del Derecho" className="font-bold text-gray-700">
                           {ramasDerecho.map(c => (
-                            <option key={c.id} value={c.id} className="bg-slate-950 text-white font-normal">
+                            <option key={c.id} value={c.id} className="text-[#252525] font-normal">
                               {c.nombre}
                             </option>
                           ))}
                         </optgroup>
                       )}
                       {otrasCategorias.length > 0 && (
-                        <optgroup label="Otras categorías" className="bg-slate-900 text-slate-300 font-semibold">
+                        <optgroup label="Otras categorías" className="font-bold text-gray-700">
                           {otrasCategorias.map(c => (
-                            <option key={c.id} value={c.id} className="bg-slate-950 text-white font-normal">
+                            <option key={c.id} value={c.id} className="text-[#252525] font-normal">
                               {c.nombre}
                             </option>
                           ))}
@@ -917,14 +883,13 @@ export default function RegistrarLibro({ onShowToast }) {
                       )}
                     </Select>
                     {fieldErrors.categoriaId && (
-                      <p className="text-[11px] text-red-400 mt-1 flex items-center gap-1">
+                      <p className="text-[11px] text-red-600 mt-1 flex items-center gap-1 font-medium">
                         <AlertCircle className="w-3 h-3 shrink-0" />
                         {fieldErrors.categoriaId}
                       </p>
                     )}
                   </div>
 
-                  {/* Reseña */}
                   <div>
                     <FieldLabel required>Reseña</FieldLabel>
                     <textarea
@@ -933,11 +898,10 @@ export default function RegistrarLibro({ onShowToast }) {
                       disabled={isLoading}
                       rows={4}
                       placeholder="Descripción o sinopsis del libro..."
-                      className="w-full bg-slate-950 border border-slate-700 text-white text-sm rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 transition-all placeholder:text-slate-600 disabled:opacity-50 resize-none"
+                      className="w-full bg-[#f3f3f3] border border-gray-200 text-[#252525] text-sm rounded-xl px-3.5 py-2.5 outline-none focus:border-[#b07c19] focus:ring-1 focus:ring-[#b07c19] transition-all placeholder:text-gray-400 disabled:opacity-50 resize-none"
                     />
                   </div>
 
-                  {/* URL de imagen + vista previa */}
                   <div>
                     <FieldLabel>URL de portada</FieldLabel>
                     <Input
@@ -952,14 +916,13 @@ export default function RegistrarLibro({ onShowToast }) {
                         <img
                           src={regForm.imagenUrl}
                           alt="Vista previa"
-                          className="h-24 rounded-lg border border-slate-700 object-cover"
+                          className="h-24 rounded-lg border border-gray-200 object-cover shadow-2xs"
                           onError={() => setImgError(true)}
                         />
                       </div>
                     )}
                   </div>
 
-                  {/* Precio */}
                   <div>
                     <FieldLabel>Precio</FieldLabel>
                     {esAdmin ? (
@@ -973,14 +936,13 @@ export default function RegistrarLibro({ onShowToast }) {
                         placeholder="0.00"
                       />
                     ) : (
-                      <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-slate-500">
-                        <ShieldCheck className="w-4 h-4 text-slate-600 shrink-0" />
+                      <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-[#f3f3f3] border border-gray-200 rounded-xl text-xs text-gray-500 font-medium">
+                        <ShieldCheck className="w-4 h-4 text-gray-400 shrink-0" />
                         El administrador asignará el precio
                       </div>
                     )}
                   </div>
 
-                  {/* Cantidad / Stock mínimo / Bodega */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <FieldLabel required>Cantidad inicial</FieldLabel>
@@ -1009,7 +971,7 @@ export default function RegistrarLibro({ onShowToast }) {
                     <div>
                       <FieldLabel required>Bodega</FieldLabel>
                       {loadingMaestros ? (
-                        <div className="h-10 bg-slate-800 rounded-lg animate-pulse" />
+                        <div className="h-10 bg-gray-200 rounded-lg animate-pulse" />
                       ) : (
                         <Select
                           value={regForm.bodegaId}
@@ -1030,7 +992,7 @@ export default function RegistrarLibro({ onShowToast }) {
                   <button
                     type="submit"
                     disabled={botonGuardarDeshabilitado}
-                    className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white text-sm font-bold px-5 py-3 rounded-xl shadow-lg transition-all active:scale-95 cursor-pointer disabled:cursor-not-allowed"
+                    className="w-full flex items-center justify-center gap-2 bg-[#e19922] hover:bg-[#b07c19] text-[#252525] hover:text-white disabled:opacity-50 text-sm font-bold px-5 py-3 rounded-xl shadow-xs transition-all hover:-translate-y-0.5 cursor-pointer disabled:cursor-not-allowed"
                   >
                     <BookOpen className="w-4 h-4" />
                     {isLoading ? 'Guardando...' : 'Registrar Libro'}
