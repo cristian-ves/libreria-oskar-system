@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Warehouse, Layers, AlertTriangle, AlertCircle, Clock,
-  ArrowUpRight, ArrowDownRight, Sliders, Search, Building,
-  Filter, X, FileText, CheckCircle2, ChevronLeft, ChevronRight,
-  Info, Calendar, User, DollarSign, Package, RefreshCw, BookOpen
+  ArrowDownRight, Sliders, Search, Filter, X, CheckCircle2,
+  ChevronLeft, ChevronRight, Info, DollarSign, Package,
+  RefreshCw, BookOpen
 } from 'lucide-react';
 import { apiFetch } from '../api/client';
 import Toast from '../components/Toast';
-import LoadingSpinner from '../components/LoadingSpinner';
 
 function formatFecha(dateString) {
   if (!dateString) return 'Sin salidas';
@@ -22,8 +21,45 @@ function formatFecha(dateString) {
   });
 }
 
+function TipoBadge({ tipo }) {
+  const t = tipo?.toLowerCase();
+  const cls =
+    t === 'ingreso'
+      ? 'bg-[#e19922] text-[#252525]'
+      : t === 'salida'
+      ? 'bg-red-600 text-white'
+      : 'bg-[#b07c19] text-white';
+  return (
+    <span className={`inline-flex items-center text-[10px] font-bold px-2.5 py-0.5 rounded-md shadow-2xs ${cls}`}>
+      {tipo}
+    </span>
+  );
+}
+
+function EstadoBadge({ bajo_stock, obsoleto }) {
+  if (bajo_stock) {
+    return (
+      <span className="inline-flex items-center text-[10px] font-bold px-2.5 py-0.5 rounded-md bg-amber-500 text-[#252525]">
+        Bajo stock
+      </span>
+    );
+  }
+  if (obsoleto) {
+    return (
+      <span className="inline-flex items-center text-[10px] font-bold px-2.5 py-0.5 rounded-md bg-red-600 text-white">
+        Obsoleto
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center text-[10px] font-bold px-2.5 py-0.5 rounded-md bg-[#e8c85e] text-[#252525]">
+      Normal
+    </span>
+  );
+}
+
 export default function Inventario() {
-  const [activeTab, setActiveTab] = useState('existencias'); // 'existencias' | 'kardex'
+  const [activeTab, setActiveTab] = useState('existencias');
   const [toast, setToast] = useState(null);
 
   // ── Datos Maestros & Resumen ──────────────────────────────────────────────
@@ -42,12 +78,11 @@ export default function Inventario() {
   // ── Pestaña Existencias ───────────────────────────────────────────────────
   const [existencias, setExistencias] = useState([]);
   const [loadingExistencias, setLoadingExistencias] = useState(true);
-  const [estadoFilter, setEstadoFilter] = useState('todos'); // 'todos' | 'en_stock' | 'bajo_stock' | 'obsoleto'
+  const [estadoFilter, setEstadoFilter] = useState('todos');
   const [searchInput, setSearchInput] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
   const [selectedBodega, setSelectedBodega] = useState('');
 
-  // Debounce de 300 ms para el buscador
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQ(searchInput);
@@ -59,7 +94,7 @@ export default function Inventario() {
   const [movimientos, setMovimientos] = useState([]);
   const [totalMovimientos, setTotalMovimientos] = useState(0);
   const [loadingKardex, setLoadingKardex] = useState(false);
-  const [kardexTipo, setKardexTipo] = useState(''); // '' | 'Ingreso' | 'Salida' | 'Ajuste'
+  const [kardexTipo, setKardexTipo] = useState('');
   const [kardexBodega, setKardexBodega] = useState('');
   const [kardexLibroId, setKardexLibroId] = useState(null);
   const [kardexLibroTitulo, setKardexLibroTitulo] = useState('');
@@ -153,15 +188,9 @@ export default function Inventario() {
       params.set('limit', String(KARDEX_LIMIT));
       params.set('offset', String(kardexOffset));
 
-      if (kardexTipo) {
-        params.set('tipo', kardexTipo);
-      }
-      if (kardexBodega) {
-        params.set('bodegaId', kardexBodega);
-      }
-      if (kardexLibroId) {
-        params.set('libroId', kardexLibroId);
-      }
+      if (kardexTipo) params.set('tipo', kardexTipo);
+      if (kardexBodega) params.set('bodegaId', kardexBodega);
+      if (kardexLibroId) params.set('libroId', kardexLibroId);
 
       const res = await apiFetch(`/api/movimientos?${params.toString()}`);
       if (res.ok) {
@@ -323,135 +352,135 @@ export default function Inventario() {
 
       {/* Encabezado principal */}
       <div className="mb-8">
-        <div className="flex items-center gap-2 text-emerald-400 text-xs font-mono uppercase tracking-wider mb-1">
-          <Warehouse className="w-4 h-4" />
+        <div className="flex items-center gap-2 text-[#b07c19] text-xs font-bold uppercase tracking-wider mb-1">
+          <Warehouse className="w-4 h-4 text-[#e19922]" />
           <span>Control de Existencias y Auditoría</span>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-[#252525] tracking-tight">
           Inventario y Kardex
         </h1>
-        <p className="text-sm text-slate-400 mt-1 max-w-2xl">
+        <p className="text-sm text-gray-500 mt-1 max-w-2xl">
           Supervisión en tiempo real de existencias por bodega, control de mermas, alertas de desabastecimiento y trazabilidad completa de movimientos.
         </p>
       </div>
 
-      {/* ── 1. Panel Superior de Alertas y Métricas (Resumen) ───────────────── */}
+      {/* ── 1. Panel Superior de Alertas y Métricas (Cards blancas con elevación suave) ── */}
       <div className="mb-8 space-y-4">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
           {/* Total Unidades */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-lg flex flex-col justify-between">
-            <div className="flex items-center justify-between text-slate-400 mb-2">
-              <span className="text-xs font-medium">Total Unidades</span>
-              <Layers className="w-4 h-4 text-emerald-400" />
+          <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-gray-500 mb-2">
+              <span className="text-xs font-semibold">Total Unidades</span>
+              <Layers className="w-4 h-4 text-[#b07c19]" />
             </div>
-            <p className="text-2xl font-bold text-white font-mono">
+            <p className="text-2xl font-extrabold text-[#252525] font-mono">
               {loadingResumen ? '...' : resumen.total_unidades.toLocaleString()}
             </p>
-            <span className="text-[11px] text-slate-500 mt-1">
+            <span className="text-[11px] text-gray-500 mt-1 font-medium">
               {resumen.titulos_con_stock} títulos con stock
             </span>
           </div>
 
-          {/* Bajo Stock (Clickable) */}
+          {/* Bajo Stock */}
           <button
             type="button"
             onClick={() => {
               setActiveTab('existencias');
               setEstadoFilter('bajo_stock');
             }}
-            className="bg-slate-900/90 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-900 rounded-2xl p-4 shadow-lg text-left transition-all cursor-pointer group flex flex-col justify-between"
+            className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 text-left transition-all duration-200 cursor-pointer group flex flex-col justify-between"
           >
-            <div className="flex items-center justify-between text-slate-400 mb-2">
-              <span className="text-xs font-medium group-hover:text-amber-300 transition-colors">Bajo Stock</span>
-              <AlertTriangle className="w-4 h-4 text-amber-400" />
+            <div className="flex items-center justify-between text-gray-500 mb-2">
+              <span className="text-xs font-semibold group-hover:text-amber-600 transition-colors">Bajo Stock</span>
+              <AlertTriangle className="w-4 h-4 text-amber-500" />
             </div>
-            <p className="text-2xl font-bold text-amber-400 font-mono">
+            <p className="text-2xl font-extrabold text-amber-600 font-mono">
               {loadingResumen ? '...' : resumen.bajo_stock}
             </p>
-            <span className="text-[11px] text-slate-500 group-hover:text-slate-400 transition-colors">
+            <span className="text-[11px] text-gray-500 group-hover:text-amber-600 transition-colors font-medium">
               Filtrar en existencias →
             </span>
           </button>
 
-          {/* Agotados (Clickable) */}
+          {/* Agotados */}
           <button
             type="button"
             onClick={() => {
               setActiveTab('existencias');
               setEstadoFilter('todos');
             }}
-            className="bg-slate-900/90 border border-slate-800 hover:border-rose-500/50 hover:bg-slate-900 rounded-2xl p-4 shadow-lg text-left transition-all cursor-pointer group flex flex-col justify-between"
+            className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 text-left transition-all duration-200 cursor-pointer group flex flex-col justify-between"
           >
-            <div className="flex items-center justify-between text-slate-400 mb-2">
-              <span className="text-xs font-medium group-hover:text-rose-300 transition-colors">Agotados</span>
-              <Package className="w-4 h-4 text-rose-400" />
+            <div className="flex items-center justify-between text-gray-500 mb-2">
+              <span className="text-xs font-semibold group-hover:text-red-600 transition-colors">Agotados</span>
+              <Package className="w-4 h-4 text-red-500" />
             </div>
-            <p className="text-2xl font-bold text-rose-400 font-mono">
+            <p className="text-2xl font-extrabold text-red-600 font-mono">
               {loadingResumen ? '...' : resumen.agotados}
             </p>
-            <span className="text-[11px] text-slate-500 group-hover:text-slate-400 transition-colors">
+            <span className="text-[11px] text-gray-500 group-hover:text-red-600 transition-colors font-medium">
               Stock en 0 unidades
             </span>
           </button>
 
-          {/* Obsoletos (Clickable) */}
+          {/* Obsoletos */}
           <button
             type="button"
             onClick={() => {
               setActiveTab('existencias');
               setEstadoFilter('obsoleto');
             }}
-            className="bg-slate-900/90 border border-slate-800 hover:border-red-500/50 hover:bg-slate-900 rounded-2xl p-4 shadow-lg text-left transition-all cursor-pointer group flex flex-col justify-between"
+            className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 text-left transition-all duration-200 cursor-pointer group flex flex-col justify-between"
           >
-            <div className="flex items-center justify-between text-slate-400 mb-2">
-              <span className="text-xs font-medium group-hover:text-red-300 transition-colors">Obsoletos</span>
-              <Clock className="w-4 h-4 text-red-400" />
+            <div className="flex items-center justify-between text-gray-500 mb-2">
+              <span className="text-xs font-semibold group-hover:text-gray-900 transition-colors">Obsoletos</span>
+              <Clock className="w-4 h-4 text-gray-500" />
             </div>
-            <p className="text-2xl font-bold text-red-400 font-mono">
+            <p className="text-2xl font-extrabold text-[#252525] font-mono">
               {loadingResumen ? '...' : resumen.obsoletos}
             </p>
-            <span className="text-[11px] text-slate-500 group-hover:text-slate-400 transition-colors">
+            <span className="text-[11px] text-gray-500 group-hover:text-[#252525] transition-colors font-medium">
               Sin rotación reciente →
             </span>
           </button>
 
           {/* Libros sin precio */}
-          <div className="col-span-2 sm:col-span-1 bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-lg flex flex-col justify-between">
-            <div className="flex items-center justify-between text-slate-400 mb-2">
-              <span className="text-xs font-medium">Sin Precio</span>
-              <DollarSign className="w-4 h-4 text-slate-400" />
+          <div className="col-span-2 sm:col-span-1 bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between">
+            <div className="flex items-center justify-between text-gray-500 mb-2">
+              <span className="text-xs font-semibold">Sin Precio</span>
+              <DollarSign className="w-4 h-4 text-gray-400" />
             </div>
-            <p className="text-2xl font-bold text-slate-300 font-mono">
+            <p className="text-2xl font-extrabold text-gray-600 font-mono">
               {loadingResumen ? '...' : resumen.libros_sin_precio}
             </p>
-            <span className="text-[11px] text-slate-500">
-              Libros pendientes de precio
+            <span className="text-[11px] text-gray-500 font-medium">
+              Pendientes de precio
             </span>
           </div>
         </div>
 
         {/* Lista de Alertas Críticas de Bajo Stock */}
         {resumen.alertas_bajo_stock && resumen.alertas_bajo_stock.length > 0 && (
-          <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4">
-            <div className="flex items-center gap-2 text-amber-400 text-xs font-bold uppercase tracking-wider mb-2.5">
-              <AlertTriangle className="w-4 h-4" />
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 shadow-xs">
+            <div className="flex items-center gap-2 text-amber-800 text-xs font-bold uppercase tracking-wider mb-2.5">
+              <AlertTriangle className="w-4 h-4 text-amber-600" />
               <span>Alertas Críticas de Bajo Stock ({resumen.alertas_bajo_stock.length})</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
               {resumen.alertas_bajo_stock.map((alerta, idx) => (
                 <div
                   key={`${alerta.titulo}-${alerta.bodega_nombre}-${idx}`}
-                  className="bg-slate-900/80 border border-slate-800 rounded-xl px-3 py-2 flex items-center justify-between gap-2 text-xs"
+                  className="bg-white border border-amber-200 rounded-xl px-3 py-2 flex items-center justify-between gap-2 text-xs shadow-2xs"
                 >
                   <div className="min-w-0">
-                    <p className="font-semibold text-white truncate">{alerta.titulo}</p>
-                    <p className="text-[11px] text-slate-400">{alerta.bodega_nombre}</p>
+                    <p className="font-bold text-[#252525] truncate">{alerta.titulo}</p>
+                    <p className="text-[11px] text-gray-500">{alerta.bodega_nombre}</p>
                   </div>
                   <div className="text-right shrink-0">
-                    <span className="font-mono font-bold text-amber-400">
+                    <span className="font-mono font-bold text-amber-700">
                       {alerta.stock_actual}
                     </span>
-                    <span className="text-[11px] text-slate-500 font-mono"> / {alerta.stock_minimo}</span>
+                    <span className="text-[11px] text-gray-400 font-mono"> / {alerta.stock_minimo}</span>
                   </div>
                 </div>
               ))}
@@ -460,39 +489,39 @@ export default function Inventario() {
         )}
       </div>
 
-      {/* ── 2. Pestañas de Navegación ───────────────────────────────────────── */}
-      <div className="flex items-center gap-2 border-b border-slate-800 mb-6">
+      {/* ── 2. Pestañas de Navegación ─────────────────────────────────────────── */}
+      <div className="flex items-center gap-2 border-b border-gray-200 mb-6">
         <button
           type="button"
           onClick={() => setActiveTab('existencias')}
-          className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold transition-all border-b-2 cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-bold transition-all border-b-2 cursor-pointer ${
             activeTab === 'existencias'
-              ? 'border-emerald-500 text-emerald-400 bg-emerald-500/5'
-              : 'border-transparent text-slate-400 hover:text-white'
+              ? 'border-[#e19922] text-[#252525] bg-white shadow-2xs'
+              : 'border-transparent text-gray-500 hover:text-[#252525]'
           }`}
         >
-          <Layers className="w-4 h-4" />
+          <Layers className="w-4 h-4 text-[#b07c19]" />
           <span>Existencias</span>
         </button>
         <button
           type="button"
           onClick={() => setActiveTab('kardex')}
-          className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold transition-all border-b-2 cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-3 text-sm font-bold transition-all border-b-2 cursor-pointer ${
             activeTab === 'kardex'
-              ? 'border-emerald-500 text-emerald-400 bg-emerald-500/5'
-              : 'border-transparent text-slate-400 hover:text-white'
+              ? 'border-[#e19922] text-[#252525] bg-white shadow-2xs'
+              : 'border-transparent text-gray-500 hover:text-[#252525]'
           }`}
         >
-          <Clock className="w-4 h-4" />
+          <Clock className="w-4 h-4 text-[#b07c19]" />
           <span>Kardex de Movimientos</span>
         </button>
       </div>
 
-      {/* ── 3. Contenido: Existencias ───────────────────────────────────────── */}
+      {/* ── 3. Contenido: Existencias ─────────────────────────────────────────── */}
       {activeTab === 'existencias' && (
         <div className="space-y-5">
           {/* Barra de Filtros */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+          <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
             {/* Chips de estado */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0">
               {[
@@ -505,10 +534,10 @@ export default function Inventario() {
                   key={chip.id}
                   type="button"
                   onClick={() => setEstadoFilter(chip.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-150 cursor-pointer ${
                     estadoFilter === chip.id
-                      ? 'bg-emerald-500 text-slate-950 shadow-sm'
-                      : 'bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-800'
+                      ? 'bg-[#e19922] text-[#252525] shadow-xs'
+                      : 'bg-[#f3f3f3] text-[#252525] hover:bg-[#b07c19] hover:text-white border border-gray-200'
                   }`}
                 >
                   {chip.label}
@@ -519,19 +548,19 @@ export default function Inventario() {
             {/* Buscador y Dropdown de Bodega */}
             <div className="flex flex-col sm:flex-row items-center gap-3">
               <div className="relative w-full sm:w-64">
-                <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   placeholder="Buscar título, autor, ISBN..."
-                  className="w-full bg-slate-950 border border-slate-700 text-white text-xs rounded-xl pl-9 pr-3.5 py-2 outline-none focus:ring-2 focus:ring-emerald-500 transition-all placeholder:text-slate-500"
+                  className="w-full bg-[#f3f3f3] border border-gray-200 text-[#252525] text-xs rounded-xl pl-9 pr-3.5 py-2 outline-none focus:border-[#b07c19] transition-all placeholder:text-gray-400"
                 />
                 {searchInput && (
                   <button
                     type="button"
                     onClick={() => setSearchInput('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#252525]"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -541,7 +570,7 @@ export default function Inventario() {
               <select
                 value={selectedBodega}
                 onChange={(e) => setSelectedBodega(e.target.value)}
-                className="w-full sm:w-52 bg-slate-950 border border-slate-700 text-white text-xs rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500 transition-all cursor-pointer"
+                className="w-full sm:w-52 bg-[#f3f3f3] border border-gray-200 text-[#252525] text-xs rounded-xl px-3 py-2 outline-none focus:border-[#b07c19] transition-all cursor-pointer font-medium"
               >
                 <option value="">Todas las bodegas</option>
                 {bodegas.map((b) => (
@@ -555,24 +584,24 @@ export default function Inventario() {
 
           {/* Listado de Existencias */}
           {loadingExistencias ? (
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center">
-              <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mx-auto mb-3" />
-              <p className="text-xs text-slate-400">Cargando existencias...</p>
+            <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center shadow-sm">
+              <div className="w-10 h-10 border-4 border-gray-200 border-t-[#e19922] rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-xs text-gray-500 font-medium">Cargando existencias...</p>
             </div>
           ) : existencias.length === 0 ? (
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center">
-              <Package className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-              <h3 className="text-base font-semibold text-white mb-1">No se encontraron existencias</h3>
-              <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                No hay registros que coincidan con los filtros aplicados. Intenta ajustar el término de búsqueda o la bodega seleccionada.
+            <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center shadow-sm">
+              <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <h3 className="text-base font-bold text-[#252525] mb-1">No se encontraron existencias</h3>
+              <p className="text-xs text-gray-500 max-w-sm mx-auto">
+                No hay registros que coincidan con los filtros aplicados.
               </p>
             </div>
           ) : (
             <>
               {/* Tabla para pantallas grandes */}
-              <div className="hidden md:block bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+              <div className="hidden md:block bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-950/80 text-slate-400 font-semibold uppercase tracking-wider border-b border-slate-800">
+                  <thead className="bg-[#f3f3f3] text-gray-600 font-bold uppercase tracking-wider border-b border-gray-200">
                     <tr>
                       <th className="py-3.5 px-4">Libro / Detalles</th>
                       <th className="py-3.5 px-4">Bodega / Sucursal</th>
@@ -582,65 +611,49 @@ export default function Inventario() {
                       <th className="py-3.5 px-4 text-right">Acciones</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                  <tbody className="divide-y divide-gray-100 text-gray-700">
                     {existencias.map((item) => (
-                      <tr key={item.inventario_id} className="hover:bg-slate-800/30 transition-colors">
+                      <tr key={item.inventario_id} className="hover:bg-gray-50/80 transition-colors">
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
                             {item.imagen_url ? (
                               <img
                                 src={item.imagen_url}
                                 alt={item.titulo}
-                                className="w-9 h-12 object-cover rounded-lg border border-slate-700 shrink-0"
+                                className="w-9 h-12 object-cover rounded-lg border border-gray-200 shrink-0"
                                 onError={(e) => { e.target.style.display = 'none'; }}
                               />
                             ) : (
-                              <div className="w-9 h-12 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0">
-                                <BookOpen className="w-4 h-4 text-slate-500" />
+                              <div className="w-9 h-12 rounded-lg bg-[#f3f3f3] border border-gray-200 flex items-center justify-center shrink-0">
+                                <BookOpen className="w-4 h-4 text-gray-400" />
                               </div>
                             )}
                             <div className="min-w-0">
-                              <p className="font-bold text-white truncate max-w-xs">{item.titulo}</p>
-                              <p className="text-[11px] text-slate-400 truncate max-w-xs">{item.autor || 'Autor desconocido'}</p>
+                              <p className="font-bold text-[#252525] truncate max-w-xs">{item.titulo}</p>
+                              <p className="text-[11px] text-gray-500 truncate max-w-xs">{item.autor || 'Autor desconocido'}</p>
                               {item.isbn && (
-                                <p className="text-[10px] font-mono text-slate-500">ISBN: {item.isbn}</p>
+                                <p className="text-[10px] font-mono text-gray-400 font-medium">ISBN: {item.isbn}</p>
                               )}
                             </div>
                           </div>
                         </td>
                         <td className="py-3 px-4">
-                          <p className="font-semibold text-white">{item.bodega_nombre}</p>
-                          <p className="text-[11px] text-slate-400">{item.sucursal_nombre || 'Sucursal Principal'}</p>
+                          <p className="font-bold text-[#252525]">{item.bodega_nombre}</p>
+                          <p className="text-[11px] text-gray-500">{item.sucursal_nombre || 'Sucursal Principal'}</p>
                         </td>
                         <td className="py-3 px-4 text-center">
-                          <span className={`font-mono text-sm font-bold ${
-                            item.stock_actual <= item.stock_minimo ? 'text-amber-400' : 'text-emerald-400'
+                          <span className={`font-mono text-sm font-extrabold ${
+                            item.stock_actual <= item.stock_minimo ? 'text-amber-600' : 'text-[#252525]'
                           }`}>
                             {item.stock_actual}
                           </span>
-                          <span className="text-[11px] text-slate-500 font-mono"> / mín {item.stock_minimo}</span>
+                          <span className="text-[11px] text-gray-400 font-mono"> / mín {item.stock_minimo}</span>
                         </td>
-                        <td className="py-3 px-4 font-mono text-[11px] text-slate-400">
+                        <td className="py-3 px-4 font-mono text-[11px] text-gray-500">
                           {formatFecha(item.ultima_salida)}
                         </td>
                         <td className="py-3 px-4">
-                          <div className="flex flex-wrap gap-1">
-                            {item.bajo_stock && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/30">
-                                Bajo stock
-                              </span>
-                            )}
-                            {item.obsoleto && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/30">
-                                Obsoleto
-                              </span>
-                            )}
-                            {!item.bajo_stock && !item.obsoleto && (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                                Normal
-                              </span>
-                            )}
-                          </div>
+                          <EstadoBadge bajo_stock={item.bajo_stock} obsoleto={item.obsoleto} />
                         </td>
                         <td className="py-3 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
@@ -648,7 +661,7 @@ export default function Inventario() {
                               type="button"
                               onClick={() => abrirModalSalida(item)}
                               title="Registrar salida"
-                              className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 border border-rose-500/30 transition-all cursor-pointer"
+                              className="px-2.5 py-1 text-xs font-bold rounded-lg bg-red-600 text-white hover:bg-red-700 transition-all hover:-translate-y-0.5 cursor-pointer shadow-2xs"
                             >
                               Salida
                             </button>
@@ -656,7 +669,7 @@ export default function Inventario() {
                               type="button"
                               onClick={() => abrirModalAjuste(item)}
                               title="Ajustar stock"
-                              className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 border border-amber-500/30 transition-all cursor-pointer"
+                              className="px-2.5 py-1 text-xs font-bold rounded-lg bg-[#b07c19] text-white hover:bg-[#e19922] hover:text-[#252525] transition-all hover:-translate-y-0.5 cursor-pointer shadow-2xs"
                             >
                               Ajuste
                             </button>
@@ -664,7 +677,7 @@ export default function Inventario() {
                               type="button"
                               onClick={() => handleVerKardex(item)}
                               title="Ver historial de movimientos"
-                              className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700 transition-all cursor-pointer"
+                              className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-[#f3f3f3] text-[#252525] hover:bg-gray-200 border border-gray-200 transition-all hover:-translate-y-0.5 cursor-pointer"
                             >
                               Kardex
                             </button>
@@ -681,49 +694,38 @@ export default function Inventario() {
                 {existencias.map((item) => (
                   <div
                     key={item.inventario_id}
-                    className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3"
+                    className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 space-y-3"
                   >
                     <div className="flex gap-3">
                       {item.imagen_url && (
                         <img
                           src={item.imagen_url}
                           alt={item.titulo}
-                          className="w-12 h-16 object-cover rounded-lg border border-slate-700 shrink-0"
+                          className="w-12 h-16 object-cover rounded-lg border border-gray-200 shrink-0"
                           onError={(e) => { e.target.style.display = 'none'; }}
                         />
                       )}
                       <div className="min-w-0 flex-1">
-                        <h4 className="font-bold text-white text-sm leading-snug line-clamp-2">{item.titulo}</h4>
-                        <p className="text-xs text-slate-400 truncate">{item.autor || 'Autor desconocido'}</p>
-                        <p className="text-[11px] font-mono text-slate-500">{item.bodega_nombre} · {item.sucursal_nombre}</p>
+                        <h4 className="font-bold text-[#252525] text-sm leading-snug line-clamp-2">{item.titulo}</h4>
+                        <p className="text-xs text-gray-500 truncate">{item.autor || 'Autor desconocido'}</p>
+                        <p className="text-[11px] font-mono text-gray-400">{item.bodega_nombre} · {item.sucursal_nombre}</p>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-xs">
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-100 text-xs">
                       <div>
-                        <span className="text-slate-400">Stock: </span>
+                        <span className="text-gray-500 font-medium">Stock: </span>
                         <span className={`font-mono font-bold ${
-                          item.stock_actual <= item.stock_minimo ? 'text-amber-400' : 'text-emerald-400'
+                          item.stock_actual <= item.stock_minimo ? 'text-amber-600' : 'text-[#252525]'
                         }`}>
                           {item.stock_actual}
                         </span>
-                        <span className="text-slate-500 font-mono"> (mín {item.stock_minimo})</span>
+                        <span className="text-gray-400 font-mono"> (mín {item.stock_minimo})</span>
                       </div>
-                      <div className="flex gap-1">
-                        {item.bajo_stock && (
-                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30">
-                            Bajo stock
-                          </span>
-                        )}
-                        {item.obsoleto && (
-                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/30">
-                            Obsoleto
-                          </span>
-                        )}
-                      </div>
+                      <EstadoBadge bajo_stock={item.bajo_stock} obsoleto={item.obsoleto} />
                     </div>
 
-                    <div className="text-[11px] text-slate-500 font-mono flex items-center justify-between">
+                    <div className="text-[11px] text-gray-500 font-mono flex items-center justify-between">
                       <span>Última salida:</span>
                       <span>{formatFecha(item.ultima_salida)}</span>
                     </div>
@@ -732,21 +734,21 @@ export default function Inventario() {
                       <button
                         type="button"
                         onClick={() => abrirModalSalida(item)}
-                        className="py-1.5 text-center text-xs font-semibold rounded-xl bg-rose-500/10 text-rose-300 border border-rose-500/30 active:scale-95 transition-all"
+                        className="py-1.5 text-center text-xs font-bold rounded-xl bg-red-600 text-white active:scale-95 transition-all"
                       >
                         Salida
                       </button>
                       <button
                         type="button"
                         onClick={() => abrirModalAjuste(item)}
-                        className="py-1.5 text-center text-xs font-semibold rounded-xl bg-amber-500/10 text-amber-300 border border-amber-500/30 active:scale-95 transition-all"
+                        className="py-1.5 text-center text-xs font-bold rounded-xl bg-[#b07c19] text-white active:scale-95 transition-all"
                       >
                         Ajuste
                       </button>
                       <button
                         type="button"
                         onClick={() => handleVerKardex(item)}
-                        className="py-1.5 text-center text-xs font-semibold rounded-xl bg-slate-800 text-slate-300 border border-slate-700 active:scale-95 transition-all"
+                        className="py-1.5 text-center text-xs font-semibold rounded-xl bg-[#f3f3f3] text-[#252525] border border-gray-200 active:scale-95 transition-all"
                       >
                         Kardex
                       </button>
@@ -759,22 +761,22 @@ export default function Inventario() {
         </div>
       )}
 
-      {/* ── 4. Contenido: Kardex ───────────────────────────────────────────── */}
+      {/* ── 4. Contenido: Kardex ─────────────────────────────────────────────── */}
       {activeTab === 'kardex' && (
         <div className="space-y-5">
-          {/* Banner si viene filtrado por libro */}
+          {/* Banner filtrado por libro */}
           {kardexLibroId && (
-            <div className="flex items-center justify-between p-3.5 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-xs text-emerald-300">
+            <div className="flex items-center justify-between p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 shadow-xs">
               <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-emerald-400" />
+                <Filter className="w-4 h-4 text-[#b07c19]" />
                 <span>
-                  Filtrado por libro: <strong className="text-white">{kardexLibroTitulo}</strong>
+                  Filtrado por libro: <strong className="text-[#252525] font-bold">{kardexLibroTitulo}</strong>
                 </span>
               </div>
               <button
                 type="button"
                 onClick={limpiarFiltroLibroKardex}
-                className="inline-flex items-center gap-1 text-slate-400 hover:text-white bg-slate-900/60 px-2.5 py-1 rounded-lg border border-slate-700 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1 text-gray-600 hover:text-red-600 bg-white px-2.5 py-1 rounded-xl border border-gray-200 transition-colors cursor-pointer shadow-2xs font-semibold"
               >
                 <X className="w-3.5 h-3.5" />
                 <span>Quitar filtro</span>
@@ -783,7 +785,7 @@ export default function Inventario() {
           )}
 
           {/* Barra de Filtros de Kardex */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+          <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
             {/* Chips de tipo */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
               {[
@@ -799,10 +801,10 @@ export default function Inventario() {
                     setKardexTipo(chip.id);
                     setKardexOffset(0);
                   }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-150 cursor-pointer ${
                     kardexTipo === chip.id
-                      ? 'bg-emerald-500 text-slate-950 shadow-sm'
-                      : 'bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-800'
+                      ? 'bg-[#e19922] text-[#252525] shadow-xs'
+                      : 'bg-[#f3f3f3] text-[#252525] hover:bg-[#b07c19] hover:text-white border border-gray-200'
                   }`}
                 >
                   {chip.label}
@@ -817,7 +819,7 @@ export default function Inventario() {
                 setKardexBodega(e.target.value);
                 setKardexOffset(0);
               }}
-              className="w-full sm:w-56 bg-slate-950 border border-slate-700 text-white text-xs rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500 transition-all cursor-pointer"
+              className="w-full sm:w-56 bg-[#f3f3f3] border border-gray-200 text-[#252525] text-xs rounded-xl px-3 py-2 outline-none focus:border-[#b07c19] transition-all cursor-pointer font-medium"
             >
               <option value="">Todas las bodegas</option>
               {bodegas.map((b) => (
@@ -830,24 +832,24 @@ export default function Inventario() {
 
           {/* Tabla de Movimientos */}
           {loadingKardex ? (
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center">
-              <div className="w-10 h-10 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mx-auto mb-3" />
-              <p className="text-xs text-slate-400">Cargando movimientos del kardex...</p>
+            <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center shadow-sm">
+              <div className="w-10 h-10 border-4 border-gray-200 border-t-[#e19922] rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-xs text-gray-500 font-medium">Cargando movimientos del kardex...</p>
             </div>
           ) : movimientos.length === 0 ? (
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center">
-              <Clock className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-              <h3 className="text-base font-semibold text-white mb-1">No hay movimientos registrados</h3>
-              <p className="text-xs text-slate-400 max-w-sm mx-auto">
+            <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center shadow-sm">
+              <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <h3 className="text-base font-bold text-[#252525] mb-1">No hay movimientos registrados</h3>
+              <p className="text-xs text-gray-500 max-w-sm mx-auto">
                 No se encontraron registros en el kardex con los filtros aplicados.
               </p>
             </div>
           ) : (
             <>
               {/* Tabla desktop */}
-              <div className="hidden md:block bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+              <div className="hidden md:block bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-950/80 text-slate-400 font-semibold uppercase tracking-wider border-b border-slate-800">
+                  <thead className="bg-[#f3f3f3] text-gray-600 font-bold uppercase tracking-wider border-b border-gray-200">
                     <tr>
                       <th className="py-3.5 px-4">Fecha / Hora</th>
                       <th className="py-3.5 px-4">Tipo</th>
@@ -858,40 +860,30 @@ export default function Inventario() {
                       <th className="py-3.5 px-4">Motivo / Detalle</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                  <tbody className="divide-y divide-gray-100 text-gray-700">
                     {movimientos.map((m) => (
-                      <tr key={m.id} className="hover:bg-slate-800/30 transition-colors">
-                        <td className="py-3 px-4 font-mono text-[11px] text-slate-400 whitespace-nowrap">
+                      <tr key={m.id} className="hover:bg-gray-50/80 transition-colors">
+                        <td className="py-3 px-4 font-mono text-[11px] text-gray-500 whitespace-nowrap">
                           {formatFecha(m.fecha_movimiento)}
                         </td>
                         <td className="py-3 px-4">
-                          <span
-                            className={`inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                              m.tipo?.toLowerCase() === 'ingreso'
-                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                                : m.tipo?.toLowerCase() === 'salida'
-                                ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
-                                : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
-                            }`}
-                          >
-                            {m.tipo}
-                          </span>
+                          <TipoBadge tipo={m.tipo} />
                         </td>
-                        <td className="py-3 px-4 text-center font-mono font-bold text-white text-sm">
+                        <td className="py-3 px-4 text-center font-mono font-extrabold text-[#252525] text-sm">
                           {m.tipo?.toLowerCase() === 'salida' ? `-${m.cantidad}` : `+${m.cantidad}`}
                         </td>
                         <td className="py-3 px-4">
-                          <p className="font-semibold text-white truncate max-w-xs">{m.titulo}</p>
-                          {m.isbn && <p className="text-[10px] font-mono text-slate-500">ISBN: {m.isbn}</p>}
+                          <p className="font-bold text-[#252525] truncate max-w-xs">{m.titulo}</p>
+                          {m.isbn && <p className="text-[10px] font-mono text-gray-400 font-medium">ISBN: {m.isbn}</p>}
                         </td>
                         <td className="py-3 px-4">
-                          <p className="font-semibold text-white">{m.bodega_nombre}</p>
-                          <p className="text-[10px] text-slate-500">{m.sucursal_nombre}</p>
+                          <p className="font-bold text-[#252525]">{m.bodega_nombre}</p>
+                          <p className="text-[10px] text-gray-500">{m.sucursal_nombre}</p>
                         </td>
-                        <td className="py-3 px-4 text-slate-400">
+                        <td className="py-3 px-4 text-gray-600 font-medium">
                           {m.usuario_nombre || 'Sistema'}
                         </td>
-                        <td className="py-3 px-4 text-slate-400 max-w-xs truncate text-[11px]">
+                        <td className="py-3 px-4 text-gray-600 max-w-xs truncate text-[11px]">
                           {m.motivo_detalle || 'Sin detalle'}
                         </td>
                       </tr>
@@ -905,37 +897,27 @@ export default function Inventario() {
                 {movimientos.map((m) => (
                   <div
                     key={m.id}
-                    className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-2.5"
+                    className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 space-y-2.5"
                   >
                     <div className="flex items-center justify-between">
-                      <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                          m.tipo?.toLowerCase() === 'ingreso'
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                            : m.tipo?.toLowerCase() === 'salida'
-                            ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
-                            : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
-                        }`}
-                      >
-                        {m.tipo}
-                      </span>
-                      <span className="font-mono text-xs text-slate-400">
+                      <TipoBadge tipo={m.tipo} />
+                      <span className="font-mono text-xs text-gray-500">
                         {formatFecha(m.fecha_movimiento)}
                       </span>
                     </div>
 
                     <div>
-                      <h4 className="font-bold text-white text-sm leading-snug">{m.titulo}</h4>
-                      <p className="text-[11px] font-mono text-slate-400">{m.bodega_nombre} · Cantidad: <strong>{m.cantidad}</strong></p>
+                      <h4 className="font-bold text-[#252525] text-sm leading-snug">{m.titulo}</h4>
+                      <p className="text-[11px] font-mono text-gray-500">{m.bodega_nombre} · Cantidad: <strong className="text-[#252525]">{m.cantidad}</strong></p>
                     </div>
 
                     {m.motivo_detalle && (
-                      <p className="text-xs text-slate-400 bg-slate-950/60 p-2 rounded-xl border border-slate-800/80">
+                      <p className="text-xs text-gray-600 bg-[#f3f3f3] p-2 rounded-xl border border-gray-200">
                         {m.motivo_detalle}
                       </p>
                     )}
 
-                    <div className="text-[10px] text-slate-500 font-mono pt-1 border-t border-slate-800 flex justify-between">
+                    <div className="text-[10px] text-gray-400 font-mono pt-1 border-t border-gray-100 flex justify-between">
                       <span>Operador: {m.usuario_nombre || 'Sistema'}</span>
                       {m.isbn && <span>ISBN: {m.isbn}</span>}
                     </div>
@@ -944,17 +926,17 @@ export default function Inventario() {
               </div>
 
               {/* Paginación */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-                <span className="text-slate-400">
+              <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                <span className="text-gray-500 font-medium">
                   Mostrando{' '}
-                  <strong className="text-white">
+                  <strong className="text-[#252525]">
                     {totalMovimientos === 0 ? 0 : kardexOffset + 1}
                   </strong>
                   –
-                  <strong className="text-white">
+                  <strong className="text-[#252525]">
                     {Math.min(kardexOffset + KARDEX_LIMIT, totalMovimientos)}
                   </strong>{' '}
-                  de <strong className="text-white">{totalMovimientos}</strong> movimientos
+                  de <strong className="text-[#252525]">{totalMovimientos}</strong> movimientos
                 </span>
 
                 <div className="flex items-center gap-2">
@@ -962,7 +944,7 @@ export default function Inventario() {
                     type="button"
                     onClick={() => setKardexOffset((prev) => Math.max(0, prev - KARDEX_LIMIT))}
                     disabled={kardexOffset === 0}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-gray-200 bg-[#f3f3f3] text-gray-700 hover:text-[#252525] hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer font-semibold"
                   >
                     <ChevronLeft className="w-4 h-4" />
                     <span>Anterior</span>
@@ -971,7 +953,7 @@ export default function Inventario() {
                     type="button"
                     onClick={() => setKardexOffset((prev) => prev + KARDEX_LIMIT)}
                     disabled={kardexOffset + KARDEX_LIMIT >= totalMovimientos}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-gray-200 bg-[#f3f3f3] text-gray-700 hover:text-[#252525] hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer font-semibold"
                   >
                     <span>Siguiente</span>
                     <ChevronRight className="w-4 h-4" />
@@ -983,49 +965,48 @@ export default function Inventario() {
         </div>
       )}
 
-      {/* ── Modal de Salida ─────────────────────────────────────────────────── */}
+      {/* ── Modal de Salida ──────────────────────────────────────────────────── */}
       {modalSalidaOpen && selectedItem && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-scale-in space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-gray-200 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-scale-in space-y-4">
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <ArrowDownRight className="w-5 h-5 text-rose-400" />
+                <h3 className="text-base font-bold text-[#252525] flex items-center gap-2">
+                  <ArrowDownRight className="w-5 h-5 text-red-600" />
                   Registrar Salida de Mercancía
                 </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className="text-xs text-gray-500 mt-0.5">
                   Bodega: {selectedItem.bodega_nombre} ({selectedItem.sucursal_nombre})
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setModalSalidaOpen(false)}
-                className="text-slate-400 hover:text-white transition-colors"
+                className="text-gray-400 hover:text-[#252525] transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Ficha del libro */}
-            <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+            <div className="p-3 bg-[#f3f3f3] rounded-xl border border-gray-200 flex items-center justify-between text-xs">
               <div className="min-w-0 pr-2">
-                <p className="font-bold text-white truncate">{selectedItem.titulo}</p>
-                <p className="text-slate-400 text-[11px] truncate">{selectedItem.autor || 'Autor no especificado'}</p>
+                <p className="font-bold text-[#252525] truncate">{selectedItem.titulo}</p>
+                <p className="text-gray-500 text-[11px] truncate">{selectedItem.autor || 'Autor no especificado'}</p>
               </div>
               <div className="text-right shrink-0">
-                <span className="text-[10px] text-slate-500 uppercase block">Stock actual</span>
-                <span className="text-sm font-bold font-mono text-emerald-400">{selectedItem.stock_actual} uds.</span>
+                <span className="text-[10px] text-gray-500 uppercase block font-semibold">Stock actual</span>
+                <span className="text-sm font-extrabold font-mono text-[#252525]">{selectedItem.stock_actual} uds.</span>
               </div>
             </div>
 
-            {/* Error en modal */}
             {modalError && (
-              <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-300 flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
                 <div className="min-w-0">
                   <p className="font-semibold">{modalError.message}</p>
                   {Array.isArray(modalError.details) && modalError.details.length > 0 && (
-                    <ul className="list-disc list-inside mt-1 space-y-0.5 text-rose-400">
+                    <ul className="list-disc list-inside mt-1 space-y-0.5 text-red-600">
                       {modalError.details.map((d, i) => <li key={i}>{d}</li>)}
                     </ul>
                   )}
@@ -1035,8 +1016,8 @@ export default function Inventario() {
 
             <form onSubmit={handleSalidaSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Cantidad a retirar <span className="text-rose-400">*</span>
+                <label className="block text-xs font-bold text-[#252525] mb-1.5">
+                  Cantidad a retirar <span className="text-red-600">*</span>
                 </label>
                 <input
                   type="number"
@@ -1046,12 +1027,12 @@ export default function Inventario() {
                   onChange={(e) => setFormCantidad(e.target.value)}
                   required
                   disabled={isSubmitting}
-                  className="w-full bg-slate-950 border border-slate-700 text-white text-sm rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-rose-500 transition-all font-mono"
+                  className="w-full bg-[#f3f3f3] border border-gray-200 text-[#252525] text-sm rounded-xl px-3.5 py-2.5 outline-none focus:border-red-600 transition-all font-mono font-bold"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                <label className="block text-xs font-bold text-[#252525] mb-1.5">
                   Motivo de la salida (opcional)
                 </label>
                 <input
@@ -1060,23 +1041,23 @@ export default function Inventario() {
                   onChange={(e) => setFormMotivo(e.target.value)}
                   placeholder="Ej. Venta en mostrador, despacho a cliente..."
                   disabled={isSubmitting}
-                  className="w-full bg-slate-950 border border-slate-700 text-white text-xs rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-rose-500 transition-all placeholder:text-slate-500"
+                  className="w-full bg-[#f3f3f3] border border-gray-200 text-[#252525] text-xs rounded-xl px-3.5 py-2.5 outline-none focus:border-[#b07c19] transition-all placeholder:text-gray-400"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
                 <button
                   type="button"
                   onClick={() => setModalSalidaOpen(false)}
                   disabled={isSubmitting}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 transition-all cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 hover:text-[#252525] bg-[#f3f3f3] hover:bg-gray-200 border border-gray-200 transition-all cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 disabled:opacity-50 transition-all cursor-pointer shadow-lg shadow-rose-950/50"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition-all hover:-translate-y-0.5 cursor-pointer shadow-xs"
                 >
                   {isSubmitting ? 'Procesando...' : 'Confirmar Salida'}
                 </button>
@@ -1086,57 +1067,55 @@ export default function Inventario() {
         </div>
       )}
 
-      {/* ── Modal de Ajuste ─────────────────────────────────────────────────── */}
+      {/* ── Modal de Ajuste ──────────────────────────────────────────────────── */}
       {modalAjusteOpen && selectedItem && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-scale-in space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white border border-gray-200 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-scale-in space-y-4">
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <Sliders className="w-5 h-5 text-amber-400" />
+                <h3 className="text-base font-bold text-[#252525] flex items-center gap-2">
+                  <Sliders className="w-5 h-5 text-[#b07c19]" />
                   Ajuste de Stock / Auditoría
                 </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className="text-xs text-gray-500 mt-0.5">
                   Bodega: {selectedItem.bodega_nombre} ({selectedItem.sucursal_nombre})
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setModalAjusteOpen(false)}
-                className="text-slate-400 hover:text-white transition-colors"
+                className="text-gray-400 hover:text-[#252525] transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Ficha del libro y stock actual */}
-            <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+            {/* Ficha del libro */}
+            <div className="p-3 bg-[#f3f3f3] rounded-xl border border-gray-200 flex items-center justify-between text-xs">
               <div className="min-w-0 pr-2">
-                <p className="font-bold text-white truncate">{selectedItem.titulo}</p>
-                <p className="text-slate-400 text-[11px] truncate">{selectedItem.autor || 'Autor no especificado'}</p>
+                <p className="font-bold text-[#252525] truncate">{selectedItem.titulo}</p>
+                <p className="text-gray-500 text-[11px] truncate">{selectedItem.autor || 'Autor no especificado'}</p>
               </div>
               <div className="text-right shrink-0">
-                <span className="text-[10px] text-slate-500 uppercase block">Stock actual</span>
-                <span className="text-sm font-bold font-mono text-white">{selectedItem.stock_actual} uds.</span>
+                <span className="text-[10px] text-gray-500 uppercase block font-semibold">Stock actual</span>
+                <span className="text-sm font-extrabold font-mono text-[#252525]">{selectedItem.stock_actual} uds.</span>
               </div>
             </div>
 
-            {/* Texto de ayuda clave */}
-            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-300 flex items-start gap-2">
-              <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-              <p className="leading-relaxed">
-                Este ajuste <strong>FIJA</strong> el stock al valor que ingreses a continuación (establece el nuevo conteo físico, no suma ni resta).
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-start gap-2">
+              <Info className="w-4 h-4 text-[#b07c19] shrink-0 mt-0.5" />
+              <p className="leading-relaxed font-medium">
+                Este ajuste <strong className="text-[#252525]">FIJA</strong> el stock al valor que ingreses a continuación (establece el nuevo conteo físico, no suma ni resta).
               </p>
             </div>
 
-            {/* Error en modal */}
             {modalError && (
-              <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-300 flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
                 <div className="min-w-0">
                   <p className="font-semibold">{modalError.message}</p>
                   {Array.isArray(modalError.details) && modalError.details.length > 0 && (
-                    <ul className="list-disc list-inside mt-1 space-y-0.5 text-rose-400">
+                    <ul className="list-disc list-inside mt-1 space-y-0.5 text-red-600">
                       {modalError.details.map((d, i) => <li key={i}>{d}</li>)}
                     </ul>
                   )}
@@ -1146,8 +1125,8 @@ export default function Inventario() {
 
             <form onSubmit={handleAjusteSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Stock Nuevo (conteo físico auditado) <span className="text-amber-400">*</span>
+                <label className="block text-xs font-bold text-[#252525] mb-1.5">
+                  Stock Nuevo (conteo físico auditado) <span className="text-[#b07c19]">*</span>
                 </label>
                 <input
                   type="number"
@@ -1156,13 +1135,13 @@ export default function Inventario() {
                   onChange={(e) => setFormStockNuevo(e.target.value)}
                   required
                   disabled={isSubmitting}
-                  className="w-full bg-slate-950 border border-slate-700 text-white text-sm rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-amber-500 transition-all font-mono"
+                  className="w-full bg-[#f3f3f3] border border-gray-200 text-[#252525] text-sm rounded-xl px-3.5 py-2.5 outline-none focus:border-[#b07c19] transition-all font-mono font-bold"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Motivo o justificación del ajuste <span className="text-amber-400">*</span>
+                <label className="block text-xs font-bold text-[#252525] mb-1.5">
+                  Motivo o justificación del ajuste <span className="text-[#b07c19]">*</span>
                 </label>
                 <textarea
                   rows={3}
@@ -1171,23 +1150,23 @@ export default function Inventario() {
                   required
                   placeholder="Ej. Conteo físico anual de inventario, merma por ejemplar dañado, corrección..."
                   disabled={isSubmitting}
-                  className="w-full bg-slate-950 border border-slate-700 text-white text-xs rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-amber-500 transition-all placeholder:text-slate-500 resize-none"
+                  className="w-full bg-[#f3f3f3] border border-gray-200 text-[#252525] text-xs rounded-xl px-3.5 py-2.5 outline-none focus:border-[#b07c19] transition-all placeholder:text-gray-400 resize-none"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
                 <button
                   type="button"
                   onClick={() => setModalAjusteOpen(false)}
                   disabled={isSubmitting}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 transition-all cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-gray-600 hover:text-[#252525] bg-[#f3f3f3] hover:bg-gray-200 border border-gray-200 transition-all cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-950 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 transition-all cursor-pointer shadow-lg shadow-amber-950/50"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-[#252525] bg-[#e19922] hover:bg-[#b07c19] hover:text-white disabled:opacity-50 transition-all hover:-translate-y-0.5 cursor-pointer shadow-xs"
                 >
                   {isSubmitting ? 'Aplicando...' : 'Fijar Stock'}
                 </button>

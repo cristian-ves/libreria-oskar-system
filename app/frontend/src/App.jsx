@@ -23,11 +23,11 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-black">
+    <div className="min-h-screen bg-oskar-light text-oskar-dark flex flex-col font-sans selection:bg-oskar-gold selection:text-oskar-dark">
       {/* Notificación flotante Toast */}
       <Toast toast={toast} onClose={closeToast} />
 
-      {/* Barra de Navegación */}
+      {/* Barra de Navegación Sticky con fondo 100% opaco y sombra */}
       <Navbar />
 
       {/* Contenido Dinámico con React Router */}
