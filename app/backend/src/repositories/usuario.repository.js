@@ -1,60 +1,227 @@
-const db = require('../config/db');
+const { Usuario, Rol, sequelize } = require('../models');
 
 class UsuarioRepository {
   /**
-   * Busca un usuario por su dirección de correo electrónico, incluyendo el nombre de su rol.
+   * Busca un usuario por su dirección de correo electrónico (case-insensitive),
+   * incluyendo su rol asociado y campos requeridos para autenticación.
+   * 
    * @param {string} email
-   * @param {import('pg').PoolClient | import('pg').Pool} [executor]
-   * @returns {Promise<Object|null>}
+   * @param {object | import('pg').PoolClient} [executorOrOptions]
+   * @returns {Promise<Object|null>} Objeto plano con datos de usuario y rol_nombre.
    */
-  async findByEmail(email, executor = db.pool) {
-    const text = `
-      SELECT 
-        u.id,
-        u.rol_id,
-        u.nombre_completo,
-        u.email,
-        u.password_hash,
-        u.dos_factores_activo,
-        u.activo,
-        u.creado_en,
-        u.actualizado_en,
-        r.nombre AS rol_nombre
-      FROM usuarios u
-      JOIN roles r ON u.rol_id = r.id
-      WHERE LOWER(u.email) = LOWER($1)
-      LIMIT 1;
-    `;
-    const res = await executor.query(text, [email.trim()]);
-    return res.rows[0] || null;
+  async findByEmail(email, executorOrOptions = {}) {
+    if (!email || typeof email !== 'string' || !email.trim()) {
+      return null;
+    }
+
+    const cleanEmail = email.trim();
+
+    // Compatibilidad en caso de recibir un cliente pg transaccional
+    if (executorOrOptions && typeof executorOrOptions.query === 'function') {
+      const text = `
+        SELECT 
+          u.id,
+          u.rol_id,
+          u.nombre_completo,
+          u.email,
+          u.password_hash,
+          u.dos_factores_activo,
+          u.activo,
+          u.creado_en,
+          u.actualizado_en,
+          r.nombre AS rol_nombre
+        FROM usuarios u
+        JOIN roles r ON u.rol_id = r.id
+        WHERE LOWER(u.email) = LOWER($1)
+        LIMIT 1;
+      `;
+      const res = await executorOrOptions.query(text, [cleanEmail]);
+      return res.rows[0] || null;
+    }
+
+    const queryOptions = {
+      where: sequelize.where(
+        sequelize.fn('LOWER', sequelize.col('Usuario.email')),
+        cleanEmail.toLowerCase()
+      ),
+      include: [
+        {
+          model: Rol,
+          as: 'rol',
+          attributes: ['id', 'nombre'],
+        },
+      ],
+      attributes: [
+        'id',
+        'rol_id',
+        'nombre_completo',
+        'email',
+        'password_hash',
+        'dos_factores_activo',
+        'activo',
+        'creado_en',
+        'actualizado_en',
+      ],
+    };
+
+    if (executorOrOptions && executorOrOptions.transaction) {
+      queryOptions.transaction = executorOrOptions.transaction;
+    }
+
+    const usuario = await Usuario.findOne(queryOptions);
+    if (!usuario) {
+      return null;
+    }
+
+    const plain = usuario.get({ plain: true });
+    plain.rol_nombre = plain.rol ? plain.rol.nombre : null;
+    return plain;
   }
 
   /**
-   * Busca un usuario por su identificador único (UUID), incluyendo el nombre de su rol.
+   * Busca un usuario por su identificador único (UUID),
+   * incluyendo su rol asociado y datos para verificación de estado y permisos.
+   * 
    * @param {string} id
-   * @param {import('pg').PoolClient | import('pg').Pool} [executor]
+   * @param {object | import('pg').PoolClient} [executorOrOptions]
+   * @returns {Promise<Object|null>} Objeto plano con datos de usuario y rol_nombre.
+   */
+  async findById(id, executorOrOptions = {}) {
+    if (!id) {
+      return null;
+    }
+
+    // Compatibilidad en caso de recibir un cliente pg transaccional
+    if (executorOrOptions && typeof executorOrOptions.query === 'function') {
+      const text = `
+        SELECT 
+          u.id,
+          u.rol_id,
+          u.nombre_completo,
+          u.email,
+          u.password_hash,
+          u.dos_factores_activo,
+          u.activo,
+          u.creado_en,
+          u.actualizado_en,
+          r.nombre AS rol_nombre
+        FROM usuarios u
+        JOIN roles r ON u.rol_id = r.id
+        WHERE u.id = $1
+        LIMIT 1;
+      `;
+      const res = await executorOrOptions.query(text, [id]);
+      return res.rows[0] || null;
+    }
+
+    const queryOptions = {
+      include: [
+        {
+          model: Rol,
+          as: 'rol',
+          attributes: ['id', 'nombre'],
+        },
+      ],
+      attributes: [
+        'id',
+        'rol_id',
+        'nombre_completo',
+        'email',
+        'password_hash',
+        'dos_factores_activo',
+        'activo',
+        'creado_en',
+        'actualizado_en',
+      ],
+    };
+
+    if (executorOrOptions && executorOrOptions.transaction) {
+      queryOptions.transaction = executorOrOptions.transaction;
+    }
+
+    const usuario = await Usuario.findByPk(id, queryOptions);
+    if (!usuario) {
+      return null;
+    }
+
+    const plain = usuario.get({ plain: true });
+    plain.rol_nombre = plain.rol ? plain.rol.nombre : null;
+    return plain;
+  }
+
+  /**
+   * Obtiene todos los usuarios del sistema sin exponer credenciales sensibles.
+   * @param {object} [options]
+   * @returns {Promise<Array<Object>>}
+   */
+  async findAll(options = {}) {
+    const queryOptions = {
+      include: [
+        {
+          model: Rol,
+          as: 'rol',
+          attributes: ['id', 'nombre'],
+        },
+      ],
+      attributes: [
+        'id',
+        'rol_id',
+        'nombre_completo',
+        'email',
+        'dos_factores_activo',
+        'activo',
+        'creado_en',
+        'actualizado_en',
+      ],
+      order: [['nombre_completo', 'ASC']],
+      ...(options && options.transaction ? { transaction: options.transaction } : {}),
+    };
+
+    const usuarios = await Usuario.findAll(queryOptions);
+    return usuarios.map((u) => {
+      const plain = u.get({ plain: true });
+      plain.rol_nombre = plain.rol ? plain.rol.nombre : null;
+      return plain;
+    });
+  }
+
+  /**
+   * Crea un nuevo usuario en la base de datos con Sequelize.
+   * @param {object} userData
+   * @param {object} [options]
+   * @returns {Promise<Object>}
+   */
+  async create(userData, options = {}) {
+    const usuario = await Usuario.create(
+      userData,
+      options && options.transaction ? { transaction: options.transaction } : {}
+    );
+    const plain = usuario.get({ plain: true });
+    delete plain.password_hash;
+    delete plain.dos_factores_secreto;
+    delete plain.token_recuperacion;
+    return plain;
+  }
+
+  /**
+   * Actualiza los datos de un usuario por su ID.
+   * @param {string} id
+   * @param {object} updateData
+   * @param {object} [options]
    * @returns {Promise<Object|null>}
    */
-  async findById(id, executor = db.pool) {
-    const text = `
-      SELECT 
-        u.id,
-        u.rol_id,
-        u.nombre_completo,
-        u.email,
-        u.password_hash,
-        u.dos_factores_activo,
-        u.activo,
-        u.creado_en,
-        u.actualizado_en,
-        r.nombre AS rol_nombre
-      FROM usuarios u
-      JOIN roles r ON u.rol_id = r.id
-      WHERE u.id = $1
-      LIMIT 1;
-    `;
-    const res = await executor.query(text, [id]);
-    return res.rows[0] || null;
+  async update(id, updateData, options = {}) {
+    const txOption = options && options.transaction ? { transaction: options.transaction } : {};
+    const usuario = await Usuario.findByPk(id, txOption);
+    if (!usuario) {
+      return null;
+    }
+    await usuario.update(updateData, txOption);
+    const plain = usuario.get({ plain: true });
+    delete plain.password_hash;
+    delete plain.dos_factores_secreto;
+    delete plain.token_recuperacion;
+    return plain;
   }
 }
 
