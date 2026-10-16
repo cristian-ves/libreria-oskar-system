@@ -1,8 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const bcrypt = require('bcryptjs');
+const { sequelize } = require('../src/models');
 const usuarioRepository = require('../src/repositories/usuario.repository');
-const db = require('../src/config/db');
 
 test('UsuarioRepository - findByEmail() recupera el usuario con rol_nombre y password_hash para autenticación', async () => {
   const email = 'admin@libreriaoskar.com';
@@ -47,6 +47,9 @@ test('UsuarioRepository - findById() busca correctamente por UUID', async () => 
   assert.strictEqual(usuario.nombre_completo, admin.nombre_completo);
   assert.strictEqual(usuario.rol_nombre, 'Administrador');
   assert.strictEqual(usuario.activo, true);
+  assert.strictEqual(usuario.password_hash, undefined, 'findById no debe devolver el hash');
+  assert.strictEqual(usuario.dos_factores_secreto, undefined);
+  assert.strictEqual(usuario.token_recuperacion, undefined);
 
   // Búsqueda con ID inexistente
   const noExiste = await usuarioRepository.findById('00000000-0000-0000-0000-000000000000');
@@ -73,18 +76,28 @@ test('UsuarioRepository - findAll() retorna lista sin exponer password_hash ni s
   });
 });
 
-test('UsuarioRepository - compatibilidad con cliente transaccional pg (query delegation)', async () => {
-  const client = await db.pool.connect();
+test('UsuarioRepository - findByEmail, findById y findAll aceptan transacción Sequelize', async () => {
+  const transaction = await sequelize.transaction();
   try {
-    const admin = await usuarioRepository.findByEmail('admin@libreriaoskar.com', client);
-    assert.ok(admin, 'Debe encontrar al usuario mediante cliente pg');
+    const admin = await usuarioRepository.findByEmail('admin@libreriaoskar.com', { transaction });
+    assert.ok(admin, 'Debe encontrar al usuario dentro de la transacción Sequelize');
     assert.strictEqual(admin.rol_nombre, 'Administrador');
     assert.ok(admin.password_hash);
 
-    const porId = await usuarioRepository.findById(admin.id, client);
-    assert.ok(porId, 'Debe encontrar al usuario por ID mediante cliente pg');
+    const porId = await usuarioRepository.findById(admin.id, { transaction });
+    assert.ok(porId, 'Debe encontrar al usuario por ID dentro de la transacción');
     assert.strictEqual(porId.id, admin.id);
+    assert.strictEqual(porId.rol_nombre, 'Administrador');
+    assert.strictEqual(porId.password_hash, undefined);
+
+    const usuarios = await usuarioRepository.findAll({ transaction });
+    assert.ok(usuarios.some((usuario) => usuario.id === admin.id));
+    usuarios.forEach((usuario) => {
+      assert.strictEqual(usuario.password_hash, undefined);
+      assert.strictEqual(usuario.dos_factores_secreto, undefined);
+      assert.strictEqual(usuario.token_recuperacion, undefined);
+    });
   } finally {
-    client.release();
+    await transaction.rollback();
   }
 });

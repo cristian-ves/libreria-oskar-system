@@ -3,21 +3,10 @@ const { Categoria, sequelize } = require('../models');
 class CategoriaRepository {
   /**
    * Obtiene todas las categorías temáticas ordenadas alfabéticamente por nombre.
-   * @param {object | import('pg').PoolClient} [options] - Opciones de consulta o cliente pg heredado.
+   * @param {{ transaction?: import('sequelize').Transaction }} [options]
    * @returns {Promise<Array<{ id: string, nombre: string }>>}
-   */
+  */
   async findAll(options = {}) {
-    // Si se pasa un cliente pg heredado con .query
-    if (options && typeof options.query === 'function') {
-      const text = `
-        SELECT id, nombre
-        FROM categorias
-        ORDER BY nombre ASC;
-      `;
-      const res = await options.query(text);
-      return res.rows;
-    }
-
     const queryOptions = {
       attributes: ['id', 'nombre'],
       order: [['nombre', 'ASC']],
@@ -40,11 +29,6 @@ class CategoriaRepository {
   async findById(id, options = {}) {
     if (!id) return null;
 
-    if (options && typeof options.query === 'function') {
-      const res = await options.query('SELECT id, nombre, creado_en FROM categorias WHERE id = $1 LIMIT 1;', [id]);
-      return res.rows[0] || null;
-    }
-
     const item = await Categoria.findByPk(id, {
       raw: true,
       ...(options && options.transaction ? { transaction: options.transaction } : {}),
@@ -63,11 +47,6 @@ class CategoriaRepository {
     if (!nombre || typeof nombre !== 'string' || !nombre.trim()) return null;
 
     const cleanNombre = nombre.trim();
-
-    if (options && typeof options.query === 'function') {
-      const res = await options.query('SELECT id, nombre, creado_en FROM categorias WHERE LOWER(nombre) = LOWER($1) LIMIT 1;', [cleanNombre]);
-      return res.rows[0] || null;
-    }
 
     const item = await Categoria.findOne({
       where: sequelize.where(

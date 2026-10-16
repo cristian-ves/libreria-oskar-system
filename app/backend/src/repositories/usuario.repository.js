@@ -6,38 +6,15 @@ class UsuarioRepository {
    * incluyendo su rol asociado y campos requeridos para autenticación.
    * 
    * @param {string} email
-   * @param {object | import('pg').PoolClient} [executorOrOptions]
+   * @param {{ transaction?: import('sequelize').Transaction }} [options]
    * @returns {Promise<Object|null>} Objeto plano con datos de usuario y rol_nombre.
    */
-  async findByEmail(email, executorOrOptions = {}) {
+  async findByEmail(email, options = {}) {
     if (!email || typeof email !== 'string' || !email.trim()) {
       return null;
     }
 
     const cleanEmail = email.trim();
-
-    // Compatibilidad en caso de recibir un cliente pg transaccional
-    if (executorOrOptions && typeof executorOrOptions.query === 'function') {
-      const text = `
-        SELECT 
-          u.id,
-          u.rol_id,
-          u.nombre_completo,
-          u.email,
-          u.password_hash,
-          u.dos_factores_activo,
-          u.activo,
-          u.creado_en,
-          u.actualizado_en,
-          r.nombre AS rol_nombre
-        FROM usuarios u
-        JOIN roles r ON u.rol_id = r.id
-        WHERE LOWER(u.email) = LOWER($1)
-        LIMIT 1;
-      `;
-      const res = await executorOrOptions.query(text, [cleanEmail]);
-      return res.rows[0] || null;
-    }
 
     const queryOptions = {
       where: sequelize.where(
@@ -64,8 +41,8 @@ class UsuarioRepository {
       ],
     };
 
-    if (executorOrOptions && executorOrOptions.transaction) {
-      queryOptions.transaction = executorOrOptions.transaction;
+    if (options?.transaction) {
+      queryOptions.transaction = options.transaction;
     }
 
     const usuario = await Usuario.findOne(queryOptions);
@@ -83,35 +60,12 @@ class UsuarioRepository {
    * incluyendo su rol asociado y datos para verificación de estado y permisos.
    * 
    * @param {string} id
-   * @param {object | import('pg').PoolClient} [executorOrOptions]
+   * @param {{ transaction?: import('sequelize').Transaction }} [options]
    * @returns {Promise<Object|null>} Objeto plano con datos de usuario y rol_nombre.
    */
-  async findById(id, executorOrOptions = {}) {
+  async findById(id, options = {}) {
     if (!id) {
       return null;
-    }
-
-    // Compatibilidad en caso de recibir un cliente pg transaccional
-    if (executorOrOptions && typeof executorOrOptions.query === 'function') {
-      const text = `
-        SELECT 
-          u.id,
-          u.rol_id,
-          u.nombre_completo,
-          u.email,
-          u.password_hash,
-          u.dos_factores_activo,
-          u.activo,
-          u.creado_en,
-          u.actualizado_en,
-          r.nombre AS rol_nombre
-        FROM usuarios u
-        JOIN roles r ON u.rol_id = r.id
-        WHERE u.id = $1
-        LIMIT 1;
-      `;
-      const res = await executorOrOptions.query(text, [id]);
-      return res.rows[0] || null;
     }
 
     const queryOptions = {
@@ -127,7 +81,6 @@ class UsuarioRepository {
         'rol_id',
         'nombre_completo',
         'email',
-        'password_hash',
         'dos_factores_activo',
         'activo',
         'creado_en',
@@ -135,8 +88,8 @@ class UsuarioRepository {
       ],
     };
 
-    if (executorOrOptions && executorOrOptions.transaction) {
-      queryOptions.transaction = executorOrOptions.transaction;
+    if (options?.transaction) {
+      queryOptions.transaction = options.transaction;
     }
 
     const usuario = await Usuario.findByPk(id, queryOptions);

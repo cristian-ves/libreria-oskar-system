@@ -1,7 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { sequelize } = require('../src/config/sequelize');
-const db = require('../src/config/db');
+const { sequelize, Autor, Editorial } = require('../src/models');
 
 const categoriaRepository = require('../src/repositories/categoria.repository');
 const autorRepository = require('../src/repositories/autor.repository');
@@ -122,39 +121,60 @@ test('EditorialRepository - findByNombre(), findById() y findAll() con Sequelize
   }
 });
 
-test('AutorRepository y EditorialRepository - compatibilidad con cliente transaccional pg (ACID rollback)', async () => {
-  // Probar que cuando se pasa un cliente pg activo (db.withTransaction), la delegación transaccional funciona y preserva el rollback
-  let autorIdGuardado = null;
-  let editorialIdGuardada = null;
+test('AutorRepository y EditorialRepository - upsert conserva rollback Sequelize y resuelve inserciones concurrentes', async () => {
+  const suffix = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const rollbackAutor = `Autor Rollback ORM ${suffix}`;
+  const rollbackEditorial = `Editorial Rollback ORM ${suffix}`;
+  const concurrentAutor = `Autor Concurrente ORM ${suffix}`;
+  const concurrentEditorial = `Editorial Concurrente ORM ${suffix}`;
+
+  await assert.rejects(sequelize.transaction(async (transaction) => {
+    await autorRepository.upsert({ transaction }, {
+      nombre: rollbackAutor,
+      biografia: 'Prueba de atomicidad',
+    });
+    await editorialRepository.upsert({ transaction }, {
+      nombre: rollbackEditorial,
+      pais: 'País Temporal',
+    });
+    throw new Error('ROLLBACK_INTENCIONAL_REPOSITORIOS');
+  }), /ROLLBACK_INTENCIONAL_REPOSITORIOS/);
+
+  assert.strictEqual(await autorRepository.findByNombre(rollbackAutor), null);
+  assert.strictEqual(await editorialRepository.findByNombre(rollbackEditorial), null);
 
   try {
-    await db.withTransaction(async (client) => {
-      const autor = await autorRepository.upsert(client, {
-        nombre: `Autor Rollback ${Date.now()}`,
-        biografia: 'Prueba de atomicidad',
-      });
-      autorIdGuardado = autor.id;
+    const [autores, editoriales] = await Promise.all([
+      Promise.all([
+        sequelize.transaction((transaction) => autorRepository.upsert({ transaction }, {
+          nombre: concurrentAutor,
+          biografia: 'Primera biografía',
+        })),
+        sequelize.transaction((transaction) => autorRepository.upsert({ transaction }, {
+          nombre: concurrentAutor,
+          biografia: 'Segunda biografía',
+        })),
+      ]),
+      Promise.all([
+        sequelize.transaction((transaction) => editorialRepository.upsert({ transaction }, {
+          nombre: concurrentEditorial,
+          pais: 'Guatemala',
+        })),
+        sequelize.transaction((transaction) => editorialRepository.upsert({ transaction }, {
+          nombre: concurrentEditorial,
+          pais: 'México',
+        })),
+      ]),
+    ]);
 
-      const editorial = await editorialRepository.upsert(client, {
-        nombre: `Editorial Rollback ${Date.now()}`,
-        pais: 'País Temporal',
-      });
-      editorialIdGuardada = editorial.id;
-
-      // Provocar error intencional para verificar ROLLBACK en la transacción pg
-      throw new Error('ROLLBACK_INTENCIONAL_REPOSITORIOS');
-    });
-  } catch (err) {
-    assert.strictEqual(err.message, 'ROLLBACK_INTENCIONAL_REPOSITORIOS');
+    assert.strictEqual(autores[0].id, autores[1].id);
+    assert.strictEqual(editoriales[0].id, editoriales[1].id);
+    assert.strictEqual(await Autor.count({ where: { nombre: concurrentAutor } }), 1);
+    assert.strictEqual(await Editorial.count({ where: { nombre: concurrentEditorial } }), 1);
+  } finally {
+    await Promise.all([
+      Autor.destroy({ where: { nombre: concurrentAutor } }),
+      Editorial.destroy({ where: { nombre: concurrentEditorial } }),
+    ]);
   }
-
-  // Verificar que los registros NO existen en PostgreSQL tras el rollback
-  assert.ok(autorIdGuardado, 'Se generó un ID temporal');
-  assert.ok(editorialIdGuardada, 'Se generó un ID temporal');
-
-  const autorPostRollback = await autorRepository.findById(autorIdGuardado);
-  assert.strictEqual(autorPostRollback, null, 'El autor no debe existir tras el rollback de pg');
-
-  const editorialPostRollback = await editorialRepository.findById(editorialIdGuardada);
-  assert.strictEqual(editorialPostRollback, null, 'La editorial no debe existir tras el rollback de pg');
 });
