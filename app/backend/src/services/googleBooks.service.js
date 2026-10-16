@@ -118,22 +118,7 @@ class GoogleBooksService {
       return fallbackBook;
     }
 
-    // Si el ISBN es válido (10 o 13 dígitos) pero ningún proveedor externo respondió:
-    if (/^\d{9}[\dX]|\d{13}$/.test(isbn)) {
-      const contingencyBook = {
-        isbn,
-        titulo: `Libro ISBN ${isbn}`,
-        autor: AUTOR_PLACEHOLDER,
-        editorial: 'Editorial Independiente',
-        resena: `Ejemplar registrado en contingencia offline con ISBN ${isbn}. Metadatos detallados pendientes de sincronización por límite de cuota externa.`,
-        imagen_url: null,
-        precio: 0.00,
-        fuente: 'Modo Contingencia Offline',
-      };
-      this.cache.set(isbn, { timestamp: Date.now(), data: contingencyBook });
-      return contingencyBook;
-    }
-
+    // Sin metadatos reales, permitir que el flujo continúe por registro manual.
     return null;
   }
 

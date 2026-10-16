@@ -3,6 +3,7 @@ const authRoutes = require('./auth.routes');
 const libroRoutes = require('./libro.routes');
 const db = require('../config/db');
 const categoriaRepository = require('../repositories/categoria.repository');
+const { Bodega, Sucursal, Usuario, Rol } = require('../models');
 const { authenticate, authorize } = require('../middlewares/auth');
 
 const router = Router();
@@ -37,15 +38,30 @@ router.get('/health', async (req, res) => {
 // Listado de bodegas para dropdowns y asignaciones
 router.get('/bodegas', async (req, res, next) => {
   try {
-    const text = `
-      SELECT b.id, b.nombre, b.descripcion, s.nombre AS sucursal_nombre
-      FROM bodegas b
-      JOIN sucursales s ON b.sucursal_id = s.id
-      WHERE b.activo = true
-      ORDER BY s.nombre, b.nombre;
-    `;
-    const result = await db.query(text);
-    res.status(200).json({ status: 'success', data: result.rows });
+    const bodegas = await Bodega.findAll({
+      attributes: ['id', 'nombre', 'descripcion'],
+      where: { activo: true },
+      include: [{
+        model: Sucursal,
+        as: 'sucursal',
+        attributes: ['nombre'],
+        required: true,
+      }],
+      order: [
+        [{ model: Sucursal, as: 'sucursal' }, 'nombre', 'ASC'],
+        ['nombre', 'ASC'],
+      ],
+    });
+    const data = bodegas.map((bodega) => {
+      const plain = bodega.get({ plain: true });
+      return {
+        id: plain.id,
+        nombre: plain.nombre,
+        descripcion: plain.descripcion,
+        sucursal_nombre: plain.sucursal?.nombre ?? null,
+      };
+    });
+    res.status(200).json({ status: 'success', data });
   } catch (err) {
     next(err);
   }
@@ -54,15 +70,27 @@ router.get('/bodegas', async (req, res, next) => {
 // Listado de usuarios/empleados para asignación de operaciones (Solo Administrador)
 router.get('/usuarios', authenticate, authorize('Administrador'), async (req, res, next) => {
   try {
-    const text = `
-      SELECT u.id, u.nombre_completo, u.email, r.nombre AS rol_nombre
-      FROM usuarios u
-      JOIN roles r ON u.rol_id = r.id
-      WHERE u.activo = true
-      ORDER BY u.nombre_completo;
-    `;
-    const result = await db.query(text);
-    res.status(200).json({ status: 'success', data: result.rows });
+    const usuarios = await Usuario.findAll({
+      attributes: ['id', 'nombre_completo', 'email'],
+      where: { activo: true },
+      include: [{
+        model: Rol,
+        as: 'rol',
+        attributes: ['nombre'],
+        required: true,
+      }],
+      order: [['nombre_completo', 'ASC']],
+    });
+    const data = usuarios.map((usuario) => {
+      const plain = usuario.get({ plain: true });
+      return {
+        id: plain.id,
+        nombre_completo: plain.nombre_completo,
+        email: plain.email,
+        rol_nombre: plain.rol?.nombre ?? null,
+      };
+    });
+    res.status(200).json({ status: 'success', data });
   } catch (err) {
     next(err);
   }
