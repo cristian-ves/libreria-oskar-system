@@ -8,7 +8,7 @@
     "dev": "nodemon src/server.js",
     "seed": "node src/database/seed.js",
     "migrate": "node src/database/migrate.js",
-    "test": "node --test tests/**/*.test.js",
+    "test": "node src/run-tests.js",
     "test:sequelize": "node src/test-sequelize.js"
   },
   "keywords": [

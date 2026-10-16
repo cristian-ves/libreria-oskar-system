@@ -1,9 +1,39 @@
-const test = require('node:test');
+const { after, before, test } = require('node:test');
 const assert = require('node:assert');
 const { sequelize } = require('../src/config/sequelize');
 const db = require('../src/config/db');
 const movimientoRepository = require('../src/repositories/movimiento.repository');
-const { Inventario, TipoMovimiento, Usuario, MovimientoInventario } = require('../src/models');
+const { Inventario, Libro, Bodega, TipoMovimiento, Usuario, MovimientoInventario } = require('../src/models');
+
+let fixtureBook;
+let fixtureInventory;
+
+before(async () => {
+  const seed = require('../src/database/seed');
+  const { bodegaId } = await seed();
+  fixtureBook = await Libro.create({
+    titulo: `Libro Fixture Movimientos ${Date.now()}`,
+    isbn: `M${Date.now()}`,
+    resena: 'Fixture aislado para pruebas del trigger de movimientos',
+    precio: 10,
+  });
+  const bodega = await Bodega.findByPk(bodegaId);
+  fixtureInventory = await Inventario.create({
+    libro_id: fixtureBook.id,
+    bodega_id: bodega.id,
+    stock_actual: 0,
+    stock_minimo: 2,
+  });
+});
+
+after(async () => {
+  try {
+    if (fixtureInventory) await fixtureInventory.destroy();
+    if (fixtureBook) await fixtureBook.destroy();
+  } finally {
+    await Promise.allSettled([sequelize.close(), db.pool.end()]);
+  }
+});
 
 test('MovimientoRepository - A. Buscar tipos de movimiento mediante Sequelize (case-insensitive)', async () => {
   const ingreso = await movimientoRepository.getTipoMovimientoByName('ingreso');

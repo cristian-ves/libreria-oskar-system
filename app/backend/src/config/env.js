@@ -5,6 +5,8 @@ const path = require('path');
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const nodeEnv = process.env.NODE_ENV || 'development';
+const isTest = nodeEnv === 'test';
+const testDatabaseName = 'libreria_oskar_test';
 
 let jwtSecret = process.env.JWT_SECRET;
 if (!jwtSecret) {
@@ -19,12 +21,12 @@ const env = {
   NODE_ENV: nodeEnv,
   PORT: parseInt(process.env.PORT || '3000', 10),
   db: {
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT || '5432', 10),
-    user: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || 'postgres',
-    database: process.env.DB_NAME || 'libreria_oskar',
-    connectionString: process.env.DATABASE_URL || undefined,
+    host: isTest ? (process.env.TEST_DB_HOST || 'localhost') : (process.env.DB_HOST || 'localhost'),
+    port: parseInt(isTest ? (process.env.TEST_DB_PORT || '5435') : (process.env.DB_PORT || '5432'), 10),
+    user: isTest ? (process.env.TEST_DB_USER || 'postgres') : (process.env.DB_USER || 'postgres'),
+    password: isTest ? (process.env.TEST_DB_PASSWORD || 'postgres') : (process.env.DB_PASSWORD || 'postgres'),
+    database: isTest ? testDatabaseName : (process.env.DB_NAME || 'libreria_oskar'),
+    connectionString: isTest ? undefined : (process.env.DATABASE_URL || undefined),
   },
   jwt: {
     secret: jwtSecret,
