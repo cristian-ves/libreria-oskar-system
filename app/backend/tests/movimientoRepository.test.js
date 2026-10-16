@@ -71,6 +71,27 @@ test('MovimientoRepository - B y C. Crear tipo inexistente y evitar duplicación
   await TipoMovimiento.destroy({ where: { id: creado.id } });
 });
 
+test('MovimientoRepository asegura un único tipo ante solicitudes concurrentes', async () => {
+  const nombre = `Concurrente ${Date.now()}`;
+  let tipoId;
+
+  try {
+    const tipos = await Promise.all(Array.from({ length: 4 }, () =>
+      sequelize.transaction((transaction) => movimientoRepository.ensureTipoMovimiento(
+        nombre,
+        'Tipo concurrente de prueba',
+        { transaction }
+      ))
+    ));
+
+    tipoId = tipos[0].id;
+    assert.ok(tipos.every((tipo) => tipo.id === tipoId));
+    assert.equal(await TipoMovimiento.count({ where: { nombre } }), 1);
+  } finally {
+    await TipoMovimiento.destroy({ where: { nombre } });
+  }
+});
+
 test('MovimientoRepository - D. createMovimiento con Sequelize y verificación del trigger (incremento exacto = 1 vez)', async () => {
   const t = await sequelize.transaction();
   try {

@@ -5,9 +5,14 @@ const seed = require('../src/database/seed');
 const libroService = require('../src/services/libro.service');
 const libroRepository = require('../src/repositories/libro.repository');
 const inventarioRepository = require('../src/repositories/inventario.repository');
+const { mockExternalFetch, googleBooksResponse } = require('./helpers/httpMocks');
 
 test('Test de Integración: Flujo Completo POST /api/libros/escanear con Transacciones ACID', async (t) => {
   let seededData;
+  const externalCalls = mockExternalFetch(t, async (url) => {
+    if (url.hostname === 'www.googleapis.com') return googleBooksResponse('9780132350884');
+    return undefined;
+  });
 
   await t.test('Paso 0: Conexión y Sembrado de Datos de Prueba', async () => {
     seededData = await seed();
@@ -74,6 +79,7 @@ test('Test de Integración: Flujo Completo POST /api/libros/escanear con Transac
     assert.strictEqual(res.movimiento.cantidad, 1);
     assert.strictEqual(res.inventario.stock_anterior, 0);
     assert.strictEqual(res.inventario.stock_actual, 1);
+    assert.equal(externalCalls.length, 1, 'El proveedor externo debe responder mediante el mock de Google');
 
     // Guardar para paso posterior
     libroId = res.libro.id;

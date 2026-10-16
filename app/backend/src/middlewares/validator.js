@@ -8,6 +8,52 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-
  */
 const AUTOR_PLACEHOLDER_VALIDATOR = 'Autor de Biblioteca Internacional';
 
+const normalizeIsbnForValidation = (isbn) => isbn.replace(/[-\s]/g, '').trim();
+
+const hasValidIsbnChecksum = (isbn) => {
+  if (/^\d{13}$/.test(isbn)) {
+    const sum = [...isbn.slice(0, 12)].reduce(
+      (total, digit, index) => total + Number(digit) * (index % 2 === 0 ? 1 : 3),
+      0
+    );
+    return (10 - (sum % 10)) % 10 === Number(isbn[12]);
+  }
+
+  if (/^\d{9}[\dX]$/i.test(isbn)) {
+    const sum = [...isbn].reduce((total, character, index) => {
+      const value = character.toUpperCase() === 'X' ? 10 : Number(character);
+      return total + value * (10 - index);
+    }, 0);
+    return sum % 11 === 0;
+  }
+
+  return false;
+};
+
+const validateIsbn = (isbn, errors, { required = true } = {}) => {
+  if (isbn === undefined || isbn === null || (typeof isbn === 'string' && !isbn.trim())) {
+    if (required) {
+      errors.push('El campo "isbn" es obligatorio y debe ser una cadena no vacía.');
+    }
+    return;
+  }
+
+  if (typeof isbn !== 'string') {
+    errors.push('El campo "isbn" debe ser una cadena de texto.');
+    return;
+  }
+
+  const normalized = normalizeIsbnForValidation(isbn);
+  if (normalized.length > 20) {
+    errors.push('El campo "isbn" no puede superar los 20 caracteres después de normalizarse.');
+    return;
+  }
+
+  if (!hasValidIsbnChecksum(normalized)) {
+    errors.push('El campo "isbn" debe ser un ISBN-10 o ISBN-13 válido.');
+  }
+};
+
 /**
  * Middleware para validar el payload de escaneo de libros.
  */
@@ -15,10 +61,7 @@ const validateEscanearLibro = (req, res, next) => {
   const { isbn, bodegaId, usuarioId } = req.body || {};
 
   const errors = [];
-
-  if (!isbn || typeof isbn !== 'string' || isbn.trim() === '') {
-    errors.push('El campo "isbn" es obligatorio y debe ser una cadena no vacía.');
-  }
+  validateIsbn(isbn, errors);
 
   if (!bodegaId) {
     errors.push('El campo "bodegaId" es obligatorio.');
@@ -46,10 +89,7 @@ const validateEscanearLibro = (req, res, next) => {
 const validateConsultarLibro = (req, res, next) => {
   const { isbn } = req.body || {};
   const errors = [];
-
-  if (!isbn || typeof isbn !== 'string' || isbn.trim() === '') {
-    errors.push('El campo "isbn" es obligatorio y debe ser una cadena no vacía.');
-  }
+  validateIsbn(isbn, errors);
 
   if (errors.length > 0) {
     return next(new ValidationError('Datos de entrada inválidos para la consulta.', errors));
@@ -67,12 +107,8 @@ const validateRegistrarLibro = (req, res, next) => {
   const { isbn, titulo, autor, categoriaId, resena, cantidad, stockMinimo, precio, bodegaId } = req.body || {};
   const errors = [];
 
-  // isbn es opcional: si viene, debe ser string no vacío
-  if (isbn !== undefined && isbn !== null && isbn !== '') {
-    if (typeof isbn !== 'string') {
-      errors.push('El campo "isbn", si se proporciona, debe ser una cadena de texto.');
-    }
-  }
+  // ISBN opcional; si se proporciona, validar su forma normalizada.
+  validateIsbn(isbn, errors, { required: false });
 
   // titulo obligatorio y no vacío
   if (!titulo || typeof titulo !== 'string' || titulo.trim() === '') {

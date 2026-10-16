@@ -434,8 +434,31 @@ test('InventarioRepository comparte transacción Sequelize en lecturas/escritura
       .some((item) => item.id === inventarioId));
 
     const resumen = await inventarioRepository.getResumen(90, { transaction });
-    assert.equal(typeof resumen.total_unidades, 'number');
+    assert.deepEqual(Object.keys(resumen), [
+      'total_unidades',
+      'titulos_con_stock',
+      'bajo_stock',
+      'agotados',
+      'obsoletos',
+      'libros_sin_precio',
+      'alertas_bajo_stock',
+    ]);
+    for (const metric of [
+      'total_unidades',
+      'titulos_con_stock',
+      'bajo_stock',
+      'agotados',
+      'obsoletos',
+      'libros_sin_precio',
+    ]) {
+      assert.equal(typeof resumen[metric], 'number', `${metric} debe ser numérico`);
+    }
     assert.ok(Array.isArray(resumen.alertas_bajo_stock));
+    const agotadosEnTransaccion = await Inventario.count({
+      where: { stock_actual: 0 },
+      transaction,
+    });
+    assert.equal(resumen.agotados, agotadosEnTransaccion);
 
     throw new Error('ROLLBACK_SEQUELIZE_INVENTARIO_TEST');
   }), /ROLLBACK_SEQUELIZE_INVENTARIO_TEST/);

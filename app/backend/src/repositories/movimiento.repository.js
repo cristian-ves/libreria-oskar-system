@@ -48,10 +48,9 @@ class MovimientoRepository {
    */
   async ensureTipoMovimiento(nombre, descripcion = '', options = {}) {
     const cleanNombre = nombre.trim();
-
     const txOption = options.transaction ? { transaction: options.transaction } : {};
 
-    let tipo = await TipoMovimiento.findOne({
+    const tipoExistente = await TipoMovimiento.findOne({
       where: sequelize.where(
         sequelize.fn('LOWER', sequelize.col('nombre')),
         cleanNombre.toLowerCase()
@@ -59,19 +58,22 @@ class MovimientoRepository {
       ...txOption,
     });
 
-    if (tipo) {
-      return tipo.get ? tipo.get({ plain: true }) : tipo;
+    if (tipoExistente) {
+      return tipoExistente.get ? tipoExistente.get({ plain: true }) : tipoExistente;
     }
 
-    const nuevoTipo = await TipoMovimiento.create(
-      {
-        nombre: cleanNombre,
+    // Sequelize 6 ejecuta findOrCreate en un savepoint si recibe una
+    // transacción externa y recupera la fila creada por una solicitud rival
+    // cuando la restricción UNIQUE(nombre) rechaza el INSERT concurrente.
+    const [tipo] = await TipoMovimiento.findOrCreate({
+      where: { nombre: cleanNombre },
+      defaults: {
         descripcion: descripcion || null,
       },
-      txOption
-    );
+      ...txOption,
+    });
 
-    return nuevoTipo.get({ plain: true });
+    return tipo.get ? tipo.get({ plain: true }) : tipo;
   }
 
   /**

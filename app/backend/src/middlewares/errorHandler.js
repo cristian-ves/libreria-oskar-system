@@ -1,45 +1,61 @@
-const env = require('../config/env');
+const {
+  UniqueConstraintError,
+  ForeignKeyConstraintError,
+  ValidationError: SequelizeValidationError,
+} = require('sequelize');
+const {
+  AppError,
+  ValidationError,
+} = require('../utils/errors');
+
+const ERROR_MESSAGES = {
+  internal: 'Error interno del servidor.',
+  unique: 'El recurso ya existe.',
+  reference: 'La referencia indicada no es válida.',
+  validation: 'Los datos enviados no son válidos.',
+  businessRule: 'La operación no puede completarse por una regla de negocio.',
+};
+
+const getDatabaseCode = (err) => err?.code || err?.original?.code || err?.parent?.code || null;
 
 /**
  * Middleware centralizado de manejo de errores de la API.
  */
 const errorHandler = (err, req, res, next) => {
-  let statusCode = err.statusCode || 500;
-  let message = err.message || 'Error interno del servidor';
-  let details = err.details || null;
+  let statusCode = 500;
+  let message = ERROR_MESSAGES.internal;
+  let details = null;
+  const databaseCode = getDatabaseCode(err);
 
-  // Manejo de errores específicos de PostgreSQL
-  if (err.code) {
-    switch (err.code) {
-      case '23505': // unique_violation
-        statusCode = 409;
-        message = 'Violación de restricción única en la base de datos.';
-        details = err.detail;
-        break;
-      case '23503': // foreign_key_violation
-        statusCode = 400;
-        message = 'Referencia inválida: la entidad relacionada no existe en la base de datos.';
-        details = err.detail;
-        break;
-      case '22P02': // invalid_text_representation
-        statusCode = 400;
-        message = 'Formato de identificador (UUID) o tipo de dato inválido.';
-        details = err.message;
-        break;
-      case 'P0001': // raise_exception desde triggers PL/pgSQL
-        statusCode = 400;
-        message = `Error de regla de negocio en base de datos: ${err.message}`;
-        break;
-      default:
-        break;
-    }
+  if (err instanceof AppError && err.statusCode < 500) {
+    statusCode = err.statusCode;
+    message = err.message;
+    // Los detalles de errores de aplicación provienen de validaciones propias.
+    details = err instanceof ValidationError ? err.details : null;
+  } else if (err instanceof UniqueConstraintError || databaseCode === '23505') {
+    statusCode = 409;
+    message = ERROR_MESSAGES.unique;
+  } else if (err instanceof ForeignKeyConstraintError || databaseCode === '23503') {
+    statusCode = 400;
+    message = ERROR_MESSAGES.reference;
+  } else if (err instanceof SequelizeValidationError || databaseCode === '22P02') {
+    statusCode = 400;
+    message = ERROR_MESSAGES.validation;
+  } else if (databaseCode === 'P0001') {
+    statusCode = 400;
+    message = ERROR_MESSAGES.businessRule;
   }
 
-  // Registro de errores para trazabilidad
+  // No registrar mensajes, SQL, parámetros, detalles ni objetos de Sequelize/pg.
+  const safeLog = {
+    name: err?.name || 'Error',
+    ...(databaseCode ? { code: databaseCode } : {}),
+    ...(req.method ? { method: req.method } : {}),
+  };
   if (statusCode >= 500) {
-    console.error('[SERVER ERROR 500]:', err);
+    console.error(`[SERVER ERROR ${statusCode}]`, safeLog);
   } else {
-    console.warn(`[CLIENT WARNING ${statusCode}]:`, message, details || '');
+    console.warn(`[CLIENT WARNING ${statusCode}]`, safeLog);
   }
 
   const response = {
@@ -49,10 +65,6 @@ const errorHandler = (err, req, res, next) => {
 
   if (details) {
     response.details = details;
-  }
-
-  if (env.NODE_ENV === 'development' && statusCode >= 500) {
-    response.stack = err.stack;
   }
 
   res.status(statusCode).json(response);

@@ -364,7 +364,7 @@ class InventarioRepository {
       WHERE m.inventario_id = "Inventario"."id" AND LOWER(tm.nombre) = 'salida'
     )`;
 
-    const queryMetricas = Inventario.findAll({
+    const loadMetricas = () => Inventario.findAll({
       attributes: [
         [sequelize.fn('COALESCE', sequelize.fn('SUM', sequelize.col('stock_actual')), 0), 'total_unidades'],
         [sequelize.literal('COUNT(DISTINCT CASE WHEN "Inventario"."stock_actual" > 0 THEN "Inventario"."libro_id" END)'), 'titulos_con_stock'],
@@ -376,7 +376,7 @@ class InventarioRepository {
       ...txOption,
     });
 
-    const querySinPrecio = Libro.count({
+    const loadSinPrecio = () => Libro.count({
       where: {
         activo: true,
         [Op.or]: [
@@ -387,7 +387,7 @@ class InventarioRepository {
       ...txOption,
     });
 
-    const queryAlertas = Inventario.findAll({
+    const loadAlertas = () => Inventario.findAll({
       where: sequelize.literal('"Inventario"."stock_actual" <= "Inventario"."stock_minimo"'),
       attributes: ['stock_actual', 'stock_minimo'],
       include: [
@@ -413,11 +413,23 @@ class InventarioRepository {
       ...txOption,
     });
 
-    const [resMetricas, librosSinPrecio, resAlertas] = await Promise.all([
-      queryMetricas,
-      querySinPrecio,
-      queryAlertas,
-    ]);
+    let resMetricas;
+    let librosSinPrecio;
+    let resAlertas;
+
+    if (options.transaction) {
+      // Una transacción Sequelize usa una conexión; serializar evita consultas
+      // concurrentes sobre el mismo cliente PostgreSQL.
+      resMetricas = await loadMetricas();
+      librosSinPrecio = await loadSinPrecio();
+      resAlertas = await loadAlertas();
+    } else {
+      [resMetricas, librosSinPrecio, resAlertas] = await Promise.all([
+        loadMetricas(),
+        loadSinPrecio(),
+        loadAlertas(),
+      ]);
+    }
 
     const metricasRow = resMetricas[0] || {};
 

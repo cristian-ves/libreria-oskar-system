@@ -3,6 +3,7 @@ const assert = require('node:assert');
 const app = require('../src/app');
 const db = require('../src/config/db');
 const seed = require('../src/database/seed');
+const { mockExternalFetch, googleBooksResponse } = require('./helpers/httpMocks');
 
 test('Test E2E de la API RESTful (Express + PostgreSQL)', async (t) => {
   let server;
@@ -127,7 +128,12 @@ test('Test E2E de la API RESTful (Express + PostgreSQL)', async (t) => {
     assert.ok(json.message);
   });
 
-  await t.test('POST /api/libros/escanear - Escaneo exitoso con respuesta HTTP estructurada', async () => {
+  await t.test('POST /api/libros/escanear - Escaneo exitoso con respuesta HTTP estructurada', async (t) => {
+    const externalCalls = mockExternalFetch(t, async (url) => {
+      if (url.hostname === 'www.googleapis.com') return googleBooksResponse('9780135957059');
+      return undefined;
+    }, { allowLocal: true });
+
     const res = await fetch(`${baseUrl}/libros/escanear`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
@@ -146,6 +152,7 @@ test('Test E2E de la API RESTful (Express + PostgreSQL)', async (t) => {
     assert.strictEqual(json.data.movimiento.tipo, 'Ingreso');
     assert.strictEqual(json.data.movimiento.cantidad, 1);
     assert.ok(json.data.inventario.stock_actual >= 1);
+    assert.ok(externalCalls.length <= 1, 'El escaneo debe usar solo el mock de Google si el libro no existe localmente');
   });
 
   await t.test('Cerrar Servidor y Pool de Conexiones', async () => {
