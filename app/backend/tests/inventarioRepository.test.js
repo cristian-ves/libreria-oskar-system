@@ -406,31 +406,40 @@ test('InventarioRepository - O. Estructura exacta de campos retornados (Contrato
   }
 });
 
-test('InventarioRepository - P. Compatibilidad completa con cliente transaccional pg (legacy)', async () => {
-  const client = await db.pool.connect();
-  try {
-    const inv = await Inventario.findOne();
-    assert.ok(inv);
+test('InventarioRepository comparte transacción Sequelize en lecturas/escrituras y revierte la creación', async () => {
+  let libroId;
+  let inventarioId;
+  await assert.rejects(sequelize.transaction(async (transaction) => {
+    const libro = await Libro.create({
+      titulo: `Libro Rollback Inventario ${Date.now()}`,
+      isbn: `IR${Date.now()}`,
+      resena: 'Fixture transaccional',
+      precio: 10,
+    }, { transaction });
+    libroId = libro.id;
 
-    // 1. findByLibroAndBodega con client pg
-    const res1 = await inventarioRepository.findByLibroAndBodega(inv.libro_id, inv.bodega_id, client);
-    assert.ok(res1);
-    assert.strictEqual(res1.id, inv.id);
+    const creado = await inventarioRepository.findOrCreate(
+      { transaction }, libro.id, baselineInventory.bodega_id, 4
+    );
+    inventarioId = creado.id;
+    assert.equal(creado.stock_actual, 0);
+    assert.equal(creado.stock_minimo, 4);
 
-    // 2. findById con client pg
-    const res2 = await inventarioRepository.findById(inv.id, client);
-    assert.ok(res2);
-    assert.strictEqual(res2.id, inv.id);
+    const byWarehouse = await inventarioRepository.findByLibroAndBodega(
+      libro.id, baselineInventory.bodega_id, { transaction }
+    );
+    assert.equal(byWarehouse.id, inventarioId);
+    assert.equal((await inventarioRepository.findById(inventarioId, { transaction })).id, inventarioId);
+    assert.ok((await inventarioRepository.findByLibroId(libro.id, { transaction }))
+      .some((item) => item.id === inventarioId));
 
-    // 3. findByLibroId con client pg
-    const res3 = await inventarioRepository.findByLibroId(inv.libro_id, client);
-    assert.ok(Array.isArray(res3));
+    const resumen = await inventarioRepository.getResumen(90, { transaction });
+    assert.equal(typeof resumen.total_unidades, 'number');
+    assert.ok(Array.isArray(resumen.alertas_bajo_stock));
 
-    // 4. getResumen con client pg
-    const res4 = await inventarioRepository.getResumen(90, client);
-    assert.ok(typeof res4.total_unidades === 'number');
-    assert.ok(Array.isArray(res4.alertas_bajo_stock));
-  } finally {
-    client.release();
-  }
+    throw new Error('ROLLBACK_SEQUELIZE_INVENTARIO_TEST');
+  }), /ROLLBACK_SEQUELIZE_INVENTARIO_TEST/);
+
+  assert.equal(await Inventario.findByPk(inventarioId), null);
+  assert.equal(await Libro.findByPk(libroId), null);
 });

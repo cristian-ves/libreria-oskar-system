@@ -16,23 +16,10 @@ class InventarioRepository {
    * Busca el registro de inventario para un libro en una bodega específica.
    * @param {string} libroId
    * @param {string} bodegaId
-   * @param {object | import('pg').PoolClient} [executorOrOptions]
+   * @param {{ transaction?: import('sequelize').Transaction }} [options]
    * @returns {Promise<object | null>}
   */
-  async findByLibroAndBodega(libroId, bodegaId, executorOrOptions = {}) {
-    if (executorOrOptions && typeof executorOrOptions.query === 'function') {
-      const res = await executorOrOptions.query(
-        `SELECT id, libro_id, bodega_id, stock_actual, stock_minimo, ultima_auditoria, creado_en
-         FROM inventarios WHERE libro_id = $1 AND bodega_id = $2 LIMIT 1;`,
-        [libroId, bodegaId]
-      );
-      return res.rows[0] || null;
-    }
-
-    const txOption = (executorOrOptions && executorOrOptions.transaction)
-      ? { transaction: executorOrOptions.transaction }
-      : {};
-
+  async findByLibroAndBodega(libroId, bodegaId, options = {}) {
     const inv = await Inventario.findOne({
       where: {
         libro_id: libroId,
@@ -40,7 +27,7 @@ class InventarioRepository {
       },
       attributes: ['id', 'libro_id', 'bodega_id', 'stock_actual', 'stock_minimo', 'ultima_auditoria', 'creado_en'],
       raw: true,
-      ...txOption,
+      ...options,
     });
 
     return inv || null;
@@ -49,28 +36,22 @@ class InventarioRepository {
   /**
    * Obtiene o crea el registro de inventario de forma atómica.
    * Si no existe, inicializa con stock 0 (el stock real se incrementa exclusivamente por movimientos y su trigger).
-   * Soporta firma polimórfica: (executor, libroId, bodegaId, stockMinimo) o (libroId, bodegaId, stockMinimo, options).
+   * Soporta las firmas (options, libroId, bodegaId, stockMinimo) y
+   * (libroId, bodegaId, stockMinimo, options).
    *
-   * @param {import('pg').PoolClient | object | string} arg1
+   * @param {object | string} arg1
    * @param {string} arg2
    * @param {string} [arg3]
    * @param {number | object} [arg4]
    */
   async findOrCreate(arg1, arg2, arg3, arg4) {
-    let executorOrOptions = {};
+    let options = {};
     let libroId;
     let bodegaId;
     let stockMinimo = 5;
 
-    if (arg1 && typeof arg1 === 'object' && typeof arg1.query === 'function') {
-      // Cliente pg legado: (client, libroId, bodegaId, stockMinimo)
-      executorOrOptions = arg1;
-      libroId = arg2;
-      bodegaId = arg3;
-      if (arg4 !== undefined && arg4 !== null && Number.isFinite(Number(arg4))) stockMinimo = Number(arg4);
-    } else if (arg1 && typeof arg1 === 'object' && arg1.transaction) {
-      // Opciones Sequelize como 1er param: (options, libroId, bodegaId, stockMinimo)
-      executorOrOptions = arg1;
+    if (arg1 && typeof arg1 === 'object') {
+      options = arg1;
       libroId = arg2;
       bodegaId = arg3;
       if (arg4 !== undefined && arg4 !== null && Number.isFinite(Number(arg4))) stockMinimo = Number(arg4);
@@ -79,30 +60,8 @@ class InventarioRepository {
       libroId = arg1;
       bodegaId = arg2;
       if (arg3 !== undefined && arg3 !== null && typeof arg3 === 'number') stockMinimo = arg3;
-      if (arg4 && typeof arg4 === 'object') executorOrOptions = arg4;
-    } else {
-      executorOrOptions = arg1 || {};
-      libroId = arg2;
-      bodegaId = arg3;
-      if (arg4 !== undefined && arg4 !== null && Number.isFinite(Number(arg4))) stockMinimo = Number(arg4);
+      if (arg4 && typeof arg4 === 'object') options = arg4;
     }
-
-    // Compatibilidad transaccional temporal con cliente pg activo
-    if (executorOrOptions && typeof executorOrOptions.query === 'function') {
-      const text = `
-        INSERT INTO inventarios (libro_id, bodega_id, stock_actual, stock_minimo)
-        VALUES ($1, $2, 0, $3)
-        ON CONFLICT (libro_id, bodega_id) DO UPDATE
-          SET libro_id = EXCLUDED.libro_id
-        RETURNING id, libro_id, bodega_id, stock_actual, stock_minimo, ultima_auditoria, creado_en;
-      `;
-      const res = await executorOrOptions.query(text, [libroId, bodegaId, stockMinimo]);
-      return res.rows[0];
-    }
-
-    const txOption = (executorOrOptions && executorOrOptions.transaction)
-      ? { transaction: executorOrOptions.transaction }
-      : {};
 
     try {
       const [inv] = await Inventario.findOrCreate({
@@ -114,7 +73,7 @@ class InventarioRepository {
           stock_actual: 0,
           stock_minimo: stockMinimo,
         },
-        ...txOption,
+        ...options,
       });
 
       return inv.get ? inv.get({ plain: true }) : inv;
@@ -128,7 +87,7 @@ class InventarioRepository {
           },
           attributes: ['id', 'libro_id', 'bodega_id', 'stock_actual', 'stock_minimo', 'ultima_auditoria', 'creado_en'],
           raw: true,
-          ...txOption,
+          ...options,
         });
         if (existing) return existing;
       }
@@ -139,26 +98,13 @@ class InventarioRepository {
   /**
    * Consulta el estado actual de inventario por su ID.
    * @param {string} id
-   * @param {object | import('pg').PoolClient} [executorOrOptions]
+   * @param {{ transaction?: import('sequelize').Transaction }} [options]
    */
-  async findById(id, executorOrOptions = {}) {
-    if (executorOrOptions && typeof executorOrOptions.query === 'function') {
-      const res = await executorOrOptions.query(
-        `SELECT id, libro_id, bodega_id, stock_actual, stock_minimo, ultima_auditoria, creado_en
-         FROM inventarios WHERE id = $1;`,
-        [id]
-      );
-      return res.rows[0] || null;
-    }
-
-    const txOption = (executorOrOptions && executorOrOptions.transaction)
-      ? { transaction: executorOrOptions.transaction }
-      : {};
-
+  async findById(id, options = {}) {
     const inv = await Inventario.findByPk(id, {
       attributes: ['id', 'libro_id', 'bodega_id', 'stock_actual', 'stock_minimo', 'ultima_auditoria', 'creado_en'],
       raw: true,
-      ...txOption,
+      ...options,
     });
 
     return inv || null;
@@ -168,28 +114,10 @@ class InventarioRepository {
    * Lista todos los registros de inventario de un libro por bodega,
    * incluyendo nombre de bodega y sucursal.
    * @param {string} libroId
-   * @param {object | import('pg').PoolClient} [executorOrOptions]
+   * @param {{ transaction?: import('sequelize').Transaction }} [options]
    * @returns {Promise<Array<{id: string, bodega_id: string, bodega_nombre: string, sucursal_nombre: string, stock_actual: number, stock_minimo: number}>>}
   */
-  async findByLibroId(libroId, executorOrOptions = {}) {
-    if (executorOrOptions && typeof executorOrOptions.query === 'function') {
-      const res = await executorOrOptions.query(
-        `SELECT inv.id, inv.bodega_id, b.nombre AS bodega_nombre,
-                s.nombre AS sucursal_nombre, inv.stock_actual, inv.stock_minimo
-         FROM inventarios inv
-         JOIN bodegas b ON b.id = inv.bodega_id
-         LEFT JOIN sucursales s ON s.id = b.sucursal_id
-         WHERE inv.libro_id = $1
-         ORDER BY s.nombre, b.nombre;`,
-        [libroId]
-      );
-      return res.rows;
-    }
-
-    const txOption = (executorOrOptions && executorOrOptions.transaction)
-      ? { transaction: executorOrOptions.transaction }
-      : {};
-
+  async findByLibroId(libroId, options = {}) {
     const inventarios = await Inventario.findAll({
       where: { libro_id: libroId },
       attributes: ['id', 'bodega_id', 'stock_actual', 'stock_minimo'],
@@ -213,7 +141,7 @@ class InventarioRepository {
         [{ model: Bodega, as: 'bodega' }, { model: Sucursal, as: 'sucursal' }, 'nombre', 'ASC'],
         [{ model: Bodega, as: 'bodega' }, 'nombre', 'ASC'],
       ],
-      ...txOption,
+      ...options,
     });
 
     return inventarios.map((inv) => {
@@ -231,48 +159,32 @@ class InventarioRepository {
 
   /**
    * Actualiza el stock_minimo de un inventario existente sin modificar el stock_actual.
-   * Soporta: (executor, inventarioId, stockMinimo) o (inventarioId, stockMinimo, options).
+   * Soporta: (options, inventarioId, stockMinimo) o (inventarioId, stockMinimo, options).
    *
-   * @param {import('pg').PoolClient | object | string} arg1
+   * @param {object | string} arg1
    * @param {string | number} arg2
    * @param {number | object} [arg3]
    */
   async setStockMinimo(arg1, arg2, arg3) {
-    let executorOrOptions = {};
+    let options = {};
     let inventarioId;
     let stockMinimo;
 
     if (typeof arg1 === 'string') {
       inventarioId = arg1;
       stockMinimo = arg2;
-      executorOrOptions = arg3 || {};
+      options = arg3 || {};
     } else {
-      executorOrOptions = arg1 || {};
+      options = arg1 || {};
       inventarioId = arg2;
       stockMinimo = arg3;
     }
 
-    // Compatibilidad transaccional con cliente pg activo
-    if (executorOrOptions && typeof executorOrOptions.query === 'function') {
-      const text = `
-        UPDATE inventarios
-        SET stock_minimo = $2
-        WHERE id = $1
-        RETURNING id, libro_id, bodega_id, stock_actual, stock_minimo, ultima_auditoria, creado_en;
-      `;
-      const res = await executorOrOptions.query(text, [inventarioId, stockMinimo]);
-      return res.rows[0] || null;
-    }
-
-    const txOption = (executorOrOptions && executorOrOptions.transaction)
-      ? { transaction: executorOrOptions.transaction }
-      : {};
-
-    const inv = await Inventario.findByPk(inventarioId, txOption);
+    const inv = await Inventario.findByPk(inventarioId, options);
     if (!inv) return null;
 
     // Actualización atómica exclusiva de stock_minimo (sin alterar stock_actual)
-    await inv.update({ stock_minimo: Number(stockMinimo) }, txOption);
+    await inv.update({ stock_minimo: Number(stockMinimo) }, options);
 
     return {
       id: inv.id,
@@ -288,25 +200,13 @@ class InventarioRepository {
   /**
    * Bloquea y consulta un registro de inventario con bloqueo pesimista FOR UPDATE.
    * Requiere obligatoriamente una transacción activa en Sequelize ({ transaction })
-   * o un cliente pg con transacción activa.
+   * mediante Sequelize ({ transaction }).
    *
    * @param {string} id
-   * @param {import('pg').PoolClient | object} executorOrOptions
+   * @param {{ transaction: import('sequelize').Transaction }} options
    */
-  async findByIdForUpdate(id, executorOrOptions) {
-    // Compatibilidad transaccional con cliente pg activo
-    if (executorOrOptions && typeof executorOrOptions.query === 'function') {
-      const text = `
-        SELECT id, libro_id, bodega_id, stock_actual, stock_minimo, ultima_auditoria, creado_en
-        FROM inventarios
-        WHERE id = $1
-        FOR UPDATE;
-      `;
-      const res = await executorOrOptions.query(text, [id]);
-      return res.rows[0] || null;
-    }
-
-    const transaction = executorOrOptions?.transaction;
+  async findByIdForUpdate(id, options) {
+    const transaction = options?.transaction;
     if (!transaction) {
       throw new Error('findByIdForUpdate requiere una transacción activa ({ transaction }) para garantizar el bloqueo pesimista.');
     }
@@ -323,106 +223,10 @@ class InventarioRepository {
   /**
    * Lista el inventario detallado por libro y bodega con métricas calculadas y filtros.
    * @param {{ estado?: string, q?: string, bodegaId?: string, diasStockObsoleto?: number }} params
-   * @param {object | import('pg').PoolClient} [executorOrOptions]
+   * @param {{ transaction?: import('sequelize').Transaction }} [options]
   */
-  async findAllWithDetails({ estado = 'todos', q = '', bodegaId = null, diasStockObsoleto = 90 }, executorOrOptions = {}) {
-    if (executorOrOptions && typeof executorOrOptions.query === 'function') {
-      const params = [diasStockObsoleto];
-      const conditions = [];
-      if (bodegaId && typeof bodegaId === 'string' && bodegaId.trim()) {
-        params.push(bodegaId.trim());
-        conditions.push(`inv.bodega_id = $${params.length}`);
-      }
-      if (q && typeof q === 'string' && q.trim()) {
-        params.push(`%${q.trim()}%`);
-        conditions.push(`(LOWER(l.titulo) LIKE LOWER($${params.length})
-          OR LOWER(COALESCE(a.nombre, '')) LIKE LOWER($${params.length})
-          OR l.isbn LIKE $${params.length})`);
-      }
-      if (estado === 'en_stock') conditions.push('inv.stock_actual > inv.stock_minimo');
-      if (estado === 'bajo_stock') conditions.push('inv.stock_actual <= inv.stock_minimo');
-      if (estado === 'obsoleto') {
-        conditions.push(`(inv.stock_actual > 0 AND COALESCE(ult_sal.fecha_movimiento, inv.creado_en)
-          < (NOW() - ($1 || ' days')::INTERVAL))`);
-      }
-      const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-      const { rows } = await executorOrOptions.query(
-        `SELECT inv.id AS inventario_id, inv.libro_id, l.titulo, l.isbn, l.imagen_url,
-                a.nombre AS autor, c.nombre AS categoria, b.id AS bodega_id,
-                b.nombre AS bodega_nombre, s.nombre AS sucursal_nombre,
-                inv.stock_actual, inv.stock_minimo, ult_sal.fecha_movimiento AS ultima_salida,
-                (inv.stock_actual <= inv.stock_minimo) AS bajo_stock,
-                (inv.stock_actual > 0 AND COALESCE(ult_sal.fecha_movimiento, inv.creado_en)
-                  < (NOW() - ($1 || ' days')::INTERVAL)) AS obsoleto
-         FROM inventarios inv
-         JOIN libros l ON l.id = inv.libro_id
-         LEFT JOIN autores a ON a.id = l.autor_id
-         LEFT JOIN categorias c ON c.id = l.categoria_id
-         JOIN bodegas b ON b.id = inv.bodega_id
-         LEFT JOIN sucursales s ON s.id = b.sucursal_id
-         LEFT JOIN LATERAL (
-           SELECT MAX(m.fecha_movimiento) AS fecha_movimiento
-           FROM movimientos_inventario m
-           JOIN tipo_movimientos tm ON tm.id = m.tipo_movimiento_id
-           WHERE m.inventario_id = inv.id AND LOWER(tm.nombre) = 'salida'
-         ) ult_sal ON true
-         ${where}
-         ORDER BY l.titulo ASC LIMIT 200;`,
-        params
-      );
-      return rows;
-    }
-
-    if (executorOrOptions && typeof executorOrOptions.query === 'function') {
-      const params = [diasStockObsoleto];
-      const conditions = [];
-      if (bodegaId && typeof bodegaId === 'string' && bodegaId.trim()) {
-        params.push(bodegaId.trim());
-        conditions.push(`inv.bodega_id = $${params.length}`);
-      }
-      if (q && typeof q === 'string' && q.trim()) {
-        params.push(`%${q.trim()}%`);
-        conditions.push(`(LOWER(l.titulo) LIKE LOWER($${params.length})
-          OR LOWER(COALESCE(a.nombre, '')) LIKE LOWER($${params.length})
-          OR l.isbn LIKE $${params.length})`);
-      }
-      if (estado === 'en_stock') conditions.push('inv.stock_actual > inv.stock_minimo');
-      if (estado === 'bajo_stock') conditions.push('inv.stock_actual <= inv.stock_minimo');
-      if (estado === 'obsoleto') {
-        conditions.push(`(inv.stock_actual > 0 AND COALESCE(ult_sal.fecha_movimiento, inv.creado_en)
-          < (NOW() - ($1 || ' days')::INTERVAL))`);
-      }
-      const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-      const { rows } = await executorOrOptions.query(
-        `SELECT inv.id AS inventario_id, inv.libro_id, l.titulo, l.isbn, l.imagen_url,
-                a.nombre AS autor, c.nombre AS categoria, b.id AS bodega_id,
-                b.nombre AS bodega_nombre, s.nombre AS sucursal_nombre,
-                inv.stock_actual, inv.stock_minimo, ult_sal.fecha_movimiento AS ultima_salida,
-                (inv.stock_actual <= inv.stock_minimo) AS bajo_stock,
-                (inv.stock_actual > 0 AND COALESCE(ult_sal.fecha_movimiento, inv.creado_en)
-                  < (NOW() - ($1 || ' days')::INTERVAL)) AS obsoleto
-         FROM inventarios inv
-         JOIN libros l ON l.id = inv.libro_id
-         LEFT JOIN autores a ON a.id = l.autor_id
-         LEFT JOIN categorias c ON c.id = l.categoria_id
-         JOIN bodegas b ON b.id = inv.bodega_id
-         LEFT JOIN sucursales s ON s.id = b.sucursal_id
-         LEFT JOIN LATERAL (
-           SELECT MAX(m.fecha_movimiento) AS fecha_movimiento
-           FROM movimientos_inventario m
-           JOIN tipo_movimientos tm ON tm.id = m.tipo_movimiento_id
-           WHERE m.inventario_id = inv.id AND LOWER(tm.nombre) = 'salida'
-         ) ult_sal ON true
-         ${where}
-         ORDER BY l.titulo ASC LIMIT 200;`,
-        params
-      );
-      return rows;
-    }
-
-    const txOption = (executorOrOptions && executorOrOptions.transaction)
-      ? { transaction: executorOrOptions.transaction }
-      : {};
+  async findAllWithDetails({ estado = 'todos', q = '', bodegaId = null, diasStockObsoleto = 90 }, options = {}) {
+    const txOption = options.transaction ? { transaction: options.transaction } : {};
 
     const ultSal = `(
       SELECT MAX(m.fecha_movimiento)
@@ -547,51 +351,10 @@ class InventarioRepository {
   /**
    * Obtiene el resumen general del inventario, alertas y libros sin precio.
    * @param {number} diasStockObsoleto
-   * @param {object | import('pg').PoolClient} [executorOrOptions]
+   * @param {{ transaction?: import('sequelize').Transaction }} [options]
   */
-  async getResumen(diasStockObsoleto = 90, executorOrOptions = {}) {
-    if (executorOrOptions && typeof executorOrOptions.query === 'function') {
-      const metricasSql = `
-        SELECT COALESCE(SUM(inv.stock_actual), 0)::INTEGER AS total_unidades,
-          COUNT(DISTINCT CASE WHEN inv.stock_actual > 0 THEN inv.libro_id END)::INTEGER AS titulos_con_stock,
-          COUNT(CASE WHEN inv.stock_actual <= inv.stock_minimo THEN 1 END)::INTEGER AS bajo_stock,
-          COUNT(CASE WHEN inv.stock_actual = 0 THEN 1 END)::INTEGER AS agotados,
-          COUNT(CASE WHEN inv.stock_actual > 0 AND COALESCE(ult_sal.fecha_movimiento, inv.creado_en)
-            < (NOW() - ($1 || ' days')::INTERVAL) THEN 1 END)::INTEGER AS obsoletos
-        FROM inventarios inv
-        LEFT JOIN LATERAL (
-          SELECT MAX(m.fecha_movimiento) AS fecha_movimiento
-          FROM movimientos_inventario m
-          JOIN tipo_movimientos tm ON tm.id = m.tipo_movimiento_id
-          WHERE m.inventario_id = inv.id AND LOWER(tm.nombre) = 'salida'
-        ) ult_sal ON true;`;
-      const sinPrecioSql = `SELECT COUNT(*)::INTEGER AS libros_sin_precio FROM libros
-        WHERE activo = true AND (precio = 0 OR precio IS NULL);`;
-      const alertasSql = `SELECT l.titulo, b.nombre AS bodega_nombre, inv.stock_actual, inv.stock_minimo
-        FROM inventarios inv JOIN libros l ON l.id = inv.libro_id
-        JOIN bodegas b ON b.id = inv.bodega_id
-        WHERE inv.stock_actual <= inv.stock_minimo
-        ORDER BY (inv.stock_actual - inv.stock_minimo) ASC LIMIT 10;`;
-      const [metricasRes, sinPrecioRes, alertasRes] = await Promise.all([
-        executorOrOptions.query(metricasSql, [diasStockObsoleto]),
-        executorOrOptions.query(sinPrecioSql),
-        executorOrOptions.query(alertasSql),
-      ]);
-      const metricas = metricasRes.rows[0] || {};
-      return {
-        total_unidades: metricas.total_unidades || 0,
-        titulos_con_stock: metricas.titulos_con_stock || 0,
-        bajo_stock: metricas.bajo_stock || 0,
-        agotados: metricas.agotados || 0,
-        obsoletos: metricas.obsoletos || 0,
-        libros_sin_precio: sinPrecioRes.rows[0]?.libros_sin_precio || 0,
-        alertas_bajo_stock: alertasRes.rows,
-      };
-    }
-
-    const txOption = (executorOrOptions && executorOrOptions.transaction)
-      ? { transaction: executorOrOptions.transaction }
-      : {};
+  async getResumen(diasStockObsoleto = 90, options = {}) {
+    const txOption = options.transaction ? { transaction: options.transaction } : {};
 
     const diasNum = Number(diasStockObsoleto) || 90;
     const ultSal = `(

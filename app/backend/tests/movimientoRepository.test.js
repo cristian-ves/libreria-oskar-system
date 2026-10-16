@@ -204,16 +204,21 @@ test('MovimientoRepository - F. findAllWithFilters() con Sequelize soporta pagin
   }
 });
 
-test('MovimientoRepository - Compatibilidad con cliente pg transaccional (legacy)', async () => {
-  const client = await db.pool.connect();
-  try {
-    const tipo = await movimientoRepository.getTipoMovimientoByName('Ingreso', client);
-    assert.ok(tipo, 'Debe responder utilizando cliente pg');
-    assert.strictEqual(tipo.nombre, 'Ingreso');
+test('MovimientoRepository comparte transacción Sequelize y revierte tipos creados al fallar', async () => {
+  const nombre = `Rollback ${Date.now()}`;
+  let tipoId;
 
-    const asegurado = await movimientoRepository.ensureTipoMovimiento('Ingreso', '', client);
-    assert.ok(asegurado.id, 'ensureTipoMovimiento debe funcionar con cliente pg');
-  } finally {
-    client.release();
-  }
+  await assert.rejects(sequelize.transaction(async (transaction) => {
+    const creado = await movimientoRepository.ensureTipoMovimiento(
+      nombre, 'Tipo temporal de prueba', { transaction }
+    );
+    tipoId = creado.id;
+
+    const encontrado = await movimientoRepository.getTipoMovimientoByName(nombre, { transaction });
+    assert.equal(encontrado.id, tipoId);
+    assert.equal(encontrado.nombre, nombre);
+    throw new Error('ROLLBACK_SEQUELIZE_TIPO_MOVIMIENTO_TEST');
+  }), /ROLLBACK_SEQUELIZE_TIPO_MOVIMIENTO_TEST/);
+
+  assert.equal(await TipoMovimiento.findByPk(tipoId), null);
 });

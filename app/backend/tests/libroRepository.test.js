@@ -219,31 +219,19 @@ test('LibroRepository.findDetalleByRef: UUID y shortId exponen disponibilidad po
   assert.equal(await libroRepository.findDetalleByRef(null), null);
 });
 
-test('LibroRepository conserva PoolClient y la atomicidad pg para lecturas, upsert y create', async () => {
-  const book = await makeBook('pg-read');
-  const client = await db.pool.connect();
-  try {
-    const byIsbn = await libroRepository.findByIsbn(book.isbn, client);
-    const byId = await libroRepository.findById(book.id, client);
-    assert.equal(byIsbn.id, book.id);
-    assert.equal(byId.id, book.id);
-
-    let createdId;
-    await assert.rejects(db.withTransaction(async (tx) => {
-      const created = await libroRepository.create(tx, {
-        titulo: 'Libro pg rollback', isbn: null, resena: 'temporal', precio: 0,
-      });
-      createdId = created.id;
-      throw new Error('ROLLBACK_PG_LIBRO_TEST');
-    }), /ROLLBACK_PG_LIBRO_TEST/);
-    assert.equal(await Libro.findByPk(createdId), null);
-
-    const upserted = await libroRepository.upsert(client, {
-      titulo: 'Upsert pg transaccional', isbn: `P${unique.slice(-12)}`, resena: 'test', precio: 4,
+test('LibroRepository.upsert: comparte transacción Sequelize y revierte alta al fallar', async () => {
+  const isbn = `T${unique.slice(-12)}RB`;
+  let createdId;
+  await assert.rejects(sequelize.transaction(async (transaction) => {
+    const created = await libroRepository.upsert({ transaction }, {
+      titulo: 'Upsert ORM para rollback', isbn, resena: 'temporal', precio: 4,
     });
-    assert.ok(upserted.id);
-    await client.query('DELETE FROM libros WHERE id = $1', [upserted.id]);
-  } finally {
-    client.release();
-  }
+    createdId = created.id;
+    const visibleInsideTransaction = await libroRepository.findByIsbn(isbn, { transaction });
+    assert.equal(visibleInsideTransaction.id, createdId);
+    throw new Error('ROLLBACK_SEQUELIZE_LIBRO_TEST');
+  }), /ROLLBACK_SEQUELIZE_LIBRO_TEST/);
+
+  assert.equal(await Libro.findByPk(createdId), null);
+  assert.equal(await libroRepository.findByIsbn(isbn), null);
 });
