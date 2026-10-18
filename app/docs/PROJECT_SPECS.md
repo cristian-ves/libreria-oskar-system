@@ -257,7 +257,7 @@ app/
 - **Diferencias entre `schema.sql` y modelos Sequelize**:
   - No hay divergencias estructurales: los 11 modelos definidos en `src/models/` mapean exactamente las 11 tablas del DDL.
   - La migración `002_categorias.sql` ya está integrada en el `schema.sql` principal.
-  - La migración `003_categorias_adicionales.sql` inserta 14 categorías adicionales en tiempo de despliegue que no figuran en el bloque inicial de semillas de `schema.sql`.
+  - `schema.sql` siembra las **20 categorías** (las 6 originales y las 14 de la migración `003_categorias_adicionales.sql`, con `ON CONFLICT (nombre) DO NOTHING`). Una BD creada desde cero con `schema.sql` ya equivale a aplicar `schema.sql + 002 + 003`. Las migraciones 002 y 003 permanecen como scripts idempotentes válidos para BDs ya existentes.
   - La tabla `schema_migrations` es creada exclusivamente en runtime por `migrate.js` y no forma parte del `schema.sql` estático.
 
 ### 3.2 Catálogo de Tablas y Columnas Clave
@@ -415,7 +415,7 @@ app/
 | `GET` | `/api/auth/me` | `authenticate` | `authController.me` | No aplica | No aplica (lee `req.user`) | Perfil del usuario autenticado en la sesión. |
 | `GET` | `/api/libros` | Ninguno (Público) | `libroController.listar` | No aplica | `libroRepository.searchAndList` | Catálogo de libros con filtros `q` y categoría. |
 | `GET` | `/api/libros/:ref` | Ninguno (Público) | `libroController.detalle` | No aplica | `libroRepository.findDetalleByRef` | Ficha técnica pública y disponibilidad por ref/UUID. |
-| `POST` | `/api/libros/escanear` | `authenticate`, `validateEscanearLibro` | `libroController.escanear` | `libroService.escanearLibro` | `libroRepository.upsert`, `inventarioRepository.findOrCreate`, `movimientoRepository.createMovimiento` | Escaneo de ISBN, registro atómico e ingreso de 1 unidad. |
+| `POST` | `/api/libros/escanear` | `authenticate`, `authorize('Administrador', 'Empleado')`, `validateEscanearLibro` | `libroController.escanear` | `libroService.escanearLibro` | `libroRepository.upsert`, `inventarioRepository.findOrCreate`, `movimientoRepository.createMovimiento` | Escaneo de ISBN, registro atómico e ingreso de 1 unidad. Body: `{ isbn, bodegaId }`. Actor (`usuarioId`) tomado de `req.user.id`. |
 | `POST` | `/api/libros/consultar`| `authenticate`, `authorize('Administrador', 'Empleado')`, `validateConsultarLibro` | `libroController.consultar` | `libroService.consultarLibro` | `libroRepository.findByIsbn`, `inventarioRepository.findByLibroId` | Verifica existencia local o sugiere metadatos de Google Books sin persistir. |
 | `POST` | `/api/libros/registrar`| `authenticate`, `authorize('Administrador', 'Empleado')`, `validateRegistrarLibro` | `libroController.registrar` | `libroService.registrarLibro` | `libroRepository.create`, `inventarioRepository.findOrCreate`, `movimientoRepository.createMovimiento` | Registro manual de libro con regla de precio por rol e ingreso inicial. |
 | `POST` | `/api/libros/:id/ingreso` | `authenticate`, `authorize('Administrador', 'Empleado')`, `validateIngresoLibro` | `libroController.ingreso` | `libroService.ingresoLibro` | `libroRepository.findById`, `inventarioRepository.findOrCreate`, `movimientoRepository.createMovimiento` | Ingreso de unidades de stock a un libro existente en bodega. |
@@ -712,10 +712,11 @@ app/
 
 ### 6.3 Flujo 3: Registro de Libro por Escaneo Directo
 1. **Vista**: `RegistrarLibro.jsx` (modo escáner activo) o llamada directa vía API.
-2. **Cliente**: Envía `POST /api/libros/escanear` con `{ isbn, bodegaId, usuarioId }` y cabecera Bearer JWT.
+2. **Cliente**: Envía `POST /api/libros/escanear` con `{ isbn, bodegaId }` y cabecera Bearer JWT.
 3. **Middlewares**:
    - `auth.authenticate`: Valida JWT y autenticidad del usuario en PostgreSQL.
-   - `validator.validateEscanearLibro`: Normaliza y valida checksum matemático del ISBN y formato UUID de bodega y usuario.
+   - `auth.authorize('Administrador', 'Empleado')`: Rechaza con 403 al rol `Usuario` (y con 401 si no hay `req.user`).
+   - `validator.validateEscanearLibro`: Normaliza y valida checksum matemático del ISBN y formato UUID de bodega. El `usuarioId` del body no se valida ni se usa.
 4. **Controlador**: `libroController.escanear` llama a `libroService.escanearLibro`.
 5. **Servicio (fase externa)**:
    - Valida existencia previa de bodega y usuario en BD.
@@ -860,7 +861,7 @@ app/
 | Iniciar Sesión | `POST /api/auth/login` | Permitido | Permitido | Permitido | Permitido |
 | Consultar Perfil | `GET /api/auth/me` | Denegado (401) | Permitido | Permitido | Permitido |
 | Listar Usuarios Operadores | `GET /api/usuarios` | Denegado (401) | Denegado (403) | Permitido | Denegado (403) |
-| Escanear ISBN Directo | `POST /api/libros/escanear` | Denegado (401) | Permitido | Permitido | Permitido |
+| Escanear ISBN Directo | `POST /api/libros/escanear` | Denegado (401) | Permitido | Permitido | Denegado (403) |
 | Consultar ISBN Previo | `POST /api/libros/consultar` | Denegado (401) | Permitido | Permitido | Denegado (403) |
 | Ingreso Stock Existente | `POST /api/libros/:id/ingreso`| Denegado (401) | Permitido | Permitido | Denegado (403) |
 | Registro Manual de Libro | `POST /api/libros/registrar` | Denegado (401) | Permitido (Precio = 0) | Permitido (Define Precio) | Denegado (403) |
@@ -872,7 +873,7 @@ app/
 
 ### 8.2 Diferencias con lo Declarado en AGENTS.md
 1. **Rol Usuario**: `AGENTS.md` estipula que solo existen `Administrador` y `Empleado` como roles operativos y que el catálogo es público. En la base de datos se sembró el rol `'Usuario'`, pero no tiene acceso a ninguna vista protegida ni existe endpoint de autorregistro.
-2. **Escaneo por ISBN (`POST /api/libros/escanear`)**: Los comentarios JSDoc en rutas indican `@access Público / Empleado / Administrador`, pero el código incluye el middleware `authenticate`, requiriendo obligatoriamente un token JWT válido.
+2. **Escaneo por ISBN (`POST /api/libros/escanear`)**: Resuelto en T3. La ruta exige `authenticate` + `authorize('Administrador', 'Empleado')` y su JSDoc declara `@access Administrador / Empleado`. El rol `Usuario` recibe 403.
 3. **Gestión de Empleados**: AGENTS.md las lista en "Roadmap (NO implementado)" y sus specs están en app/docs/roadmap/. En el código solo existe `GET /api/usuarios` para lectura; no existen endpoints de creación, edición o baja de empleados.
 
 ### 8.3 Ocultamiento de Precios al Empleado (Comportamiento Exacto)
@@ -894,7 +895,6 @@ app/
 | **Monorepo incompleto** | `app/package.json` | Ejecuta scripts con flags `--prefix`, pero no declara la propiedad formal `"workspaces": ["backend", "frontend"]`. |
 | **Ausencia de tests en Frontend** | `app/frontend/` | No existe directorio de pruebas, ni frameworks como Vitest, Jest o React Testing Library en `package.json`. |
 | **Duplicación de validación de ISBN** | `app/backend/src/middlewares/validator.js`, `app/backend/src/services/googleBooks.service.js`, `app/backend/src/utils/slug.js` | Funciones de normalización de cadenas, limpieza de guiones y expresiones regulares de UUID reimplementadas en múltiples archivos. |
-| **Inconsistencias en comentarios JSDoc** | `app/backend/src/routes/libro.routes.js` (L23) | Declara `@access Público / Empleado / Administrador` en `POST /api/libros/escanear`, pero aplica el middleware `authenticate`. |
 | **Tratamiento de errores con savepoints manuales** | `app/backend/src/services/libro.service.js` (L21) | Crea transacciones anidadas manuales para atrapar `23505` en Sequelize en lugar de un constraint handling declarativo. |
 | **Ausencia de contenedor de Frontend en desarrollo** | `app/docker-compose.yml` | Solo orquesta `db`, `db-test` y `backend`. El frontend debe ejecutarse manualmente en el host con `npm run dev`. |
 | **Falta de paginación en inventario y catálogo** | `app/backend/src/repositories/inventario.repository.js` (L325), `libro.repository.js` (L136) | Aplica `LIMIT 200` y `LIMIT 50` fijos sin soportar parámetro `offset` en existencias y catálogo. |
