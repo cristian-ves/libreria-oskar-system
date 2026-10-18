@@ -1,3 +1,5 @@
+> ⚠️ **DOCUMENTO DESACTUALIZADO.** Este archivo no refleja el estado actual del proyecto. La fuente de verdad es `app/docs/PROJECT_SPECS.md`.
+
 # Estructura de Paquetería y Arquitectura del Sistema - Librería Oskar
 
 Este documento describe la estructura de directorios, organización de paquetes, modularización y flujo de datos de los proyectos **Backend** y **Frontend** del sistema de inventario y catálogo de la Librería Oskar.

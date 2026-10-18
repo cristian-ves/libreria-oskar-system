@@ -3,6 +3,8 @@ name: catalog-employee-crud
 description: Implementar CRUD de catálogo y empleados con Express, Sequelize, RBAC y validaciones.
 ---
 
+> **ESTADO: NO IMPLEMENTADO (roadmap).** Esta skill describe una función planificada que aún no existe en el código. No usar como instrucción de trabajo hasta su implementación.
+
 # CRUD de catálogo y empleados
 
 ## Procedimiento

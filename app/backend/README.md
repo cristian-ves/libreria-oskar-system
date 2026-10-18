@@ -1,3 +1,5 @@
+> ⚠️ **DOCUMENTO DESACTUALIZADO.** Este archivo no refleja el estado actual del proyecto. La fuente de verdad es `app/docs/PROJECT_SPECS.md`.
+
 # Backend - Sistema de Inventario y Catálogo (Librería Oskar)
 
 Servicio RESTful desarrollado en **Node.js** con **Express** y **PostgreSQL**, implementando una arquitectura limpia por capas (**Clean Layered Architecture**), transacciones ACID y consumo seguro de APIs externas de catalogación (Google Books API).
