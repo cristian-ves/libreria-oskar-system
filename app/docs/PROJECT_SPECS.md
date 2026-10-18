@@ -97,21 +97,18 @@
 
 ```text
 app/
-├── AGENTS.md (106)
+├── AGENTS.md (74)
 ├── docker-compose.yml (78)
 ├── package.json (19)
 ├── .agents/
 │   └── skills/
-│       ├── auth-2fa/SKILL.md (15)
-│       ├── backend-engineer-nodejs/SKILL.md (42)
+│       ├── backend-engineer-nodejs/SKILL.md (34)
 │       ├── backend-testing/SKILL.md (19)
-│       ├── catalog-employee-crud/SKILL.md (16)
 │       ├── database-architect/SKILL.md (26)
 │       ├── devops-gcp-automation/SKILL.md (26)
 │       ├── frontend-engineer-react/SKILL.md (26)
-│       ├── inventory-email-alerts/SKILL.md (15)
 │       ├── inventory-transactions/SKILL.md (25)
-│       └── sequelize-orm/SKILL.md (22)
+│       └── sequelize-orm/SKILL.md (23) (convenciones vigentes)
 ├── .github/
 │   ├── DEPLOYMENT_GUIDE.md (115)
 │   └── workflows/
@@ -193,6 +190,12 @@ app/
 │   └── migrations/
 │       ├── 002_categorias.sql (26)
 │       └── 003_categorias_adicionales.sql (23)
+├── docs/
+│   ├── PROJECT_SPECS.md (975)
+│   └── roadmap/
+│       ├── auth-2fa/SKILL.md (16)
+│       ├── catalog-employee-crud/SKILL.md (17)
+│       └── inventory-email-alerts/SKILL.md (17)
 └── frontend/
     ├── index.html (16)
     ├── package.json (27)
@@ -206,6 +209,8 @@ app/
         ├── main.jsx (16)
         ├── api/
         │   └── client.js (42)
+        ├── assets/
+        │   └── logo.jpg
         ├── context/
         │   └── AuthContext.jsx (118)
         ├── components/
@@ -868,7 +873,7 @@ app/
 ### 8.2 Diferencias con lo Declarado en AGENTS.md
 1. **Rol Usuario**: `AGENTS.md` estipula que solo existen `Administrador` y `Empleado` como roles operativos y que el catálogo es público. En la base de datos se sembró el rol `'Usuario'`, pero no tiene acceso a ninguna vista protegida ni existe endpoint de autorregistro.
 2. **Escaneo por ISBN (`POST /api/libros/escanear`)**: Los comentarios JSDoc en rutas indican `@access Público / Empleado / Administrador`, pero el código incluye el middleware `authenticate`, requiriendo obligatoriamente un token JWT válido.
-3. **Gestión de Empleados**: `AGENTS.md` menciona el alcance de CRUD de empleados. En el código solo existe `GET /api/usuarios` para lectura; no existen endpoints de creación, edición o baja de empleados.
+3. **Gestión de Empleados**: AGENTS.md las lista en "Roadmap (NO implementado)" y sus specs están en app/docs/roadmap/. En el código solo existe `GET /api/usuarios` para lectura; no existen endpoints de creación, edición o baja de empleados.
 
 ### 8.3 Ocultamiento de Precios al Empleado (Comportamiento Exacto)
 - **En Backend (`POST /api/libros/registrar`)**: `libroService.registrarLibro` evalúa `esAdmin = (usuarioRol === 'Administrador')`. Si el usuario es `Empleado`, ignora cualquier valor enviado en `precio`, fuerza `precioFinal = 0.00` y retorna la bandera `"precio_pendiente": true`.
@@ -899,14 +904,14 @@ app/
 ## 10. Funcionalidad Incompleta o Ausente (respecto a AGENTS.md)
 
 1. **Autenticación de Dos Factores (2FA)**:
-   - Declarada en `AGENTS.md` y con skill dedicada `auth-2fa`.
+   - AGENTS.md las lista en "Roadmap (NO implementado)" y sus specs están en app/docs/roadmap/.
    - En la base de datos existen los campos `dos_factores_activo` y `dos_factores_secreto`.
    - **Estado real**: No existe lógica de enrolamiento, generación de QR, validación de token TOTP ni desafío en el login.
 2. **Notificaciones por Correo de Desabastecimiento y Libros Sin Precio**:
-   - Declarada en `AGENTS.md` y con skill dedicada `inventory-email-alerts`.
+   - AGENTS.md las lista en "Roadmap (NO implementado)" y sus specs están en app/docs/roadmap/.
    - **Estado real**: No existe servicio de correo, no hay dependencias SMTP (como Nodemailer o Sendgrid) en `package.json`, ni tareas programadas (*cron jobs*) para envíos automáticos.
 3. **CRUD Administrativo de Catálogo y Empleados**:
-   - Declarado en `AGENTS.md` y con skill dedicada `catalog-employee-crud`.
+   - AGENTS.md las lista en "Roadmap (NO implementado)" y sus specs están en app/docs/roadmap/.
    - **Estado real**: En empleados solo existe `GET /api/usuarios` (lectura). No existen endpoints `POST`, `PUT` o `DELETE` para usuarios. En catálogo no existen endpoints para modificar (`PUT /api/libros/:id`) ni dar de baja libros obsoletos (`DELETE` o baja lógica).
 4. **Validación de Sesión en el Lector Móvil**:
    - `BarcodeScanner.jsx` no valida permisos de rol internamente; depende exclusivamente de la vista contenedora y el guardián de ruta.
@@ -953,23 +958,39 @@ app/
 
 ---
 
-## 12. Archivos de Documentación y Configuración de Agentes (Fuera de `app/docs/`)
+## 12. Archivos de Documentación y Configuración de Agentes
 
-| Archivo | Propósito en una línea | Solapamientos o Contradicciones Detectadas |
+### 12.1 Jerarquía de Fuentes de Verdad
+La prioridad de fuentes de información para agentes y desarrolladores se rige por:
+1. **`app/AGENTS.md`**: Reglas globales de arquitectura, persistencia, seguridad y comportamiento operativo del agente.
+2. **Skills activas (`app/.agents/skills/`)**: Directrices técnicas especializadas por dominio de ingeniería.
+3. **`app/docs/PROJECT_SPECS.md`**: Especificación exhaustiva y fuente de verdad técnica detallada.
+
+> **Regla de oro**: Ante cualquier discrepancia entre documentación, agentes o especificaciones, **el código fuente y la base de datos mandan**.
+
+### 12.2 Estado de Archivos y Configuración de Agentes
+- **`app/AGENTS.md` reescrito (74 líneas)**: Actualizado y conciso. No declara como activos 2FA, correos ni CRUD admin; los lista en "Roadmap (NO implementado)" apuntando a `app/docs/roadmap/`.
+- **7 skills activas (`app/.agents/skills/`)**: Se mantienen las 7 skills del alcance vigente (`backend-engineer-nodejs`, `backend-testing`, `database-architect`, `devops-gcp-automation`, `frontend-engineer-react`, `inventory-transactions`, `sequelize-orm`). En particular, `sequelize-orm` fue actualizada a convenciones vigentes (ya no procedimiento de migración), `database-architect` incluye el tipo 'Ajuste', y las skills de funciones no implementadas (`auth-2fa`, `catalog-employee-crud`, `inventory-email-alerts`) se trasladaron a `app/docs/roadmap/`.
+- **Carga en agy CLI**: Verificado manualmente: agy citó `AGENTS.md` y las skills sin ruta explícita en el prompt.
+
+### 12.3 Catálogo de Archivos de Documentación
+
+| Archivo | Propósito en una línea | Estado y Alineación |
 |---|---|---|
 | `README.md` (raíz del repo) | Título introductorio del repositorio del seminario. | No aporta información técnica ni instrucciones. |
 | `documentacion/estructura-paqueteria.md` | Descripción arquitectónica inicial de paquetes y capas. | **Contradicción severa**: Describe el backend basado en `pg.Pool` directo y DAO SQL tradicional; omite por completo los 11 modelos Sequelize y la configuración ORM. |
-| `app/AGENTS.md` | Guía de trabajo colaborativo, directrices de arquitectura y alcance de fase 3. | Describe alcance planificado (2FA, CRUD de empleados, alertas por email) que aún no está implementado en el código fuente. |
+| `app/AGENTS.md` | Guía de trabajo colaborativo, directrices de arquitectura y reglas para agentes. | Reescrito (74 líneas). Totalmente alineado; 2FA, correos y CRUD admin marcados en "Roadmap (NO implementado)". |
 | `app/backend/README.md` | Documentación técnica específica del servidor Express. | **Contradicción**: Afirma que `POST /api/libros/escanear` no requiere autenticación y documenta arquitectura con `pg.Pool` previa a la migración ORM. |
 | `app/frontend/README.md` | Guía de componentes y ejecución del cliente React. | Desactualizado: no documenta las vistas de Inventario, Nosotros ni el flujo de autenticación con JWT. |
 | `app/.github/DEPLOYMENT_GUIDE.md` | Manual paso a paso para aprovisionamiento y despliegue en Google Cloud Platform. | Alineado con `.github/workflows/deploy.yml` y `Dockerfile`. |
-| `app/.agents/skills/auth-2fa/SKILL.md` | Guía para implementar segundo factor TOTP sin alterar bcrypt/JWT. | Describe requerimientos de una funcionalidad que no existe en el código actual. |
-| `app/.agents/skills/backend-engineer-nodejs/SKILL.md` | Directrices de desarrollo Express, capas y convenciones de servicios. | Alineado con la estructura de backend. |
-| `app/.agents/skills/backend-testing/SKILL.md` | Reglas para ejecución de tests con el runner nativo de Node.js. | Alineado con `src/run-tests.js` y la suite en `tests/`. |
-| `app/.agents/skills/catalog-employee-crud/SKILL.md` | Directrices para implementar CRUD administrativo de libros y personal. | Describe requerimientos de una funcionalidad que no existe en el código actual. |
-| `app/.agents/skills/database-architect/SKILL.md` | Directrices de integridad referencial, triggers PL/pgSQL y esquema PostgreSQL. | Alineado con `app/database/schema.sql`. |
-| `app/.agents/skills/devops-gcp-automation/SKILL.md` | Pautas para Dockerfiles multi-stage, Artifact Registry y Cloud Run. | Alineado con `Dockerfile` y `deploy.yml`. |
-| `app/.agents/skills/frontend-engineer-react/SKILL.md` | Pautas de diseño mobile-first, React Router, Tailwind y `html5-qrcode`. | Alineado con los componentes de `app/frontend/src/`. |
-| `app/.agents/skills/inventory-email-alerts/SKILL.md` | Guía para diseñar alertas por correo electrónico ante desabastecimiento. | Describe requerimientos de una funcionalidad que no existe en el código actual. |
-| `app/.agents/skills/inventory-transactions/SKILL.md` | Reglas de atomicidad ACID, bloqueos pesimistas y trigger de stock. | Totalmente alineado con `libro.service.js` e `inventario.service.js`. |
-| `app/.agents/skills/sequelize-orm/SKILL.md` | Procedimiento de migración de consultas SQL a Sequelize 6 preservando contratos. | Alineado con la implementación final de repositorios en `src/repositories/`. |
+| `app/docs/PROJECT_SPECS.md` | Fuente de verdad y especificación integral del sistema. | Actualizado; refleja la arquitectura Sequelize, roadmap e infraestructura verificada. |
+| `app/docs/roadmap/auth-2fa/SKILL.md` | Especificación técnica para segundo factor TOTP (roadmap). | Funcionalidad no implementada; spec en `app/docs/roadmap/`. |
+| `app/docs/roadmap/catalog-employee-crud/SKILL.md` | Especificación técnica para CRUD de catálogo y empleados (roadmap). | Funcionalidad no implementada; spec en `app/docs/roadmap/`. |
+| `app/docs/roadmap/inventory-email-alerts/SKILL.md` | Especificación técnica para alertas de inventario por correo (roadmap). | Funcionalidad no implementada; spec en `app/docs/roadmap/`. |
+| `app/.agents/skills/backend-engineer-nodejs/SKILL.md` | Directrices de desarrollo Express, arquitectura en capas y transacciones Sequelize. | Skill activa; alineada con backend y Sequelize. |
+| `app/.agents/skills/backend-testing/SKILL.md` | Reglas para ejecución de tests con el runner nativo de Node.js. | Skill activa; alineada con `src/run-tests.js` y `tests/`. |
+| `app/.agents/skills/database-architect/SKILL.md` | Directrices de integridad referencial, triggers PL/pgSQL y soporte para 'Ajuste'. | Skill activa; alineada con `app/database/schema.sql`. |
+| `app/.agents/skills/devops-gcp-automation/SKILL.md` | Pautas para Dockerfiles multi-stage, Artifact Registry y Cloud Run. | Skill activa; alineada con `Dockerfile` y `deploy.yml`. |
+| `app/.agents/skills/frontend-engineer-react/SKILL.md` | Pautas de diseño mobile-first, React Router, Tailwind y `html5-qrcode`. | Skill activa; alineada con los componentes de `app/frontend/src/`. |
+| `app/.agents/skills/inventory-transactions/SKILL.md` | Reglas de atomicidad ACID, bloqueos pesimistas y trigger de stock. | Skill activa; totalmente alineada con `libro.service.js` e `inventario.service.js`. |
+| `app/.agents/skills/sequelize-orm/SKILL.md` | Convenciones vigentes de Sequelize ORM (modelos, asociaciones y repositorios). | Skill activa; actualizada a convenciones vigentes (ya no procedimiento de migración). |
