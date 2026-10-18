@@ -1,5 +1,5 @@
-const db = require('../config/db');
 const env = require('../config/env');
+const { sequelize } = require('../models');
 const inventarioRepository = require('../repositories/inventario.repository');
 const movimientoRepository = require('../repositories/movimiento.repository');
 const { ValidationError, NotFoundError, ConflictError } = require('../utils/errors');
@@ -54,9 +54,10 @@ class InventarioService {
       throw new ValidationError('La cantidad debe ser un entero mayor o igual a 1.');
     }
 
-    return await db.withTransaction(async (client) => {
+    return await sequelize.transaction(async (transaction) => {
       // 1. Bloquear y verificar el registro de inventario
-      const inventario = await inventarioRepository.findByIdForUpdate(inventarioId, client);
+      const txOptions = { transaction };
+      const inventario = await inventarioRepository.findByIdForUpdate(inventarioId, txOptions);
       if (!inventario) {
         throw new NotFoundError('El registro de inventario indicado no existe.');
       }
@@ -69,17 +70,17 @@ class InventarioService {
       }
 
       // 3. Obtener o asegurar el tipo de movimiento 'Salida'
-      let tipoMovimiento = await movimientoRepository.getTipoMovimientoByName('Salida', client);
+      let tipoMovimiento = await movimientoRepository.getTipoMovimientoByName('Salida', txOptions);
       if (!tipoMovimiento) {
         tipoMovimiento = await movimientoRepository.ensureTipoMovimiento(
           'Salida',
           'Salida de stock por ventas o transferencias.',
-          client
+          txOptions
         );
       }
 
       // 4. Insertar el movimiento (el trigger restará la cantidad del stock_actual de forma atómica)
-      const movimiento = await movimientoRepository.createMovimiento(client, {
+      const movimiento = await movimientoRepository.createMovimiento(txOptions, {
         inventarioId,
         usuarioId,
         tipoMovimientoId: tipoMovimiento.id,
@@ -88,7 +89,7 @@ class InventarioService {
       });
 
       // 5. Consultar el inventario actualizado
-      const inventarioActualizado = await inventarioRepository.findById(inventarioId, client);
+      const inventarioActualizado = await inventarioRepository.findById(inventarioId, txOptions);
 
       return {
         inventario: {
@@ -114,7 +115,8 @@ class InventarioService {
    */
   async registrarAjuste({ inventarioId, stockNuevo, motivo, usuarioId }) {
     const stockNuevoNum = Number(stockNuevo);
-    if (!Number.isInteger(stockNuevoNum) || stockNuevoNum < 0) {
+    if (stockNuevo === null || stockNuevo === undefined || stockNuevo === '' ||
+        !Number.isInteger(stockNuevoNum) || stockNuevoNum < 0) {
       throw new ValidationError('El stock nuevo debe ser un número entero mayor o igual a 0.');
     }
 
@@ -122,9 +124,10 @@ class InventarioService {
       throw new ValidationError('El motivo del ajuste es obligatorio.');
     }
 
-    return await db.withTransaction(async (client) => {
+    return await sequelize.transaction(async (transaction) => {
       // 1. Bloquear y verificar el registro de inventario
-      const inventario = await inventarioRepository.findByIdForUpdate(inventarioId, client);
+      const txOptions = { transaction };
+      const inventario = await inventarioRepository.findByIdForUpdate(inventarioId, txOptions);
       if (!inventario) {
         throw new NotFoundError('El registro de inventario indicado no existe.');
       }
@@ -137,12 +140,12 @@ class InventarioService {
       }
 
       // 3. Obtener o asegurar el tipo de movimiento 'Ajuste'
-      let tipoMovimiento = await movimientoRepository.getTipoMovimientoByName('Ajuste', client);
+      let tipoMovimiento = await movimientoRepository.getTipoMovimientoByName('Ajuste', txOptions);
       if (!tipoMovimiento) {
         tipoMovimiento = await movimientoRepository.ensureTipoMovimiento(
           'Ajuste',
           'Ajuste de inventario por auditoría o corrección.',
-          client
+          txOptions
         );
       }
 
@@ -150,7 +153,7 @@ class InventarioService {
       // En Ajuste, cantidad = stockNuevo (el trigger fijará stock_actual = NEW.cantidad)
       const motivoDetalle = `Stock anterior: ${stockAnterior}. Stock nuevo: ${stockNuevoNum}. Motivo: ${motivo.trim()}`;
 
-      const movimiento = await movimientoRepository.createMovimiento(client, {
+      const movimiento = await movimientoRepository.createMovimiento(txOptions, {
         inventarioId,
         usuarioId,
         tipoMovimientoId: tipoMovimiento.id,
@@ -159,7 +162,7 @@ class InventarioService {
       });
 
       // 5. Consultar el inventario actualizado
-      const inventarioActualizado = await inventarioRepository.findById(inventarioId, client);
+      const inventarioActualizado = await inventarioRepository.findById(inventarioId, txOptions);
 
       return {
         stock_anterior: stockAnterior,

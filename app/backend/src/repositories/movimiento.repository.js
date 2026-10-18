@@ -1,38 +1,79 @@
-const db = require('../config/db');
+const {
+  TipoMovimiento,
+  MovimientoInventario,
+  Inventario,
+  Libro,
+  Bodega,
+  Sucursal,
+  Usuario,
+  sequelize,
+} = require('../models');
 
 class MovimientoRepository {
   /**
-   * Obtiene el identificador y detalle de un tipo de movimiento por nombre.
+   * Obtiene el identificador y detalle de un tipo de movimiento por nombre (case-insensitive).
    * @param {string} nombre - 'Ingreso', 'Salida', 'Ajuste'
-   * @param {import('pg').PoolClient | import('pg').Pool} [executor]
+   * @param {{ transaction?: import('sequelize').Transaction }} [options]
+   * @returns {Promise<{ id: string, nombre: string, descripcion: string | null } | null>}
    */
-  async getTipoMovimientoByName(nombre, executor = db.pool) {
-    const text = `
-      SELECT id, nombre, descripcion
-      FROM tipo_movimientos
-      WHERE LOWER(nombre) = LOWER($1)
-      LIMIT 1;
-    `;
-    const res = await executor.query(text, [nombre.trim()]);
-    return res.rows[0] || null;
+  async getTipoMovimientoByName(nombre, options = {}) {
+    if (!nombre || typeof nombre !== 'string' || !nombre.trim()) {
+      return null;
+    }
+
+    const cleanNombre = nombre.trim();
+
+    const queryOptions = {
+      where: sequelize.where(
+        sequelize.fn('LOWER', sequelize.col('nombre')),
+        cleanNombre.toLowerCase()
+      ),
+      raw: true,
+    };
+
+    if (options.transaction) {
+      queryOptions.transaction = options.transaction;
+    }
+
+    const tipo = await TipoMovimiento.findOne(queryOptions);
+    return tipo || null;
   }
 
   /**
-   * Asegura la existencia de un tipo de movimiento ('Ingreso', 'Salida', etc.).
+   * Asegura la existencia de un tipo de movimiento ('Ingreso', 'Salida', etc.) de forma idempotente.
    * @param {string} nombre
-   * @param {string} descripcion
-   * @param {import('pg').PoolClient | import('pg').Pool} [executor]
+   * @param {string} [descripcion='']
+   * @param {{ transaction?: import('sequelize').Transaction }} [options]
+   * @returns {Promise<{ id: string, nombre: string, descripcion: string | null }>}
    */
-  async ensureTipoMovimiento(nombre, descripcion = '', executor = db.pool) {
-    const text = `
-      INSERT INTO tipo_movimientos (nombre, descripcion)
-      VALUES ($1, $2)
-      ON CONFLICT (nombre) DO UPDATE
-        SET nombre = EXCLUDED.nombre
-      RETURNING id, nombre, descripcion;
-    `;
-    const res = await executor.query(text, [nombre.trim(), descripcion]);
-    return res.rows[0];
+  async ensureTipoMovimiento(nombre, descripcion = '', options = {}) {
+    const cleanNombre = nombre.trim();
+    const txOption = options.transaction ? { transaction: options.transaction } : {};
+
+    const tipoExistente = await TipoMovimiento.findOne({
+      where: sequelize.where(
+        sequelize.fn('LOWER', sequelize.col('nombre')),
+        cleanNombre.toLowerCase()
+      ),
+      ...txOption,
+    });
+
+    if (tipoExistente) {
+      return tipoExistente.get ? tipoExistente.get({ plain: true }) : tipoExistente;
+    }
+
+    // Sequelize 6 ejecuta findOrCreate en un savepoint si recibe una
+    // transacción externa y recupera la fila creada por una solicitud rival
+    // cuando la restricción UNIQUE(nombre) rechaza el INSERT concurrente.
+    const [tipo] = await TipoMovimiento.findOrCreate({
+      where: { nombre: cleanNombre },
+      defaults: {
+        descripcion: descripcion || null,
+      },
+      ...txOption,
+    });
+
+    return tipo.get ? tipo.get({ plain: true }) : tipo;
   }
 
   /**
@@ -40,7 +81,10 @@ class MovimientoRepository {
    * Dispara automáticamente el trigger PL/pgSQL 'tg_movimientos_inventario_stock'
    * que actualiza de forma atómica y pesimista el stock en la tabla inventarios.
    * 
-   * @param {import('pg').PoolClient} executor
+   * NOTA CRÍTICA: NO actualizar stock_actual directamente desde JavaScript.
+   * El stock es administrado exclusivamente por el trigger de PostgreSQL.
+   * 
+   * @param {{ transaction?: import('sequelize').Transaction }} options
    * @param {{
    *   inventarioId: string,
    *   usuarioId: string,
@@ -48,33 +92,35 @@ class MovimientoRepository {
    *   cantidad: number,
    *   motivoDetalle?: string
    * }} data
+   * @returns {Promise<{
+   *   id: string,
+   *   inventario_id: string,
+   *   usuario_id: string,
+   *   tipo_movimiento_id: string,
+   *   cantidad: number,
+   *   motivo_detalle: string | null,
+   *   fecha_movimiento: Date
+   * }>}
    */
-  async createMovimiento(executor, { inventarioId, usuarioId, tipoMovimientoId, cantidad, motivoDetalle = null }) {
-    const text = `
-      INSERT INTO movimientos_inventario (
-        inventario_id,
-        usuario_id,
-        tipo_movimiento_id,
-        cantidad,
-        motivo_detalle
-      ) VALUES ($1, $2, $3, $4, $5)
-      RETURNING id, inventario_id, usuario_id, tipo_movimiento_id, cantidad, motivo_detalle, fecha_movimiento;
-    `;
+  async createMovimiento(options, { inventarioId, usuarioId, tipoMovimientoId, cantidad, motivoDetalle = null }) {
+    const txOption = options.transaction ? { transaction: options.transaction } : {};
 
-    const values = [
-      inventarioId,
-      usuarioId,
-      tipoMovimientoId,
-      cantidad,
-      motivoDetalle,
-    ];
+    const mov = await MovimientoInventario.create(
+      {
+        inventario_id: inventarioId,
+        usuario_id: usuarioId,
+        tipo_movimiento_id: tipoMovimientoId,
+        cantidad: Number(cantidad),
+        motivo_detalle: motivoDetalle || null,
+      },
+      txOption
+    );
 
-    const res = await executor.query(text, values);
-    return res.rows[0];
+    return mov.get({ plain: true });
   }
 
   /**
-   * Consulta el kardex / movimientos de inventario con filtros y paginación.
+   * Consulta el kardex / movimientos de inventario con filtros y paginación utilizando Sequelize ORM.
    * @param {{
    *   libroId?: string,
    *   bodegaId?: string,
@@ -82,85 +128,103 @@ class MovimientoRepository {
    *   limit?: number,
    *   offset?: number
    * }} filters
-   * @param {import('pg').PoolClient | import('pg').Pool} [executor]
+   * @param {{ transaction?: import('sequelize').Transaction }} [options]
+   * @returns {Promise<{
+   *   total: number,
+   *   limit: number,
+   *   offset: number,
+   *   movimientos: Array<Object>
+   * }>}
    */
-  async findAllWithFilters({ libroId = null, bodegaId = null, tipo = null, limit = 50, offset = 0 }, executor = db.pool) {
-    const params = [];
-    const whereConditions = [];
-
+  async findAllWithFilters({ libroId = null, bodegaId = null, tipo = null, limit = 50, offset = 0 }, options = {}) {
+    const whereInventario = {};
     if (libroId && typeof libroId === 'string' && libroId.trim()) {
-      params.push(libroId.trim());
-      whereConditions.push(`inv.libro_id = $${params.length}`);
+      whereInventario.libro_id = libroId.trim();
     }
-
     if (bodegaId && typeof bodegaId === 'string' && bodegaId.trim()) {
-      params.push(bodegaId.trim());
-      whereConditions.push(`inv.bodega_id = $${params.length}`);
+      whereInventario.bodega_id = bodegaId.trim();
     }
 
+    let tipoIncludeWhere = undefined;
     if (tipo && typeof tipo === 'string' && tipo.trim()) {
-      params.push(tipo.trim());
-      whereConditions.push(`LOWER(tm.nombre) = LOWER($${params.length})`);
+      tipoIncludeWhere = sequelize.where(
+        sequelize.fn('LOWER', sequelize.col('tipo_movimiento.nombre')),
+        tipo.trim().toLowerCase()
+      );
     }
 
-    let whereClause = '';
-    if (whereConditions.length > 0) {
-      whereClause = `WHERE ${whereConditions.join(' AND ')}`;
-    }
+    const queryOptions = {
+      include: [
+        {
+          model: TipoMovimiento,
+          as: 'tipo_movimiento',
+          attributes: ['id', 'nombre'],
+          ...(tipoIncludeWhere ? { where: tipoIncludeWhere } : {}),
+        },
+        {
+          model: Usuario,
+          as: 'usuario',
+          attributes: ['id', 'nombre_completo'],
+          required: false,
+        },
+        {
+          model: Inventario,
+          as: 'inventario',
+          attributes: ['id', 'libro_id', 'bodega_id'],
+          ...(Object.keys(whereInventario).length > 0 ? { where: whereInventario } : {}),
+          include: [
+            {
+              model: Libro,
+              as: 'libro',
+              attributes: ['id', 'titulo', 'isbn'],
+            },
+            {
+              model: Bodega,
+              as: 'bodega',
+              attributes: ['id', 'nombre'],
+              include: [
+                {
+                  model: Sucursal,
+                  as: 'sucursal',
+                  attributes: ['id', 'nombre'],
+                  required: false,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      order: [['fecha_movimiento', 'DESC']],
+      limit: Number(limit) || 50,
+      offset: Number(offset) || 0,
+      distinct: true,
+      ...(options.transaction ? { transaction: options.transaction } : {}),
+    };
 
-    // Consulta de total
-    const countSql = `
-      SELECT COUNT(*)::INTEGER AS total
-      FROM movimientos_inventario m
-      JOIN tipo_movimientos tm ON tm.id = m.tipo_movimiento_id
-      JOIN inventarios inv ON inv.id = m.inventario_id
-      ${whereClause}
-    `;
+    const res = await MovimientoInventario.findAndCountAll(queryOptions);
 
-    // Consulta de filas
-    params.push(limit);
-    const limitIdx = params.length;
-    params.push(offset);
-    const offsetIdx = params.length;
-
-    const dataSql = `
-      SELECT
-        m.id,
-        m.fecha_movimiento,
-        tm.nombre AS tipo,
-        m.cantidad,
-        m.motivo_detalle,
-        l.id AS libro_id,
-        l.titulo,
-        l.isbn,
-        b.nombre AS bodega_nombre,
-        s.nombre AS sucursal_nombre,
-        u.nombre_completo AS usuario_nombre
-      FROM movimientos_inventario m
-      JOIN tipo_movimientos tm ON tm.id = m.tipo_movimiento_id
-      JOIN inventarios inv ON inv.id = m.inventario_id
-      JOIN libros l ON l.id = inv.libro_id
-      JOIN bodegas b ON b.id = inv.bodega_id
-      LEFT JOIN sucursales s ON s.id = b.sucursal_id
-      LEFT JOIN usuarios u ON u.id = m.usuario_id
-      ${whereClause}
-      ORDER BY m.fecha_movimiento DESC
-      LIMIT $${limitIdx} OFFSET $${offsetIdx};
-    `;
-
-    const countParams = params.slice(0, params.length - 2);
-    const [countRes, dataRes] = await Promise.all([
-      executor.query(countSql, countParams),
-      executor.query(dataSql, params),
-    ]);
-
-    const total = countRes.rows[0]?.total || 0;
+    const movimientos = res.rows.map((m) => {
+      const row = m.get ? m.get({ plain: true }) : m;
+      return {
+        id: row.id,
+        fecha_movimiento: row.fecha_movimiento,
+        tipo: row.tipo_movimiento ? row.tipo_movimiento.nombre : null,
+        cantidad: row.cantidad,
+        motivo_detalle: row.motivo_detalle,
+        libro_id: row.inventario?.libro?.id || null,
+        titulo: row.inventario?.libro?.titulo || null,
+        isbn: row.inventario?.libro?.isbn || null,
+        bodega_nombre: row.inventario?.bodega?.nombre || null,
+        sucursal_nombre: row.inventario?.bodega?.sucursal?.nombre || null,
+        usuario_nombre: row.usuario?.nombre_completo || null,
+      };
+    });
 
     return {
-      total,
-      limit,
-      offset,
-      movimientos: dataRes.rows,
+      total: res.count,
+      limit: Number(limit) || 50,
+      offset: Number(offset) || 0,
+      movimientos,
     };
   }
 }

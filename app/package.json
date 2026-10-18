@@ -7,6 +7,7 @@
     "dev": "npm --prefix backend run dev",
     "seed": "npm --prefix backend run seed",
     "test": "npm --prefix backend test",
+    "test:sequelize": "npm --prefix backend run test:sequelize",
     "frontend:dev": "npm --prefix frontend run dev",
     "frontend:build": "npm --prefix frontend run build",
     "frontend:preview": "npm --prefix frontend run preview"
