@@ -361,7 +361,8 @@ test('escanearLibro mantiene respuesta HTTP 201 para libro nuevo y 200 para exis
     const response = responseMock();
     let nextError;
     await libroController.escanear({
-      body: { isbn, bodegaId: bodega.id, usuarioId: usuario.id },
+      body: { isbn, bodegaId: bodega.id },
+      user: { id: usuario.id },
     }, response, (error) => { nextError = error; });
     assert.equal(nextError, undefined);
     trackResult(response.body.data);
