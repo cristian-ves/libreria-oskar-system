@@ -20,9 +20,15 @@ router.get('/', libroController.listar.bind(libroController));
  * @route   POST /api/libros/escanear
  * @desc    Escanea un libro por ISBN, lo registra atómicamente si no existe,
  *          e ingresa 1 unidad al inventario de la bodega con transacción ACID.
- * @access  Público / Empleado / Administrador
+ * @access  Administrador / Empleado
  */
-router.post('/escanear', authenticate, validateEscanearLibro, libroController.escanear.bind(libroController));
+router.post(
+  '/escanear',
+  authenticate,
+  authorize('Administrador', 'Empleado'),
+  validateEscanearLibro,
+  libroController.escanear.bind(libroController)
+);
 
 /**
  * @route   POST /api/libros/consultar
