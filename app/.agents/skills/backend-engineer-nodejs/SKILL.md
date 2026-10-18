@@ -17,23 +17,15 @@ El perfil **backend-engineer-nodejs** se encarga de diseñar e implementar una A
    - `repositories/` o `daos/`: Acceso a base de datos PostgreSQL mediante pool de conexiones (`pg`).
    - `middlewares/`: Autenticación, autorización RBAC, validación de schemas (Zod/Joi) y error handler centralizado.
 2. **Transacciones ACID**:
-   - Para operaciones atómicas (ej. creación de movimientos de inventario y actualización de stock), utilizar clientes dedicados del pool con:
+   - Para operaciones atómicas (ej. movimientos de inventario), usar una sola transacción Sequelize y pasar `{ transaction: t }` a cada operación:
      ```javascript
-     const client = await pool.connect();
-     try {
-       await client.query('BEGIN');
-       // Operaciones críticas
-       await client.query('COMMIT');
-     } catch (err) {
-       await client.query('ROLLBACK');
-       throw err;
-     } finally {
-       client.release();
-     }
+     await sequelize.transaction(async (t) => {
+       // Operaciones críticas con { transaction: t }
+     });
      ```
 3. **Seguridad y Control de Acceso**:
    - Autenticación mediante JWT con tokens de acceso y refresh tokens.
-   - Soporte para autenticación de dos factores (2FA / TOTP con Speakeasy y QR codes).
+   - 2FA: roadmap, NO implementado (ver `app/docs/roadmap/`).
    - Roles definidos: Administrador, Empleado, Usuario.
    - Hashing con bcrypt y parámetros de seguridad (salt rounds >= 10).
 4. **Consumo Seguro de Google Books API**:

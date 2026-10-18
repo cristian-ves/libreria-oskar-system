@@ -1,22 +1,23 @@
 ---
 name: sequelize-orm
-description: Migrar repositorios, modelos y transacciones de pg a Sequelize 6 sin alterar el contrato de la aplicación.
+description: Convenciones vigentes de Sequelize 6 en el backend de Librería Oskar (repositorios, transacciones, bloqueos, alias). Úsala al tocar modelos o repositorios.
 ---
 
-# Sequelize ORM — Fase 3
+# Sequelize ORM — convenciones vigentes
+La migración desde SQL nativo ya terminó. Aquí solo hay reglas para código nuevo o modificado.
 
-## Cuándo aplicar
-Cuando se pida migrar consultas, implementar modelos/asociaciones, o adaptar repositorios a Sequelize.
+## Reglas
+- Todo acceso a datos va en `repositories/` con métodos Sequelize (`findOne`, `findAll`, `create`, `update`, `include`). `sequelize.query()` solo para excepciones analíticas, justificadas en un comentario.
+- NUNCA `sequelize.sync()`. El esquema lo define `app/database/schema.sql` y las migraciones; los modelos lo reflejan, no lo crean.
+- Modelos con atributos en snake_case, igual que las columnas.
+- Los repositorios devuelven objetos planos, no instancias de modelo. Conserva alias (p. ej. `rol_nombre`), nulos, tipos y orden.
+- Una transacción por operación de negocio atómica; pasa el mismo `{ transaction }` a cada llamada.
+- Bloqueo pesimista con `transaction.LOCK.UPDATE` (ver `inventarioRepository.findByIdForUpdate`); no lo quites.
+- Duplicados: captura el código 23505 dentro de un savepoint para no abortar la transacción externa.
+- `upsert` y `findOrCreate` no equivalen a `ON CONFLICT`: verifica el comportamiento con una prueba.
+- No modifiques `stock_actual` con `update`; registra un movimiento y deja actuar al trigger.
+- Paginación con `include`: verifica que el conteo y el orden no se dupliquen.
 
-## Procedimiento
-1. Inspeccionar modelos, repositorio, llamadas desde servicios y `database/schema.sql` relevantes; documentar firma, resultado (incluyendo alias), tratamiento de NULL y transacción.
-2. Revisar `git status --short` y diffs, incluidos archivos sin seguimiento. Si hay cambios previos, preservarlos y continuar solo con instrucciones explícitas.
-3. Reemplazar consultas normales con `findOne`, `findByPk`, `findAll`, `create`, `update`, `include` y agregaciones. Pasar `transaction` a cada método dentro de una unidad atómica.
-4. Devolver objetos planos si el contrato anterior devolvía filas `pg`; respetar alias como `rol_nombre`, valores monetarios y tipos de conteos.
-5. Para `upsert`/`findOrCreate`, respetar los efectos de `ON CONFLICT`, las restricciones únicas y la concurrencia; no presuponer equivalencia exacta.
-6. Para operaciones dependientes de un cliente `pg`, no ejecutar ORM en una conexión distinta dentro de la misma transacción; coordinar migración de servicios o mantener fallback temporal explícito.
-7. No modificar esquema ni ejecutar `sync` ni romper la lógica del trigger.
-8. Probar lecturas, escritura, paginación, errores, rollback, concurrencia y compatibilidad JSON; reportar SQL directo remanente.
-
-## Reglas para reportes
-No llamar “100% ORM” a un repositorio con fallback `client.query` o con `sequelize.query`. Si un reporte analítico requiere SQL nativo, justificarlo y documentar la excepción; no cargar tablas completas en memoria sin medir.
+## Al cambiar un repositorio
+- Prueba rollback, concurrencia, paginación y forma del JSON en la BD aislada `libreria_oskar_test`.
+- No describas como "100% ORM" código que aún use SQL nativo.
