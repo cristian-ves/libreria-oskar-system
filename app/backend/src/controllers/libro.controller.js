@@ -6,11 +6,13 @@ const { ValidationError, NotFoundError } = require('../utils/errors');
 class LibroController {
   /**
    * Endpoint: POST /api/libros/escanear
-   * Recibe isbn, bodegaId y usuarioId en el cuerpo de la petición.
+   * Recibe isbn y bodegaId en el cuerpo de la petición.
+   * usuarioId se toma siempre de req.user (inyectado por authenticate).
    */
   async escanear(req, res, next) {
     try {
-      const { isbn, bodegaId, usuarioId } = req.body;
+      const { isbn, bodegaId } = req.body;
+      const usuarioId = req.user.id;
 
       const resultado = await libroService.escanearLibro({
         isbn,

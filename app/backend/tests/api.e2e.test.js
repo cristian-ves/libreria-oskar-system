@@ -155,6 +155,109 @@ test('Test E2E de la API RESTful (Express + PostgreSQL)', async (t) => {
     assert.ok(externalCalls.length <= 1, 'El escaneo debe usar solo el mock de Google si el libro no existe localmente');
   });
 
+
+  // ── Nuevos casos: autorización y actor del movimiento ──────────────────────
+
+  await t.test('POST /api/libros/escanear - 401 sin token', async () => {
+    const res = await fetch(`${baseUrl}/libros/escanear`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isbn: '9780135957059', bodegaId: seededData.bodegaId }),
+    });
+    assert.strictEqual(res.status, 401);
+  });
+
+  await t.test('POST /api/libros/escanear - 403 con token de rol Usuario', async () => {
+    const bcrypt = require('bcryptjs');
+    const { Usuario, Rol } = require('../src/models');
+    const rolUsuario = await Rol.findOne({ where: { nombre: 'Usuario' } });
+    assert.ok(rolUsuario, 'El rol "Usuario" debe existir en BD');
+
+    const uniqueEmail = `test-rol-usuario-${Date.now()}@libreriaoskar-test.com`;
+    const hash = await bcrypt.hash('Test123!', 10);
+    const nuevoUsuario = await Usuario.create({
+      rol_id: rolUsuario.id,
+      nombre_completo: 'Usuario de Prueba Temporal',
+      email: uniqueEmail,
+      password_hash: hash,
+      activo: true,
+    });
+
+    try {
+      const loginRes = await fetch(`${baseUrl}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: uniqueEmail, password: 'Test123!' }),
+      });
+      assert.strictEqual(loginRes.status, 200);
+      const usuarioToken = (await loginRes.json()).data.token;
+      assert.ok(usuarioToken);
+
+      const res = await fetch(`${baseUrl}/libros/escanear`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${usuarioToken}` },
+        body: JSON.stringify({ isbn: '9780135957059', bodegaId: seededData.bodegaId }),
+      });
+      assert.strictEqual(res.status, 403);
+    } finally {
+      await nuevoUsuario.destroy();
+    }
+  });
+
+  await t.test('POST /api/libros/escanear - 2xx con token de Empleado', async (t) => {
+    const externalCalls = mockExternalFetch(t, async (url) => {
+      if (url.hostname === 'www.googleapis.com') return googleBooksResponse('9780201633610');
+      return undefined;
+    }, { allowLocal: true });
+
+    const res = await fetch(`${baseUrl}/libros/escanear`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${employeeToken}` },
+      body: JSON.stringify({
+        isbn: '9780201633610', // The Pragmatic Programmer 2nd alt ISBN
+        bodegaId: seededData.bodegaId,
+      }),
+    });
+    assert.ok([200, 201].includes(res.status));
+    const json = await res.json();
+    assert.strictEqual(json.status, 'success');
+    assert.ok(json.data.libro);
+    assert.strictEqual(json.data.movimiento.tipo, 'Ingreso');
+    assert.ok(externalCalls.length <= 1);
+  });
+
+  await t.test('POST /api/libros/escanear - usuarioId del body se ignora; actor = usuario autenticado', async (t) => {
+    const fakeUsuarioId = '00000000-dead-beef-0000-000000000000';
+    const externalCalls = mockExternalFetch(t, async (url) => {
+      if (url.hostname === 'www.googleapis.com') return googleBooksResponse('9780132350884');
+      return undefined;
+    }, { allowLocal: true });
+
+    const res = await fetch(`${baseUrl}/libros/escanear`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${employeeToken}` },
+      body: JSON.stringify({
+        isbn: '9780132350884',
+        bodegaId: seededData.bodegaId,
+        usuarioId: fakeUsuarioId,
+      }),
+    });
+    assert.ok([200, 201].includes(res.status));
+    const json = await res.json();
+    const movimientoId = json.data.movimiento.id;
+    assert.ok(movimientoId);
+
+    // Verificar en BD que el actor del movimiento es el Empleado, no el falso
+    const { rows } = await db.pool.query(
+      'SELECT usuario_id FROM movimientos_inventario WHERE id = $1',
+      [movimientoId]
+    );
+    assert.strictEqual(rows.length, 1);
+    assert.strictEqual(rows[0].usuario_id, seededData.usuarioId, 'El actor debe ser el Empleado autenticado');
+    assert.notStrictEqual(rows[0].usuario_id, fakeUsuarioId, 'El usuarioId falso del body debe haber sido ignorado');
+    assert.ok(externalCalls.length <= 1);
+  });
+
   await t.test('Cerrar Servidor y Pool de Conexiones', async () => {
     await new Promise((resolve) => server.close(resolve));
     await db.pool.end();

@@ -58,7 +58,7 @@ const validateIsbn = (isbn, errors, { required = true } = {}) => {
  * Middleware para validar el payload de escaneo de libros.
  */
 const validateEscanearLibro = (req, res, next) => {
-  const { isbn, bodegaId, usuarioId } = req.body || {};
+  const { isbn, bodegaId } = req.body || {};
 
   const errors = [];
   validateIsbn(isbn, errors);
@@ -67,12 +67,6 @@ const validateEscanearLibro = (req, res, next) => {
     errors.push('El campo "bodegaId" es obligatorio.');
   } else if (!UUID_REGEX.test(bodegaId)) {
     errors.push('El campo "bodegaId" debe ser un UUID válido.');
-  }
-
-  if (!usuarioId) {
-    errors.push('El campo "usuarioId" es obligatorio.');
-  } else if (!UUID_REGEX.test(usuarioId)) {
-    errors.push('El campo "usuarioId" debe ser un UUID válido.');
   }
 
   if (errors.length > 0) {

@@ -37,6 +37,8 @@ Sistema web de inventario interno + catálogo informativo de libros. Sin carrito
 ## Seguridad
 - bcrypt es hash, no "cifrado". Usa el JWT y RBAC existentes y valida permisos en el backend, no solo en React.
 - Nunca expongas ni versiones secretos, `.env` ni claves; comprueba su presencia sin mostrar valores.
+- `POST /api/libros/escanear` exige rol `Administrador` o `Empleado` (`authenticate` + `authorize`). Sin token → 401; rol `Usuario` → 403.
+- El actor (`usuarioId`) de todo movimiento sale siempre de `req.user.id` (inyectado por `authenticate`), nunca del body. Un `usuarioId` en el body se ignora.
 
 ## Pruebas
 - Las de integración modifican datos: apuntan a la BD aislada y limpian lo que crean.
