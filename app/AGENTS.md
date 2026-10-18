@@ -1,105 +1,74 @@
-# Librería Oskar — Instrucciones de desarrollo compartidas
+# AGENTS.md — Librería Oskar
 
-> Documento de trabajo para todo el equipo, independientemente de si usa Codex CLI, agy CLI u otro asistente. Las instrucciones de este archivo prevalecen sobre indicaciones antiguas de fase 2 que entren en conflicto. Antes de aplicar una skill, comprobar su compatibilidad con la arquitectura actual.
+Sistema web de inventario interno + catálogo informativo de libros. Sin carrito, reservas ni pagos. Interfaz en español, mobile-first. Responde en español.
 
-## 1. Contexto y alcance
+## Stack y estructura actual
+- Frontend: React 18, Vite 5, Tailwind 3 (paleta `oskar`), lucide-react, html5-qrcode, react-router-dom 6. JSX, sin TypeScript. Carpetas `app/frontend/src/{api,assets,context,components,views}`; no hay hooks, servicios por dominio ni tests.
+- Backend: Node 22, Express 4, CommonJS, en `app/backend/src/`: `routes → controllers → services → repositories → models` (más `config/`, `middlewares/`, `utils/`, `database/`). Sequelize 6.37 sobre PostgreSQL, 11 modelos.
+- BD: PostgreSQL con UUID. `app/database/schema.sql` es la fuente de verdad; migraciones en `app/database/migrations/`.
+- Pruebas: runner nativo de Node, `npm test` desde `app/`, BD aislada `libreria_oskar_test` (puerto 5435).
+- Docker Compose: `db`, `db-test`, `backend`. El frontend corre en el host con `npm run dev`. Despliegue en Google Cloud: planeado, no ejecutado.
+- Hay un refactor en curso: la estructura objetivo de frontend y backend se documentará al cerrar cada subtarea. Mientras tanto, respeta la estructura actual.
 
-- Aplicación web de **catálogo informativo e inventario interno de libros**; no implementar carrito, reservas o pagos sin requerimiento explícito.
-- Estructura del repositorio: `frontend/`, `backend/`, `database/`, `docker-compose.yml` (usar las rutas reales verificadas en el repositorio; no asumir que existe un directorio adicional `src/` en la raíz).
-- Frontend: React 18, Vite, Tailwind CSS, JavaScript/JSX, `lucide-react` y `html5-qrcode`. Mantener diseño mobile-first, interfaz en español y componentes reutilizables (`Navbar`, `BookCard`, `Toast`, `BarcodeScanner`, `LoadingSpinner`, cuando existan).
-- Backend: Node.js/Express (CommonJS), con separación `routes → controllers → services → repositories → models` y configuración en `backend/src/config/`.
-- Base de datos: PostgreSQL, UUID, esquema y scripts en `database/`; Sequelize 6 como ORM principal. `pg` sigue presente **temporalmente** donde aún no se ha migrado.
-- Preservar contratos HTTP y formatos de respuesta existentes (por ejemplo `{ status: 'success', data }` donde aplique). Verificar el código antes de dar por hecho que un endpoint o campo existe.
-- Roles de autenticación actuales: **Administrador** y **Empleado**, según la configuración real del sistema. El catálogo público puede ser visitado sin iniciar sesión. No inventar un rol autenticado `Usuario` sin validar el esquema y los requisitos.
-- Registro bibliográfico mediante ISBN, lector de cámara y entrada manual; integraciones existentes con Google Books y fuentes alternativas.
+## Roles
+- Administrador: todo.
+- Empleado: escaneo, ingresos, salidas, ajustes, stock y kardex. No administra usuarios. Ve precios pero no los fija: al registrar libros queda `precio=0` y `precio_pendiente=true`.
+- Usuario: existe en BD, sin acceso a nada protegido.
+- El catálogo es público.
 
-## 2. Alcance de la fase 3
+## Reglas de arquitectura y persistencia
+- Preserva contratos HTTP y formatos `{ status: 'success', data }`, `{ status: 'fail', message }`, `{ status: 'error', message }`.
+- Verifica en el código que un endpoint o campo existe antes de darlo por hecho; no inventes endpoints, tablas ni archivos.
+- Errores con la jerarquía `AppError` de `utils/errors.js`.
+- Usa métodos Sequelize. `sequelize.query()` solo en excepciones analíticas justificadas.
+- NUNCA `sequelize.sync()` (ni force ni alter). No modifiques esquema, migraciones ni triggers sin autorización explícita.
+- `config/db.js` (cliente `pg`) solo se usa en healthcheck y tests, no en repositorios.
+- Conserva los contratos de repositorios y servicios (nombres, nulos, tipos, alias, orden, JSON plano).
+- Una sola transacción por operación de negocio atómica, pasando el mismo `{ transaction }` a todo.
+- No dupliques endpoints.
 
-Trabajar únicamente en la funcionalidad solicitada. Entre los objetivos planificados están:
+## Reglas de inventario
+- El backend registra movimientos en `movimientos_inventario`; el trigger `tg_movimientos_inventario_stock` actualiza `stock_actual`. Nunca lo modifiques directo (solo se inicializa en 0 al crear el inventario).
+- Tipos válidos: Ingreso, Salida, Ajuste, Ajuste Auditoria.
+- `UNIQUE (libro_id, bodega_id)`; sin stock negativo; conserva `inventarioRepository.findByIdForUpdate` y los bloqueos pesimistas.
+- Bajo stock = `stock_actual <= stock_minimo`. Stock obsoleto = sin salidas en `DIAS_STOCK_OBSOLETO` (90 por defecto).
+- No cambies cálculos de alertas ni formatos de reportes sin requerimiento.
 
-- Completar la migración de consultas directas de `pg` a Sequelize ORM.
-- CRUD administrativo de catálogo y empleados.
-- Autenticación de dos factores (2FA).
-- Notificaciones por correo de desabastecimiento y libros sin precio.
-- Mantener y verificar infraestructura, pruebas y despliegue existentes cuando la tarea lo requiera.
+## Seguridad
+- bcrypt es hash, no "cifrado". Usa el JWT y RBAC existentes y valida permisos en el backend, no solo en React.
+- Nunca expongas ni versiones secretos, `.env` ni claves; comprueba su presencia sin mostrar valores.
 
-No asumir que una funcionalidad está terminada solo porque existe un modelo, una pantalla o una configuración: confirmar el flujo extremo a extremo y sus pruebas.
+## Pruebas
+- Las de integración modifican datos: apuntan a la BD aislada y limpian lo que crean.
+- `libros.isbn` es VARCHAR(20): usa ISBN-13 válido en fixtures y no amplíes la columna.
+- En operaciones críticas cubre rollback, movimiento+trigger, concurrencia, stock no negativo y duplicados.
+- No afirmes que algo pasa o está desplegado sin evidencia.
 
-## 3. Reglas de arquitectura y persistencia
+## Convenciones
+- Archivos backend `nombre.capa.js`. Atributos de modelos en snake_case, igual que las columnas.
+- Cambios pequeños y acotados; no reescribas lo que funciona.
 
-- PostgreSQL y su esquema vigente son la **fuente de verdad** para nombres de tablas, columnas, UUID, claves foráneas, valores por defecto y restricciones.
-- En código nuevo, preferir métodos de Sequelize (`findOne`, `findAll`, `create`, `update`, asociaciones, agregaciones). Migrar el SQL heredado de forma incremental.
-- No usar `sequelize.query()` como sustitución silenciosa de una consulta ORM; justificar y documentar cualquier excepción para reportes analíticos complejos.
-- No ejecutar `sequelize.sync()` ni `sync({ force: true })`, `sync({ alter: true })`, ni modificar esquema, migraciones o triggers sin autorización explícita.
-- Conservar contratos de repositorios y servicios: nombres públicos, valores nulos, tipos de datos, alias, ordenamientos y estructura JSON. Sequelize devuelve instancias; convertirlas a objetos planos cuando corresponda.
-- Mantener una sola transacción para cada operación de negocio atómica. Pasar el mismo objeto `{ transaction }` a **todas** las operaciones ORM involucradas.
-- Mientras un servicio use un cliente de `pg`, mantener sus operaciones en **esa misma conexión**. Nunca mezclar operaciones de `pg` y Sequelize suponiendo que comparten transacción.
-- Los adaptadores de compatibilidad con `pg` solo se retirarán después de migrar los servicios dependientes y superar pruebas de regresión.
+## Comportamiento del agente
+- Lee solo los archivos necesarios.
+- NO instales dependencias ni ejecutes builds, tests o migraciones salvo que se pida; el usuario los corre.
+- NO ejecutes operaciones git (commit, push, checkout, merge, rebase, reset, clean, stash): las hace el usuario. No edites `main`.
+- Si hay cambios locales sin confirmar, presérvalos.
+- Cierra cada tarea con un resumen de MÁXIMO 5 líneas: archivos modificados, comportamiento conservado, riesgos/pendientes.
 
-## 4. Integridad de inventarios
+## Documentación
+`app/docs/PROJECT_SPECS.md` es la fuente de verdad verificada. NO lo cargues completo: lee solo la sección necesaria. Si el código y las specs discrepan, manda el código.
+Índice: §3 BD, §4 backend (4.3 endpoints, 4.5 transacciones, 4.6 auth/RBAC, 4.9 tests), §5 frontend, §6 flujos, §7 infraestructura, §8 permisos, §9 deuda técnica, §10 lo ausente, §11 convenciones, §12 docs y agentes.
 
-- El único responsable de actualizar `inventarios.stock_actual` tras ingresos, salidas o ajustes es el trigger PostgreSQL `tg_movimientos_inventario_stock`, asociado a `fn_actualizar_stock_por_movimiento`.
-- El backend registra un movimiento; **no incrementa, decrementa ni ajusta directamente** `stock_actual`. Se permite inicializarlo en `0` al crear un inventario.
-- Preservar `UNIQUE (libro_id, bodega_id)` y las validaciones de existencias; no aceptar stock negativo.
-- Conservar bloqueos pesimistas (`SELECT ... FOR UPDATE` o `lock: transaction.LOCK.UPDATE` dentro de una transacción) cuando sean necesarios para operaciones concurrentes.
-- Bajo stock: respetar la comparación de `stock_actual` con `stock_minimo` implementada en el sistema.
-- Stock muerto: respetar la lógica basada en la última **salida** del inventario, o su fecha de creación si no tuvo salidas, y el período configurable (90 días por defecto según la implementación previa).
-- No cambiar cálculos de alertas, orden de prioridad o formatos de reportes sin requerimiento explícito.
+## Roadmap (NO implementado)
+2FA, alertas de inventario por correo, CRUD admin de empleados y catálogo, y ventas. No los asumas existentes. Sus specs están en `app/docs/roadmap/` (auth-2fa, inventory-email-alerts, catalog-employee-crud).
 
-## 5. Seguridad y autenticación
-
-- Usar bcrypt para **hash y verificación** de contraseñas; no denominarlo cifrado reversible.
-- Preservar autenticación JWT y RBAC existentes. Verificar permisos también en el backend, no solo en React.
-- Mantener secretos 2FA, tokens de recuperación, hashes y credenciales fuera de las respuestas HTTP y de los logs.
-- No imprimir, copiar a respuestas ni versionar valores de `.env`, claves privadas o secretos de producción. Si es indispensable verificar una variable, comprobar su presencia sin exponer su valor.
-- Implementar 2FA únicamente cuando esa tarea sea solicitada; no introducir cambios de autenticación durante una migración de repositorios.
-
-## 6. Desarrollo colaborativo y Git
-
-Distintos integrantes trabajan con **Codex CLI, agy CLI u otras herramientas**. Este documento describe reglas comunes, pero cada agente debe comprobar que realmente lo está leyendo. Si una herramienta no reconoce `AGENTS.md` o skills automáticamente, proporcionar sus rutas explícitamente en el prompt.
-
-- **Cada integrante trabaja en su propia rama de funcionalidad.** No imponer `feature/sequelize-orm` a otros: es una rama de ejemplo para quien esté migrando Sequelize, no una regla global.
-- Antes de modificar archivos, revisar `git branch --show-current`, `git status --short`, diferencias relevantes y archivos sin seguimiento.
-- No cambiar de rama, hacer `commit`, `push`, `merge`, `rebase`, `reset`, `clean`, `stash` o `checkout` forzado sin autorización explícita.
-- No editar `main` directamente. Integrar preferentemente mediante Pull Requests, con revisión y pruebas.
-- No sobrescribir ni descartar cambios previos, especialmente cuando provienen de otro integrante o asistente.
-- Si una tarea requiere modificar archivos compartidos (`database/schema.sql`, migraciones, `backend/src/models/`, configuración, servicios comunes, rutas, `package.json`, `docker-compose.yml`, workflows, este `AGENTS.md` o `.agents/skills/`), advertir sobre posibles conflictos y coordinar antes de cambios incompatibles.
-- Mantener cambios pequeños, revisables y acotados. No reescribir código funcional ni crear endpoints duplicados.
-- Un conflicto de Git se resuelve comparando ambas implementaciones; nunca borrando automáticamente una rama o el trabajo de otra persona.
-
-## 7. Pruebas, calidad y datos de desarrollo
-
-- Leer solo los archivos necesarios para la tarea, pero ampliar la revisión cuando las dependencias o la seguridad lo requieran.
-- Ejecutar primero pruebas específicas de lo modificado y después pruebas de regresión apropiadas; para backend, usar `npm test` desde `backend/` cuando corresponda.
-- Las pruebas de integración pueden ejecutar seeds y modificar registros: **confirmar que apuntan a una base aislada de pruebas** y que limpian los datos creados. Nunca ejecutarlas contra producción o una base compartida sin autorización.
-- `libros.isbn` está definido como `VARCHAR(20)` en el esquema examinado: los fixtures deben respetar ese límite; usar ISBN-13 válido cuando la prueba requiera validez bibliográfica. No ampliar columnas para corregir datos de prueba inválidos.
-- En operaciones críticas, cubrir transacciones/rollback, inserción del movimiento y ejecución del trigger, concurrencia, stocks no negativos y ausencia de duplicados.
-- No afirmar que todas las pruebas pasan si alguna falla, que un despliegue está activo porque existe un workflow, ni prometer tiempos de respuesta sin medición.
-- No instalar dependencias o ejecutar migraciones fuera del alcance sin justificarlo y, para acciones riesgosas, obtener autorización.
-
-## 8. Perfiles y skills disponibles
-
-Skills especializadas ubicadas en `.agents/skills/<nombre>/SKILL.md`. Leer **solo las relevantes** para la tarea y verificar que sus instrucciones no contradigan este archivo:
-
-| Skill | Uso principal |
+## Skills activas (`app/.agents/skills/<nombre>/SKILL.md`)
+| Skill | Úsala para |
 |---|---|
-| `database-architect` | Esquema PostgreSQL, integridad, índices y triggers. |
-| `backend-engineer-nodejs` | Express, arquitectura por capas y servicios. |
-| `frontend-engineer-react` | React, componentes y experiencia de usuario. |
-| `devops-gcp-automation` | Docker, GitHub Actions y Google Cloud. |
-| `sequelize-orm` | Modelos, repositorios y migración ORM. |
-| `inventory-transactions` | Stock, triggers, transacciones y concurrencia. |
-| `backend-testing` | Pruebas, regresiones y fallos. |
-| `catalog-employee-crud` | Administración de catálogo y empleados. |
-| `auth-2fa` | Segundo factor, recuperación y seguridad. |
-| `inventory-email-alerts` | Avisos por correo de bajo stock y libros sin precio. |
-
-No asumir que todas las skills están instaladas: verificar su presencia en el repositorio. No editar skills compartidas sin autorización.
-
-## 9. Comunicación, autonomía y uso de tokens
-
-- Antes de una tarea compleja, indicar brevemente alcance, archivos previstos y riesgos; preguntar solo cuando exista una decisión relevante que no pueda resolverse de forma segura.
-- Si hay trabajo local sin confirmar, describirlo y preservarlo. No usarlo como excusa para eliminar o sobrescribir archivos.
-- Si se pidió **solo analizar**, no modificar código. Si se autorizó implementar, avanzar dentro del alcance acordado, ejecutar verificaciones seguras y reportar resultados, sin pedir autorización de nuevo por cada cambio menor.
-- Evitar exploraciones indiscriminadas, dependencias innecesarias y respuestas extensas sin información útil.
-- Cerrar con un reporte breve: archivos modificados, comportamiento conservado, pruebas ejecutadas (aprobadas/fallidas) y riesgos o pendientes.
+| backend-engineer-nodejs | Capas, Express, errores, auth |
+| backend-testing | Pruebas del backend |
+| database-architect | Esquema, migraciones, triggers |
+| devops-gcp-automation | Docker, CI, Google Cloud |
+| frontend-engineer-react | React, Vite, Tailwind |
+| inventory-transactions | Movimientos, stock, bloqueos |
+| sequelize-orm | Convenciones del ORM |

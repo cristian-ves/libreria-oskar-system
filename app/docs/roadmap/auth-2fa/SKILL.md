@@ -3,6 +3,8 @@ name: auth-2fa
 description: Implementar autenticación de dos factores sin debilitar bcrypt, JWT, roles o secretos existentes.
 ---
 
+> **ESTADO: NO IMPLEMENTADO (roadmap).** Esta skill describe una función planificada que aún no existe en el código. No usar como instrucción de trabajo hasta su implementación.
+
 # Autenticación 2FA
 
 ## Procedimiento

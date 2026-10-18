@@ -1,3 +1,5 @@
+> ⚠️ **DOCUMENTO DESACTUALIZADO.** Este archivo no refleja el estado actual del proyecto. La fuente de verdad es `app/docs/PROJECT_SPECS.md`.
+
 # Frontend - SPA React con Tailwind CSS y html5-qrcode
 
 Módulo de cliente web SPA para **Librería Oskar**, desarrollado con **React (Vite)**, estilizado con **Tailwind CSS** e integrado con la biblioteca **html5-qrcode** para escaneo de códigos de barras / ISBN en tiempo real.

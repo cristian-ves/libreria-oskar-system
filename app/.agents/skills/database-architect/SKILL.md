@@ -17,7 +17,7 @@ El perfil **database-architect** lidera las decisiones de modelado relacional, i
 2. **Triggers y Reglas de Negocio en DB**:
    - Automatización de variaciones de stock mediante triggers (`AFTER INSERT ON movimientos_inventario`).
    - Bloqueo y prevención estricta de stock negativo con `RAISE EXCEPTION`.
-   - Soporte para tipos de movimiento: 'Ingreso', 'Salida', 'Ajuste Auditoria'.
+   - Soporte para tipos de movimiento: 'Ingreso', 'Salida', 'Ajuste', 'Ajuste Auditoria'.
 3. **Optimización e Índices**:
    - Búsqueda en catálogo con índices en `libros(titulo)` y `libros(autor_id)`.
    - Índices parciales condicionales para alertas: `CREATE INDEX idx_inventario_alertas ON inventarios(stock_actual) WHERE (stock_actual <= stock_minimo);`.
