@@ -1,4 +1,5 @@
 const env = require('../config/env');
+const { normalizarIsbn } = require('../utils/isbn');
 
 /** Nombre de autor canónico cuando ningún proveedor externo aporta autores reales. */
 const AUTOR_PLACEHOLDER = 'Autor de Biblioteca Internacional';
@@ -59,8 +60,7 @@ class GoogleBooksService {
    * @returns {string}
    */
   normalizarIsbn(isbn) {
-    if (!isbn) return '';
-    return isbn.toString().replace(/[-\s]/g, '').trim();
+    return normalizarIsbn(isbn);
   }
 
   /**

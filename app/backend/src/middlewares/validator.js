@@ -1,34 +1,12 @@
 const { ValidationError } = require('../utils/errors');
-
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const { normalizarIsbnEstricto, hasValidIsbnChecksum } = require('../utils/isbn');
+const { UUID_REGEX, esUuid } = require('../utils/uuid');
 
 /**
  * Valor canónico de marcador de posición para autor; debe coincidir con
  * AUTOR_PLACEHOLDER definido en googleBooks.service.js.
  */
 const AUTOR_PLACEHOLDER_VALIDATOR = 'Autor de Biblioteca Internacional';
-
-const normalizeIsbnForValidation = (isbn) => isbn.replace(/[-\s]/g, '').trim();
-
-const hasValidIsbnChecksum = (isbn) => {
-  if (/^\d{13}$/.test(isbn)) {
-    const sum = [...isbn.slice(0, 12)].reduce(
-      (total, digit, index) => total + Number(digit) * (index % 2 === 0 ? 1 : 3),
-      0
-    );
-    return (10 - (sum % 10)) % 10 === Number(isbn[12]);
-  }
-
-  if (/^\d{9}[\dX]$/i.test(isbn)) {
-    const sum = [...isbn].reduce((total, character, index) => {
-      const value = character.toUpperCase() === 'X' ? 10 : Number(character);
-      return total + value * (10 - index);
-    }, 0);
-    return sum % 11 === 0;
-  }
-
-  return false;
-};
 
 const validateIsbn = (isbn, errors, { required = true } = {}) => {
   if (isbn === undefined || isbn === null || (typeof isbn === 'string' && !isbn.trim())) {
@@ -43,7 +21,7 @@ const validateIsbn = (isbn, errors, { required = true } = {}) => {
     return;
   }
 
-  const normalized = normalizeIsbnForValidation(isbn);
+  const normalized = normalizarIsbnEstricto(isbn);
   if (normalized.length > 20) {
     errors.push('El campo "isbn" no puede superar los 20 caracteres después de normalizarse.');
     return;
