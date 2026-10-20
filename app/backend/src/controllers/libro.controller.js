@@ -1,7 +1,5 @@
 const libroService = require('../services/libro.service');
-const libroRepository = require('../repositories/libro.repository');
-const { buildRef, parseRef } = require('../utils/slug');
-const { ValidationError, NotFoundError } = require('../utils/errors');
+const catalogoService = require('../services/catalogo.service');
 
 class LibroController {
   /**
@@ -38,12 +36,10 @@ class LibroController {
   async listar(req, res, next) {
     try {
       const { q, categoriaId, categoria_id } = req.query;
-      const catId = categoriaId || categoria_id || null;
-      const libros = await libroRepository.searchAndList(q, catId);
-      const data = libros.map((l) => ({
-        ...l,
-        ref: buildRef(l),
-      }));
+      const data = await catalogoService.listar({
+        q,
+        categoriaId: categoriaId || categoria_id || null,
+      });
       return res.status(200).json({
         status: 'success',
         results: data.length,
@@ -152,21 +148,7 @@ class LibroController {
   async detalle(req, res, next) {
     try {
       const { ref } = req.params;
-      const parsed = parseRef(ref);
-      if (!parsed) {
-        throw new ValidationError('El identificador o referencia del libro es inválido.');
-      }
-
-      const libro = await libroRepository.findDetalleByRef(parsed);
-      if (!libro) {
-        throw new NotFoundError('Libro no encontrado.');
-      }
-
-      const data = {
-        ...libro,
-        ref: buildRef(libro),
-      };
-
+      const data = await catalogoService.detalle(ref);
       return res.status(200).json({
         status: 'success',
         data,

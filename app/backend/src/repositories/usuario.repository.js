@@ -176,6 +176,36 @@ class UsuarioRepository {
     delete plain.token_recuperacion;
     return plain;
   }
+  /**
+   * Obtiene todos los usuarios activos con su rol para el endpoint GET /api/usuarios.
+   * Query copiada exactamente del handler inline original en routes/index.js.
+   * No expone credenciales sensibles (no incluye password_hash, dos_factores_secreto, etc.).
+   *
+   * @returns {Promise<Array<{ id: string, nombre_completo: string, email: string, rol_nombre: string|null }>>}
+   */
+  async findActivosConRol() {
+    const usuarios = await Usuario.findAll({
+      attributes: ['id', 'nombre_completo', 'email'],
+      where: { activo: true },
+      include: [{
+        model: Rol,
+        as: 'rol',
+        attributes: ['nombre'],
+        required: true,
+      }],
+      order: [['nombre_completo', 'ASC']],
+    });
+
+    return usuarios.map((usuario) => {
+      const plain = usuario.get({ plain: true });
+      return {
+        id: plain.id,
+        nombre_completo: plain.nombre_completo,
+        email: plain.email,
+        rol_nombre: plain.rol?.nombre ?? null,
+      };
+    });
+  }
 }
 
 module.exports = new UsuarioRepository();
