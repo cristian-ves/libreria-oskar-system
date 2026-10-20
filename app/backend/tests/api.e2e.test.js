@@ -514,6 +514,17 @@ test('Test E2E de la API RESTful (Express + PostgreSQL)', async (t) => {
     assert.ok(typeof json.message === 'string' && json.message.length > 0, 'Debe haber un mensaje de error');
   });
 
+  await t.test('GET /api/libros/:ref malformado - 400 con { status: "fail", message } ante ref inválido', async () => {
+    const refInvalido = 'ref-invalido';
+    const res = await fetch(`${baseUrl}/libros/${refInvalido}`);
+
+    assert.strictEqual(res.status, 400);
+    const json = await res.json();
+
+    assert.strictEqual(json.status, 'fail');
+    assert.strictEqual(json.message, 'El identificador o referencia del libro es inválido.');
+  });
+
   // ── Limpieza: eliminar el libro de caracterización ─────────────────────────
 
   await t.test('Limpieza: eliminar libro de caracterización de la BD', async () => {

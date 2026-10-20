@@ -2,7 +2,7 @@
  * Utilidades para generación y parseo de identificadores y slugs amigables (refs).
  */
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const { UUID_REGEX } = require('./uuid');
 const SHORT_ID_REGEX = /(?:^|-)([0-9a-fA-F]{12})$/;
 
 /**
