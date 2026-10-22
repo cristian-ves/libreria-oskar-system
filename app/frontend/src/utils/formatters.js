@@ -10,3 +10,7 @@ export function formatFecha(dateString) {
     minute: '2-digit',
   });
 }
+
+export function formatPrecio(precio) {
+  return Number(precio) > 0 ? 'Q ' + Number(precio).toFixed(2) : 'Precio por confirmar';
+}
