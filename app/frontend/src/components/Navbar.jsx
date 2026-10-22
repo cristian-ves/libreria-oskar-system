@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Barcode, Warehouse, ShieldCheck, LogOut, Info, BookOpen } from 'lucide-react';
+import { Barcode, Warehouse, ShieldCheck, LogOut, Info, BookOpen, Receipt } from 'lucide-react';
 import logo from '../assets/logo.jpg';
 
 export default function Navbar() {
@@ -12,6 +12,7 @@ export default function Navbar() {
         { path: '/registrar', label: 'Registrar', icon: Barcode },
         { path: '/catalogo', label: 'Catálogo', icon: BookOpen },
         { path: '/inventario', label: 'Inventario', icon: Warehouse },
+        { path: '/ventas', label: 'Ventas', icon: Receipt },
         { path: '/nosotros', label: 'Nosotros', icon: Info },
       ]
     : [

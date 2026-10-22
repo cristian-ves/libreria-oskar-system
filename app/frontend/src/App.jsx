@@ -8,6 +8,9 @@ import Catalogo from './views/Catalogo';
 import LibroDetalle from './views/LibroDetalle';
 import Nosotros from './views/Nosotros';
 import Inventario from './views/Inventario';
+import Ventas from './views/Ventas';
+import NuevaVenta from './views/NuevaVenta';
+import VentaDetalle from './views/VentaDetalle';
 import Login from './views/Login';
 import { ROLES_OPERATIVOS } from './utils/roles';
 
@@ -55,6 +58,30 @@ export default function App() {
             element={
               <ProtectedRoute roles={ROLES_OPERATIVOS}>
                 <Inventario />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ventas"
+            element={
+              <ProtectedRoute roles={ROLES_OPERATIVOS}>
+                <Ventas />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ventas/nueva"
+            element={
+              <ProtectedRoute roles={ROLES_OPERATIVOS}>
+                <NuevaVenta />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ventas/:id"
+            element={
+              <ProtectedRoute roles={ROLES_OPERATIVOS}>
+                <VentaDetalle />
               </ProtectedRoute>
             }
           />

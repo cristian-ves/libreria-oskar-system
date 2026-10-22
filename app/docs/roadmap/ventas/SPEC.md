@@ -1,6 +1,6 @@
 # Ventas — documento de diseño
 
-> **ESTADO: esquema y API (backend) creados; sin UI.** Este documento recoge las decisiones de diseño tomadas por el usuario. Existen las tablas, los modelos Sequelize (migración 004) y los endpoints de ventas; no hay vistas ni reportes de ventas.
+> **ESTADO: esquema, API e interfaz creados; reportes pendientes.** Este documento recoge las decisiones de diseño tomadas por el usuario. Existen las tablas, los modelos Sequelize (migración 004), los endpoints y las pantallas de ventas; no hay reportes de ventas.
 
 ## Decisiones
 
@@ -52,3 +52,13 @@ Todas las respuestas usan `{ status: 'success', data }` o `{ status: 'fail', mes
 ### Decisiones pendientes
 - **Libros inactivos**: hoy se pueden vender (no se bloquean). Decidir si una venta debe rechazar `libros.activo = false`.
 - **Visibilidad por rol**: hoy Empleado y Administrador ven todas las ventas. Decidir si el Empleado debe ver solo las suyas.
+
+## Interfaz implementada (frontend)
+
+- **Rutas** (`ROLES_OPERATIVOS`): `/ventas` (listado con filtros de estado y fechas, 25 por página), `/ventas/nueva` y `/ventas/:id` (detalle). El `Navbar` añade el enlace "Ventas".
+- **Nueva venta**: bodega preseleccionada (un `Select` solo si hay varias; al cambiarla se vacía la venta); buscador con debounce sobre `GET /api/libros?q=` (precio y `stock_total`; `GET /api/inventario` no trae precio); "Agregar" se deshabilita con "Sin precio", "Sin stock" o "En la venta".
+- **Táctil**: la cantidad de cada línea se cambia con botones − y + (mín. 1, máx. el stock) además del input; método de pago y bodega usan botones segmentados (`OpcionesSegmentadas`) en vez de `<select>`.
+- **Importes**: líneas, subtotal, descuento y total se calculan en centavos enteros (`utils/dinero.js`); un descuento inválido o mayor que el subtotal bloquea el envío. El payload nunca lleva precio, subtotal, total ni `usuarioId`.
+- **Duplicados**: un `useRef` y el `disabled` ignoran un segundo envío en curso. Ante un error de red se avisa que la venta pudo registrarse y se enlaza al listado; ante un 400/404/409 se muestra el mensaje y las líneas se conservan.
+- **Anulación**: solo el Administrador ve "Anular venta" (venta `Completada`), con motivo obligatorio de hasta 500 caracteres; el backend vuelve a exigir el rol.
+- **Decisiones pendientes**: libros inactivos (hoy se pueden vender) y visibilidad por rol (hoy ambos roles ven todas las ventas).

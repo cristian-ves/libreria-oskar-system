@@ -74,7 +74,7 @@ Sistema web de inventario interno + catálogo informativo de libros. Sin carrito
 - Alcance del CRUD admin pendiente: usuarios y categorías. La edición/baja de libros y las ventas se desarrollan aparte.
 
 ## Roadmap (NO implementado)
-2FA, alertas de inventario por correo, CRUD admin de empleados y catálogo, y ventas (esquema y API creados, sin UI). No los asumas existentes. Sus specs están en `app/docs/roadmap/` (auth-2fa, inventory-email-alerts, catalog-employee-crud, ventas).
+2FA, alertas de inventario por correo, CRUD admin de empleados y catálogo, y ventas (esquema, API e interfaz creados; reportes pendientes). No los asumas existentes. Sus specs están en `app/docs/roadmap/` (auth-2fa, inventory-email-alerts, catalog-employee-crud, ventas).
 
 ## Skills activas (`app/.agents/skills/<nombre>/SKILL.md`)
 | Skill | Úsala para |

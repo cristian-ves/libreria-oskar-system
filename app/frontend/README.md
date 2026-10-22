@@ -17,7 +17,7 @@ npm run frontend:preview   # sirve el build
 ## Estructura de `src/`
 
 ```text
-views/                  Orquestadores de ruta: Catalogo, LibroDetalle, RegistrarLibro, Inventario, Login, Nosotros
+views/                  Orquestadores de ruta: Catalogo, LibroDetalle, RegistrarLibro, Inventario, Ventas, NuevaVenta, VentaDetalle, Login, Nosotros
 components/             Navbar, Footer, Toast, LoadingSpinner, ProtectedRoute, BarcodeScanner
 components/ui/          Modal, ErrorBox, FieldLabel, Input, Select
 context/                AuthContext (sesión)

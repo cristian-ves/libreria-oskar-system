@@ -276,7 +276,7 @@ app/
     ├── tailwind.config.js (25)
     ├── vite.config.js (16)
     └── src/
-        ├── App.jsx (66)
+        ├── App.jsx (93)
         ├── index.css (34)
         ├── main.jsx (16)
         ├── assets/
@@ -285,7 +285,7 @@ app/
         │   ├── BarcodeScanner.jsx (221)
         │   ├── Footer.jsx (23)
         │   ├── LoadingSpinner.jsx (30)
-        │   ├── Navbar.jsx (124)
+        │   ├── Navbar.jsx (125)
         │   ├── ProtectedRoute.jsx (47)
         │   ├── Toast.jsx (73)
         │   └── ui/
@@ -293,6 +293,7 @@ app/
         │       ├── FieldLabel.jsx (7)
         │       ├── Input.jsx (8)
         │       ├── Modal.jsx (9)
+        │       ├── OpcionesSegmentadas.jsx (23)
         │       └── Select.jsx (10)
         ├── context/
         │   └── AuthContext.jsx (87)
@@ -326,19 +327,35 @@ app/
         │   │   └── hooks/
         │   │       ├── useInventarioData.js (112)
         │   │       └── useKardex.js (80)
-        │   └── registrar-libro/
-        │       ├── validacion.js (33)
+        │   ├── registrar-libro/
+        │   │   ├── validacion.js (33)
+        │   │   ├── components/
+        │   │   │   ├── FichaLibroExistente.jsx (79)
+        │   │   │   ├── FormularioIngreso.jsx (58)
+        │   │   │   ├── FormularioRegistro.jsx (238)
+        │   │   │   ├── HistorialSesion.jsx (33)
+        │   │   │   ├── PanelConsulta.jsx (75)
+        │   │   │   ├── PanelLateral.jsx (62)
+        │   │   │   ├── ResultadoIngreso.jsx (40)
+        │   │   │   └── ResultadoRegistro.jsx (40)
+        │   │   └── hooks/
+        │   │       └── useRegistrarLibro.js (255)
+        │   └── ventas/
         │       ├── components/
-        │       │   ├── FichaLibroExistente.jsx (79)
-        │       │   ├── FormularioIngreso.jsx (58)
-        │       │   ├── FormularioRegistro.jsx (238)
-        │       │   ├── HistorialSesion.jsx (33)
-        │       │   ├── PanelConsulta.jsx (75)
-        │       │   ├── PanelLateral.jsx (62)
-        │       │   ├── ResultadoIngreso.jsx (40)
-        │       │   └── ResultadoRegistro.jsx (40)
+        │       │   ├── BuscadorLibrosVenta.jsx (62)
+        │       │   ├── ControlCantidad.jsx (44)
+        │       │   ├── EstadoVentaBadge.jsx (10)
+        │       │   ├── FichaVenta.jsx (72)
+        │       │   ├── FiltrosVentas.jsx (46)
+        │       │   ├── FormularioCliente.jsx (47)
+        │       │   ├── LineasVenta.jsx (55)
+        │       │   ├── ModalAnularVenta.jsx (95)
+        │       │   ├── ResumenVenta.jsx (29)
+        │       │   └── TablaVentas.jsx (127)
         │       └── hooks/
-        │           └── useRegistrarLibro.js (255)
+        │           ├── useNuevaVenta.js (161)
+        │           ├── useVentaDetalle.js (37)
+        │           └── useVentas.js (61)
         ├── hooks/
         │   └── useDebouncedValue.js (14)
         ├── services/
@@ -349,9 +366,11 @@ app/
         │       ├── categorias.api.js (5)
         │       ├── client.js (34)
         │       ├── inventario.api.js (27)
-        │       └── libros.api.js (29)
+        │       ├── libros.api.js (29)
+        │       └── ventas.api.js (27)
         ├── utils/
-        │   ├── formatters.js (16)
+        │   ├── dinero.js (24)
+        │   ├── formatters.js (30)
         │   ├── parsers.js (10)
         │   ├── roles.js (9)
         │   └── tokenStorage.js (26)
@@ -361,7 +380,10 @@ app/
             ├── LibroDetalle.jsx (66)
             ├── Login.jsx (119)
             ├── Nosotros.jsx (88)
-            └── RegistrarLibro.jsx (187)
+            ├── NuevaVenta.jsx (98)
+            ├── RegistrarLibro.jsx (187)
+            ├── VentaDetalle.jsx (88)
+            └── Ventas.jsx (55)
 ```
 
 ### 2.2 Archivos de más de 250 Líneas
@@ -768,17 +790,18 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 ```text
 src/
 ├── App.jsx, main.jsx, index.css
-├── views/                  Orquestadores de ruta (Catalogo, LibroDetalle, RegistrarLibro, Inventario, Login, Nosotros)
+├── views/                  Orquestadores de ruta (Catalogo, LibroDetalle, RegistrarLibro, Inventario, Login, Nosotros, Ventas, NuevaVenta, VentaDetalle)
 ├── components/             Compartidos: Navbar, Footer, Toast, LoadingSpinner, ProtectedRoute, BarcodeScanner
-│   └── ui/                 Modal, ErrorBox, FieldLabel, Input, Select
+│   └── ui/                 Modal, ErrorBox, FieldLabel, Input, OpcionesSegmentadas, Select
 ├── context/                AuthContext.jsx
 ├── features/
 │   ├── catalogo/           components/ + hooks/ (useCatalogo, useLibroDetalle)
 │   ├── inventario/         components/ + hooks/ (useInventarioData, useKardex)
-│   └── registrar-libro/    components/ + hooks/ (useRegistrarLibro) + validacion.js
+│   ├── registrar-libro/    components/ + hooks/ (useRegistrarLibro) + validacion.js
+│   └── ventas/             components/ + hooks/ (useNuevaVenta, useVentas, useVentaDetalle)
 ├── hooks/                  useDebouncedValue.js
-├── services/api/           client.js, auth.api.js, catalogo.api.js, bodegas.api.js, categorias.api.js, inventario.api.js, libros.api.js
-└── utils/                  tokenStorage.js, roles.js, formatters.js, parsers.js
+├── services/api/           client.js, auth.api.js, catalogo.api.js, bodegas.api.js, categorias.api.js, inventario.api.js, libros.api.js, ventas.api.js
+└── utils/                  tokenStorage.js, roles.js, formatters.js, parsers.js, dinero.js
 ```
 
 Reglas de la estructura: las llamadas HTTP salen solo de `services/api/`; las vistas son orquestadoras delgadas (leen sesión, invocan el hook de su feature y componen componentes); los roles se consultan con `utils/roles.js` (`ROLES`, `ROLES_OPERATIVOS`, `esAdministrador`) y el token con `utils/tokenStorage.js`.
@@ -794,6 +817,9 @@ Reglas de la estructura: las llamadas HTTP salen solo de `services/api/`; las vi
 | `/login` | `Login` | Público | Formulario de autenticación de operadores |
 | `/registrar` | `RegistrarLibro` | `ROLES_OPERATIVOS` (`Administrador`, `Empleado`) | Consulta por ISBN, ingreso de stock y registro de libros (`ProtectedRoute`) |
 | `/inventario` | `Inventario` | `ROLES_OPERATIVOS` | Resumen, existencias y kardex (`ProtectedRoute`) |
+| `/ventas` | `Ventas` | `ROLES_OPERATIVOS` | Listado de ventas con filtros y paginación (`ProtectedRoute`) |
+| `/ventas/nueva` | `NuevaVenta` | `ROLES_OPERATIVOS` | Registro de una venta (`ProtectedRoute`) |
+| `/ventas/:id` | `VentaDetalle` | `ROLES_OPERATIVOS` | Detalle de la venta; el Administrador puede anularla (`ProtectedRoute`) |
 | `*` | `Navigate` | Público | Redirige cualquier ruta desconocida a `/catalogo` |
 
 ### 5.2 Análisis Detallado por Vista
@@ -828,17 +854,35 @@ Reglas de la estructura: las llamadas HTTP salen solo de `services/api/`; las vi
 #### 6. `Nosotros.jsx` (88 líneas)
 - Vista estática institucional (sucursales, horarios, contacto). No consume endpoints.
 
+#### 7. `Ventas.jsx` (55 líneas)
+- **Responsabilidades**: Orquestador del listado; estado en `features/ventas/hooks/useVentas.js` (filtros de estado y fechas `desde`/`hasta`, paginación por offset con `VENTAS_LIMIT = 25`; al cambiar un filtro el offset vuelve a 0; si `desde > hasta` no envía la petición y muestra un aviso).
+- **Endpoints consumidos** (vía `ventas.api.js`): `GET /api/ventas?estado=&desde=&hasta=&limit=&offset=`.
+- **Componentes**: `FiltrosVentas`, `TablaVentas` (tabla en escritorio, tarjetas en móvil; cada fila enlaza a `/ventas/:id`), `EstadoVentaBadge`. Botón "Nueva venta" hacia `/ventas/nueva`.
+
+#### 8. `NuevaVenta.jsx` (97 líneas)
+- **Responsabilidades**: Orquestador del formulario; todo el estado en `features/ventas/hooks/useNuevaVenta.js` (bodega, búsqueda con `useDebouncedValue(…, 300)`, líneas, descuento, método de pago, cliente, NIT, notas, envío). Los importes se calculan en centavos enteros con `utils/dinero.js`.
+- **Endpoints consumidos** (vía `ventas.api.js` y `bodegas.api.js`, con `apiFetch`): `GET /api/bodegas`, `GET /api/libros?q=` (`buscarLibrosParaVenta`; se eligió porque `GET /api/inventario` no devuelve el precio; usa `id`, `titulo`, `autor_nombre`, `isbn`, `precio`, `stock_total`) y `POST /api/ventas`.
+- **Componentes**: `BuscadorLibrosVenta` (máx. 20 resultados; "Sin precio", "Sin stock" o "En la venta" deshabilitan "Agregar"), `LineasVenta` (con `ControlCantidad`: botones − y + alrededor del input de cantidad), `ResumenVenta`, `FormularioCliente` (método de pago con `OpcionesSegmentadas`; la bodega, si hay varias, también).
+- **Reglas**: el payload lleva solo `bodegaId`, `items`, `metodoPago` y, si no están vacíos, `clienteNombre`, `clienteNit`, `descuento` y `notas`; nunca precio, subtotal, total ni `usuarioId`. Un `useRef` y el `disabled` evitan el doble envío. Un error 400/404/409 se muestra con `ErrorBox` sin vaciar las líneas; un error de red muestra un aviso con enlace al listado en pestaña nueva (la venta pudo haberse registrado). Un 201 navega a `/ventas/:id` con `state: { recienCreada: true }`.
+
+#### 9. `VentaDetalle.jsx` (88 líneas)
+- **Responsabilidades**: Orquestador del detalle; datos en `useVentaDetalle` (carga, 404, error y recarga).
+- **Endpoints consumidos** (vía `ventas.api.js`): `GET /api/ventas/:id` y `POST /api/ventas/:id/anular`.
+- **Componentes**: `FichaVenta`, `ModalAnularVenta` (sobre `components/ui/Modal`; motivo obligatorio de hasta 500 caracteres), `EstadoVentaBadge`. Con `location.state?.recienCreada` muestra el banner de éxito y limpia el estado. 404 → "Venta no encontrada" con enlace al listado; otro error → mensaje con botón "Reintentar".
+- **Rol**: el botón "Anular venta" solo aparece si `esAdministrador(user)` y la venta está `Completada`; el backend exige `Administrador` en la anulación.
+
 ### 5.3 Catálogo de Componentes Compartidos (`src/components/`)
 
 | Componente | Archivo | Props Aceptadas | Descripción |
 |---|---|---|---|
-| `Navbar` | `components/Navbar.jsx` | Ninguna | Barra superior responsive. Con sesión muestra Registrar, Catálogo, Inventario y Nosotros (a cualquier rol, incluido `Usuario`); sin sesión, Catálogo y Nosotros. |
+| `Navbar` | `components/Navbar.jsx` | Ninguna | Barra superior responsive. Con sesión muestra Registrar, Catálogo, Inventario, Ventas y Nosotros (a cualquier rol, incluido `Usuario`); sin sesión, Catálogo y Nosotros. |
 | `Footer` | `components/Footer.jsx` | Ninguna | Pie de página. |
 | `LoadingSpinner` | `components/LoadingSpinner.jsx` | `message` (String, default: "Cargando...") | Spinner para llamadas asíncronas. |
 | `Toast` | `components/Toast.jsx` | `toast` (Objeto), `onClose` (Función) | Notificación flotante con temporizador. |
 | `BarcodeScanner` | `components/BarcodeScanner.jsx` | `onScanSuccess`, `isProcessing`, `onClose` (opcional) | Visor de cámara con `html5-qrcode`. Se usa desde `PanelLateral`. Problema reportado, no diagnosticado: no captura códigos (ver §9). |
 | `ProtectedRoute` | `components/ProtectedRoute.jsx` | `children`, `roles` (opcional) | Guardián de navegación: verifica sesión y rol. |
 | `Modal`, `ErrorBox`, `FieldLabel`, `Input`, `Select` | `components/ui/*.jsx` | Ver cada archivo | Primitivas de UI reutilizadas por los formularios y modales de las features. |
+| `OpcionesSegmentadas` | `components/ui/OpcionesSegmentadas.jsx` | `opciones` (`{ valor, etiqueta }`), `valor`, `onChange`, `ariaLabel`, `disabled` | Botones táctiles (`role="radiogroup"`/`radio`, mín. 44 px) en lugar de un `<select>`; hoy los usa la interfaz de ventas. |
 
 Los componentes específicos de cada vista viven en `features/<feature>/components/`. `BookCard.jsx` fue eliminado (nadie lo importaba).
 
@@ -848,12 +892,12 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 - Envoltorio de `fetch`. Lee el token con `getToken()` (`utils/tokenStorage.js`, clave `oskar_token` en `localStorage`) e inyecta `Authorization: Bearer <token>`.
 - Inyecta `Content-Type: application/json` si hay cuerpo que no es `FormData`.
 - Si la respuesta es 401 y había token, llama a `clearToken()` y redirige con `window.location.assign('/login')`.
-- Módulos por dominio que lo usan: `bodegas.api.js`, `categorias.api.js`, `inventario.api.js`, `libros.api.js`. `auth.api.js` y `catalogo.api.js` usan `fetch` directo a propósito (endpoints públicos o sin redirección por 401).
+- Módulos por dominio que lo usan: `bodegas.api.js`, `categorias.api.js`, `inventario.api.js`, `libros.api.js`, `ventas.api.js`. `auth.api.js` y `catalogo.api.js` usan `fetch` directo a propósito (endpoints públicos o sin redirección por 401).
 
 #### Otros módulos
-- `utils/formatters.js` (`formatFecha`, `formatPrecio`), `utils/parsers.js` (`orNull`, `toNum`), `hooks/useDebouncedValue.js`.
+- `utils/formatters.js` (`formatFecha`, `formatPrecio`, `formatFechaVenta`: fecha en `America/Guatemala`, "—" si es nula o inválida), `utils/dinero.js` (centavos enteros sin punto flotante: `aCentavos`, `deCentavos`, `formatQuetzales`, `formatMonto`), `services/api/ventas.api.js` (`crearVenta`, `getVentas`, `getVenta`, `anularVenta`, `buscarLibrosParaVenta`), `utils/parsers.js` (`orNull`, `toNum`), `hooks/useDebouncedValue.js`.
 - `features/catalogo/components/ModalPrecioLibro.jsx`: modal (sobre `components/ui/Modal`) que muestra el título y el precio actual, pide el nuevo precio y llama a `actualizarPrecioLibro(libroId, precio)` (`libros.api.js`, `PATCH`); muestra `message` y `details` del backend con `ErrorBox`.
-- Hooks de feature: `useCatalogo`, `useLibroDetalle`, `useInventarioData`, `useKardex`, `useRegistrarLibro`.
+- Hooks de feature: `useCatalogo`, `useLibroDetalle`, `useInventarioData`, `useKardex`, `useRegistrarLibro`, `useNuevaVenta`, `useVentas`, `useVentaDetalle`.
 
 #### `context/AuthContext.jsx` (`AuthProvider` y `useAuth`)
 - Estado: `user` (`{ id, nombre_completo, email, rol }`), `token`, `loading`.
@@ -972,8 +1016,8 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 3. **Vista**: `ResumenKpis` renderiza las tarjetas de KPIs.
 
 ### 6.10 Flujo 10: Registro de Venta
-1. **Vista**: no existe (el frontend de ventas no está implementado). Solo API y pruebas.
-2. **Cliente**: `POST /api/ventas` con `{ bodegaId, items: [{ libroId, cantidad }], metodoPago, clienteNombre?, clienteNit?, descuento?, notas? }`.
+1. **Vista**: `NuevaVenta.jsx` (`/ventas/nueva`, hook `useNuevaVenta`): busca libros con `GET /api/libros?q=`, arma las líneas y calcula subtotal, descuento y total en centavos; al recibir el 201 navega a `/ventas/:id`.
+2. **Cliente**: `crearVenta` (`ventas.api.js`) envía `POST /api/ventas` con `{ bodegaId, items: [{ libroId, cantidad }], metodoPago, clienteNombre?, clienteNit?, descuento?, notas? }`.
 3. **Middlewares**: `authenticate`, `authorize('Administrador', 'Empleado')`, `validateCrearVenta`.
 4. **Controlador**: `ventaController.crear` delega a `ventaService.crearVenta` con `usuarioId = req.user.id` (se ignoran `usuarioId`, `precio`, `subtotal` y `total` del body).
 5. **Servicio** (`services/venta/crear.service.js`), en una sola `sequelize.transaction(...)`:
@@ -985,8 +1029,8 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 7. **Confirmación**: 201 con el detalle de la venta.
 
 ### 6.11 Flujo 11: Anulación de Venta
-1. **Vista**: no existe. Solo API y pruebas.
-2. **Cliente**: `POST /api/ventas/:id/anular` con `{ motivo }`.
+1. **Vista**: `VentaDetalle.jsx` (`/ventas/:id`): el botón "Anular venta" (solo `Administrador` y venta `Completada`) abre `ModalAnularVenta`; al tener éxito se cierra el modal y se recarga el detalle.
+2. **Cliente**: `anularVenta` (`ventas.api.js`) envía `POST /api/ventas/:id/anular` con `{ motivo }`.
 3. **Middlewares**: `authenticate`, `authorize('Administrador')`, `validateAnularVenta`.
 4. **Controlador**: `ventaController.anular` delega a `ventaService.anularVenta` con `usuarioId = req.user.id`.
 5. **Servicio** (`services/venta/anular.service.js`), en una sola transacción:
@@ -1066,7 +1110,7 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 | Anular Venta | `POST /api/ventas/:id/anular` | Denegado (401) | Denegado (403) | Permitido | Denegado (403) |
 
 ### 8.2 Diferencias con lo Declarado en AGENTS.md
-1. **Rol Usuario**: `AGENTS.md` lo describe como existente en BD y sin acceso a nada protegido. Así es en el backend (403 en endpoints protegidos). En el frontend, el `Navbar` muestra Registrar e Inventario a cualquier sesión (incluido `Usuario`) y `ProtectedRoute` responde con el 403 visual; es una decisión de producto vigente. No existe endpoint de autorregistro.
+1. **Rol Usuario**: `AGENTS.md` lo describe como existente en BD y sin acceso a nada protegido. Así es en el backend (403 en endpoints protegidos). En el frontend, el `Navbar` muestra Registrar, Inventario y Ventas a cualquier sesión (incluido `Usuario`) y `ProtectedRoute` responde con el 403 visual; es una decisión de producto vigente. No existe endpoint de autorregistro.
 2. **Escaneo por ISBN (`POST /api/libros/escanear`)**: La ruta exige `authenticate` + `authorize('Administrador', 'Empleado')`; el rol `Usuario` recibe 403 y sin token se responde 401. El frontend no lo consume.
 3. **Gestión de Empleados**: AGENTS.md la lista en "Roadmap (NO implementado)" y sus specs están en `app/docs/roadmap/`. En el código solo existe `GET /api/usuarios` (lectura).
 4. **"El Empleado ve precios"**: AGENTS.md dice que el Empleado ve precios pero no los fija. En el código, el Empleado ve el precio en el Catálogo y el Detalle públicos, pero NO en la ficha del libro existente de `RegistrarLibro` (`FichaLibroExistente.jsx` la condiciona a `esAdmin`). Inventario no muestra precios.
@@ -1098,13 +1142,15 @@ Cada ítem cita su archivo como evidencia. Resueltos y retirados de esta secció
 | **`UUID_REGEX.test` convierte a string** | `backend/src/utils/uuid.js` | `esUuid(valor)` es `UUID_REGEX.test(valor)`, que convierte a string: por razonamiento sobre el código, un arreglo con un solo UUID pasaría. `tests/utilsIsbnUuid.test.js` cubre números y objetos, pero no ese caso de arreglo (no verificado por prueba). |
 | **`normalizarIsbn(0)` y `normalizarIsbnEstricto` con números** | `backend/src/utils/isbn.js` | `normalizarIsbn(0)` devuelve `''`; `normalizarIsbnEstricto` lanza `TypeError` con números. Fijado en `tests/utilsIsbnUuid.test.js`. |
 | **Ausencia de tests en Frontend** | `frontend/` | No hay pruebas ni Vitest/Jest/Testing Library en `frontend/package.json`. Se verifica con `npm run frontend:build` y prueba manual. |
-| **Bundle grande sin code splitting** | `frontend/vite.config.js` | El build reporta un bundle de ~635 kB (aviso de más de 500 kB de Vite); sin `manualChunks` ni carga diferida. |
+| **Bundle grande sin code splitting** | `frontend/vite.config.js` | El build reporta un bundle de ~670 kB (aviso de más de 500 kB de Vite); sin `manualChunks` ni carga diferida. |
 | **Paginación pendiente** | `backend/src/repositories/inventario/inventarioListado.repository.js` (`limit: 200`), `backend/src/repositories/libro.repository.js` (`limit: 50`) | Límites fijos sin `offset` en existencias y catálogo. |
 | **CORS abierto** | `backend/src/app.js` | `cors({ origin: '*' })`. |
 | **`version` obsoleta en Compose** | `docker-compose.yml` | Declara `version: '3.8'`, campo obsoleto en Docker Compose v2. |
 | **Monorepo sin `workspaces`** | `package.json` | Usa scripts con `--prefix`; no declara `"workspaces"`. |
 | **Sin Dockerfile de frontend** | `frontend/` | Solo existe `backend/Dockerfile`; el frontend corre en el host con `npm run frontend:dev`. |
 | **Escáner de cámara (reportado, no diagnosticado)** | `frontend/src/components/BarcodeScanner.jsx` | El usuario reporta que no captura códigos. Sin diagnóstico: no verificado. |
+| **JSON mal formado devuelve 500** | `backend/src/middlewares/errorHandler.js` | El manejador no contempla el `SyntaxError` del parser JSON (no es `AppError` ni error de Sequelize/pg) y responde 500 en vez de 400. Verificado por lectura del código; no probado en ejecución. |
+| **Placeholder del modal de salida desactualizado** | `frontend/src/features/inventario/components/ModalSalidaInventario.jsx` | El placeholder del motivo sugiere "Venta en mostrador" aunque ahora existe el módulo de ventas (que registra sus propias salidas). |
 
 ---
 
@@ -1122,7 +1168,7 @@ Cada ítem cita su archivo como evidencia. Resueltos y retirados de esta secció
    - **Estado real**: En empleados solo existe `GET /api/usuarios`. No hay `POST`/`PUT`/`DELETE` de usuarios ni `PUT /api/libros/:id` (edición completa) ni baja de libros. Fijar solo el precio sí existe: `PATCH /api/libros/:id/precio`.
 4. **Ventas**:
    - Diseño en `app/docs/roadmap/ventas/SPEC.md`.
-   - **Estado real**: El esquema, los modelos y la API existen: `POST /api/ventas`, `GET /api/ventas`, `GET /api/ventas/:id` y `POST /api/ventas/:id/anular` (ver §4.3, §6.10 y §6.11). NO hay vistas de ventas ni reportes. Pendientes de decisión: venta de libros inactivos (hoy no se bloquea) y visibilidad de ventas por rol (hoy ambos roles ven todas).
+   - **Estado real**: Esquema, API e interfaz implementados; reportes pendientes. El esquema, los modelos y la API existen: `POST /api/ventas`, `GET /api/ventas`, `GET /api/ventas/:id` y `POST /api/ventas/:id/anular` (ver §4.3, §6.10 y §6.11). La interfaz también existe (`/ventas`, `/ventas/nueva`, `/ventas/:id`; ver §5.1 y §5.2). NO hay reportes de ventas. Pendientes de decisión: venta de libros inactivos (hoy no se bloquea) y visibilidad de ventas por rol (hoy ambos roles ven todas).
 5. **Validación de Sesión en el Lector Móvil**:
    - `BarcodeScanner.jsx` no valida permisos de rol; depende de la vista contenedora y del guardián de ruta.
 
@@ -1179,7 +1225,7 @@ La prioridad de fuentes de información para agentes y desarrolladores se rige p
 > **Regla de oro**: Ante cualquier discrepancia entre documentación, agentes o especificaciones, **el código fuente y la base de datos mandan**.
 
 ### 12.2 Estado de Archivos y Configuración de Agentes
-- **`app/AGENTS.md`**: guía concisa que se carga en cada sesión. Describe la estructura real, los roles, las reglas de persistencia e inventario y lista 2FA, correos, CRUD admin y ventas como "Roadmap (NO implementado)" (de ventas existen el esquema y la API, sin UI) (`app/docs/roadmap/`).
+- **`app/AGENTS.md`**: guía concisa que se carga en cada sesión. Describe la estructura real, los roles, las reglas de persistencia e inventario y lista 2FA, correos, CRUD admin y ventas como "Roadmap (NO implementado)" (de ventas existen el esquema, la API y la interfaz; los reportes están pendientes) (`app/docs/roadmap/`).
 - **7 skills activas (`app/.agents/skills/`)**: `backend-engineer-nodejs`, `backend-testing`, `database-architect`, `devops-gcp-automation`, `frontend-engineer-react`, `inventory-transactions`, `sequelize-orm`. Las skills de funciones no implementadas viven como especificaciones en `app/docs/roadmap/`.
 - **Carga en Claude Code**: Claude Code lee `AGENTS.md` mediante un `CLAUDE.md` local que contiene `@AGENTS.md`, y las skills mediante un symlink `.claude/skills`. Esa configuración es local y no está versionada (`CLAUDE.md` y `.claude/` aparecen como no rastreados en `git status`).
 
@@ -1197,5 +1243,5 @@ La prioridad de fuentes de información para agentes y desarrolladores se rige p
 | `app/docs/roadmap/auth-2fa/SKILL.md` | Spec de 2FA TOTP. | No implementado. |
 | `app/docs/roadmap/catalog-employee-crud/SKILL.md` | Spec de CRUD de catálogo y empleados. | No implementado. |
 | `app/docs/roadmap/inventory-email-alerts/SKILL.md` | Spec de alertas de inventario por correo. | No implementado. |
-| `app/docs/roadmap/ventas/SPEC.md` | Documento de diseño del módulo de ventas. | Esquema y API creados; sin UI. Incluye la sección "API implementada (backend)". |
+| `app/docs/roadmap/ventas/SPEC.md` | Documento de diseño del módulo de ventas. | Esquema, API e interfaz creados; reportes pendientes. Incluye las secciones "API implementada (backend)" e "Interfaz implementada". |
 | `app/.agents/skills/*/SKILL.md` (7) | Directrices por dominio de ingeniería. | Revisadas el 2026-10-22; correcciones puntuales donde contradecían la estructura real. |
