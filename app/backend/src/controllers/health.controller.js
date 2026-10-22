@@ -1,4 +1,4 @@
-const db = require('../config/db');
+const { testSequelizeConnection } = require('../config/sequelize');
 
 class HealthController {
   /**
@@ -8,7 +8,7 @@ class HealthController {
    */
   async check(req, res) {
     try {
-      const dbInfo = await db.testConnection();
+      const dbInfo = await testSequelizeConnection();
       res.status(200).json({
         status: 'healthy',
         uptime: process.uptime(),

@@ -15,30 +15,21 @@ if (env.NODE_ENV !== 'test' || env.db.database !== TEST_DATABASE_NAME || env.db.
 }
 
 async function run() {
-  const db = require('./config/db');
   const { sequelize } = require('./config/sequelize');
-  let pgDatabase;
   let sequelizeDatabase;
 
   try {
-    const [pgInfo, sequelizeInfo] = await Promise.all([
-      db.testConnection(),
-      sequelize.authenticate().then(async () => {
-        const [rows] = await sequelize.query('SELECT current_database() AS db_name;');
-        return rows[0];
-      }),
-    ]);
-
-    pgDatabase = pgInfo.db_name;
-    sequelizeDatabase = sequelizeInfo.db_name;
-    if (pgDatabase !== TEST_DATABASE_NAME || sequelizeDatabase !== TEST_DATABASE_NAME) {
-      throw new Error('Pruebas bloqueadas: pg y Sequelize no están conectados a libreria_oskar_test.');
+    await sequelize.authenticate();
+    const [rows] = await sequelize.query('SELECT current_database() AS db_name;');
+    sequelizeDatabase = rows[0].db_name;
+    if (sequelizeDatabase !== TEST_DATABASE_NAME) {
+      throw new Error('Pruebas bloqueadas: Sequelize no está conectado a libreria_oskar_test.');
     }
   } finally {
-    await Promise.allSettled([db.pool.end(), sequelize.close()]);
+    await sequelize.close();
   }
 
-  console.log(`Base de pruebas verificada para pg y Sequelize: ${TEST_DATABASE_NAME}`);
+  console.log(`Base de pruebas verificada para Sequelize: ${TEST_DATABASE_NAME}`);
   const result = spawnSync(
     process.execPath,
     ['--test', '--test-concurrency=1', 'tests/**/*.test.js'],

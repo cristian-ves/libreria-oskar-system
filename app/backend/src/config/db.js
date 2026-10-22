@@ -1,3 +1,6 @@
+// Uso exclusivo de pruebas: el código de la app no debe importar este módulo (usa config/sequelize).
+// Se retira cuando esas pruebas migren a Sequelize.
+
 const { Pool } = require('pg');
 const env = require('./env');
 

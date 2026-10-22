@@ -1,11 +1,11 @@
 const app = require('./app');
 const env = require('./config/env');
-const db = require('./config/db');
+const { sequelize, testSequelizeConnection } = require('./config/sequelize');
 
 const startServer = async () => {
   try {
     // Verificar conectividad con PostgreSQL
-    const connInfo = await db.testConnection();
+    const connInfo = await testSequelizeConnection();
     console.log(`[DATABASE CONNECTED]: PostgreSQL en ${env.db.host}:${env.db.port} | BD: ${connInfo.db_name} | Hora servidor: ${connInfo.current_time}`);
 
     const server = app.listen(env.PORT, () => {
@@ -24,7 +24,7 @@ const startServer = async () => {
       server.close(async () => {
         console.log('[SHUTDOWN]: Servidor HTTP cerrado. Cerrando pool de conexiones PostgreSQL...');
         try {
-          await db.pool.end();
+          await sequelize.close();
           console.log('[SHUTDOWN]: Pool de base de datos finalizado correctamente.');
           process.exit(0);
         } catch (err) {
