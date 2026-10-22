@@ -56,7 +56,7 @@ export default function BookGrid({ libros }) {
           <div className="pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
             <div className="flex items-center gap-1.5 text-[#b07c19] font-mono font-bold">
               <Layers className="w-3.5 h-3.5 text-[#e19922]" />
-              <span>Stock Total: {libro.stock_total || 0}</span>
+              <span>{(libro.stock_total || 0) <= 0 ? 'Sin stock' : `Stock Total: ${libro.stock_total}`}</span>
             </div>
             <span className="font-bold text-[#252525]">
               {formatPrecio(libro.precio)}
