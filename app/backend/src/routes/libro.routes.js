@@ -6,6 +6,7 @@ const {
   validateConsultarLibro,
   validateRegistrarLibro,
   validateIngresoLibro,
+  validateActualizarPrecioLibro,
 } = require('../middlewares/validator');
 
 const router = Router();
@@ -71,6 +72,19 @@ router.post(
   authorize('Administrador', 'Empleado'),
   validateIngresoLibro,
   libroController.ingreso.bind(libroController)
+);
+
+/**
+ * @route   PATCH /api/libros/:id/precio
+ * @desc    Fija o corrige el precio de un libro ya registrado. No toca stock ni movimientos.
+ * @access  Administrador
+ */
+router.patch(
+  '/:id/precio',
+  authenticate,
+  authorize('Administrador'),
+  validateActualizarPrecioLibro,
+  libroController.actualizarPrecio.bind(libroController)
 );
 
 /**

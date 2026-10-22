@@ -142,6 +142,26 @@ class LibroController {
   }
 
   /**
+   * Endpoint: PATCH /api/libros/:id/precio
+   * body: { precio }
+   */
+  async actualizarPrecio(req, res, next) {
+    try {
+      const { id: libroId } = req.params;
+      const { precio } = req.body;
+
+      const libro = await libroService.actualizarPrecio({ libroId, precio });
+
+      return res.status(200).json({
+        status: 'success',
+        data: libro,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Endpoint: GET /api/libros/:ref
    * Obtiene el detalle público de un libro por su ref (slug-shortId) o UUID.
    */

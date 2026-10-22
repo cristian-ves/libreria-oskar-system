@@ -52,6 +52,12 @@ class LibroRepository {
     return libroPlano(libro);
   }
 
+  async updatePrecio(id, precio, options = {}) {
+    const [filas] = await Libro.update({ precio }, { where: { id }, ...transactionOption(options) });
+    if (!filas) return null;
+    return this.findById(id, options);
+  }
+
   async upsert(options, data) {
     const {
       autor_id = null, editorial_id = null, categoria_id = null,

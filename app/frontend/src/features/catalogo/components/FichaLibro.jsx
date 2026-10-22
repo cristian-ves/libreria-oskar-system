@@ -3,7 +3,7 @@ import { BookOpen, User, Building2, Tag, Layers, ArrowLeft } from 'lucide-react'
 import { formatPrecio } from '../../../utils/formatters';
 import DisponibilidadItem from './DisponibilidadItem';
 
-export default function FichaLibro({ libro, onVolver }) {
+export default function FichaLibro({ libro, onVolver, esAdmin, onFijarPrecio }) {
   const precioTexto = formatPrecio(libro.precio);
   const disponibilidadLista = Array.isArray(libro.disponibilidad) ? libro.disponibilidad : [];
 
@@ -83,6 +83,15 @@ export default function FichaLibro({ libro, onVolver }) {
               <span className="text-2xl font-extrabold text-[#252525] font-mono">
                 {precioTexto}
               </span>
+              {esAdmin && (
+                <button
+                  type="button"
+                  onClick={onFijarPrecio}
+                  className="ml-3 align-middle px-3 py-1.5 rounded-xl text-xs font-bold text-[#252525] bg-[#e8c85e] hover:bg-[#b07c19] hover:text-white transition-colors cursor-pointer"
+                >
+                  {Number(libro.precio) > 0 ? 'Cambiar precio' : 'Fijar precio'}
+                </button>
+              )}
             </div>
           </div>
 

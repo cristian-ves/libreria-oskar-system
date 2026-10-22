@@ -156,10 +156,46 @@ const validateIngresoLibro = (req, res, next) => {
   next();
 };
 
+const PRECIO_MAXIMO = 99999999.99;
+const PRECIO_REGEX = /^\d+(\.\d{1,2})?$/;
+
+/**
+ * Middleware para validar el cambio de precio de un libro existente.
+ * PATCH /api/libros/:id/precio — body: { precio }
+ */
+const validateActualizarPrecioLibro = (req, res, next) => {
+  const { id } = req.params || {};
+  const { precio } = req.body || {};
+  const errors = [];
+
+  if (!id || !UUID_REGEX.test(id)) {
+    errors.push('El parámetro "id" del libro debe ser un UUID válido.');
+  }
+
+  if (precio === undefined || precio === null || (typeof precio === 'string' && precio.trim() === '')) {
+    errors.push('El campo "precio" es obligatorio.');
+  } else if (typeof precio !== 'number' && typeof precio !== 'string') {
+    errors.push('El campo "precio" debe ser un número.');
+  } else if (typeof precio === 'number' && !Number.isFinite(precio)) {
+    errors.push('El campo "precio" debe ser un número finito.');
+  } else if (!PRECIO_REGEX.test(String(precio).trim())) {
+    errors.push('El campo "precio" debe ser un número mayor o igual a 0 con máximo 2 decimales.');
+  } else if (Number(precio) > PRECIO_MAXIMO) {
+    errors.push(`El campo "precio" no puede ser mayor que ${PRECIO_MAXIMO}.`);
+  }
+
+  if (errors.length > 0) {
+    return next(new ValidationError('Datos de entrada inválidos para actualizar el precio.', errors));
+  }
+
+  next();
+};
+
 module.exports = {
   validateEscanearLibro,
   validateConsultarLibro,
   validateRegistrarLibro,
   validateIngresoLibro,
+  validateActualizarPrecioLibro,
   AUTOR_PLACEHOLDER_VALIDATOR,
 };

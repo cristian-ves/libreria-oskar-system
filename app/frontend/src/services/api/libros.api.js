@@ -20,3 +20,10 @@ export function registrarLibro(payload) {
     body: JSON.stringify(payload),
   });
 }
+
+export function actualizarPrecioLibro(libroId, precio) {
+  return apiFetch(`/api/libros/${libroId}/precio`, {
+    method: 'PATCH',
+    body: JSON.stringify({ precio }),
+  });
+}
