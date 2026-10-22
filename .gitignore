@@ -8,3 +8,5 @@ dist/
 .vite/
 */*/.idea
 
+
+.idea/
