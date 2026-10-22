@@ -99,7 +99,7 @@ Generado con `find`/`os.walk` + conteo de saltos de línea (equivalente a `wc -l
 
 ```text
 app/
-├── AGENTS.md (81)
+├── AGENTS.md (88)
 ├── docker-compose.yml (77)
 ├── package.json (18)
 ├── .agents/
@@ -239,7 +239,7 @@ app/
 │       ├── auth-2fa/
 │       │   └── SKILL.md (16)
 │       ├── catalog-employee-crud/
-│       │   └── SKILL.md (17)
+│       │   └── SKILL.md (36)
 │       ├── inventory-email-alerts/
 │       │   └── SKILL.md (17)
 │       └── ventas/
@@ -498,6 +498,7 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 
 - **Conexión Sequelize (`src/config/sequelize.js`)**: Instancia `Sequelize` configurada con `freezeTableName: true`, `underscored: true`, `timestamps: false`, y pool de conexiones (max: 20, min: 0, acquire: 30000ms, idle: 30000ms).
 - **Cliente `pg` nativo (`src/config/db.js`)**: Pool de `pg` de uso exclusivo de pruebas (lo importan 7 archivos de `tests/`; su cabecera lo indica). La app no lo importa: `server.js`, `health.controller.js`, `run-tests.js`, `database/migrate.js` y `database/seed.js` usan Sequelize. Se retira en una fase posterior junto con esas pruebas.
+- **Puerto en `.env.example`**: usa `DB_PORT=5434` para coincidir con el puerto que publica Compose; el valor por defecto de `config/env.js` sigue siendo `5432`.
 - **`DATABASE_URL`**: `config/env.js` fuerza `connectionString: undefined` cuando `NODE_ENV=test`, de modo que las pruebas nunca usan una URL completa.
 
 ### 4.2 Bootstrap y Middlewares Globales (`src/app.js` y `src/server.js`)
@@ -1012,7 +1013,7 @@ Cada ítem cita su archivo como evidencia. Resueltos y retirados de esta secció
    - Roadmap; spec en `app/docs/roadmap/inventory-email-alerts/`.
    - **Estado real**: No hay servicio de correo, dependencias SMTP en `package.json` ni tareas programadas.
 3. **CRUD Administrativo de Catálogo y Empleados**:
-   - Roadmap; spec en `app/docs/roadmap/catalog-employee-crud/`.
+   - Roadmap; spec en `app/docs/roadmap/catalog-employee-crud/`. Alcance de la implementación en curso: usuarios y categorías; la edición/baja de libros y las ventas se desarrollan aparte (ver la sección "Alcance de esta implementación" de esa spec).
    - **Estado real**: En empleados solo existe `GET /api/usuarios`. No hay `POST`/`PUT`/`DELETE` de usuarios ni `PUT /api/libros/:id` ni baja de libros.
 4. **Ventas**:
    - Roadmap; diseño en `app/docs/roadmap/ventas/SPEC.md`.

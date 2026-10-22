@@ -22,7 +22,7 @@ La especificación técnica verificada contra el código está en [`app/docs/PRO
 Requiere Node 22, npm y Docker. Excepto el paso 1, los comandos se ejecutan desde `app/` (`cd app`).
 
 ```bash
-# 1. Variables de entorno del backend (copia el ejemplo; usa DB_PORT=5434, el puerto que publica `db`)
+# 1. Variables de entorno del backend (el ejemplo ya apunta al puerto 5434 que publica `db`)
 cp app/backend/.env.example app/backend/.env
 
 # 2. Dependencias
@@ -40,7 +40,7 @@ npm run frontend:dev
 ```
 
 Notas:
-- El backend también puede correr en el host con `npm run dev` (con `DB_PORT=5434` en `backend/.env`); `npm run seed` siempre corre en el host y necesita ese mismo `.env`.
+- El backend también puede correr en el host con `npm run dev`; `npm run seed` siempre corre en el host y ambos usan `backend/.env`.
 - Las contraseñas del seed se leen de `SEED_ADMIN_PASSWORD` y `SEED_EMPLEADO_PASSWORD` (ver `backend/src/database/seed.js`).
 - Compilar el frontend: `npm run frontend:build`.
 
@@ -54,3 +54,17 @@ npm test
 ```
 
 El frontend no tiene pruebas automatizadas; se verifica con `npm run frontend:build` y prueba manual.
+
+## Trabajo en equipo
+
+- Las ramas nuevas salen de `develop` y se integran en `develop`. Un push a `main` dispara el despliegue (`app/.github/workflows/deploy.yml`): no fusionar ni empujar a `main` sin acuerdo.
+- Reparto vigente por tema: (1) CRUD administrativo de usuarios y categorías; (2) edición de libros ya registrados (fijar precio), ventas, paginación y escáner de cámara.
+- Migraciones: la 004 está reservada para ventas; los cambios de esquema nuevos usan la 005 en adelante, reflejados también en `app/database/schema.sql` y en los modelos.
+- Archivos compartidos con riesgo de conflicto (trae `develop` antes de editarlos y mantén el cambio mínimo): `backend/src/routes/index.js`, `backend/src/models/index.js`, `frontend/src/App.jsx`, `frontend/src/components/Navbar.jsx`, `database/schema.sql` y `docs/PROJECT_SPECS.md` (rutas dentro de `app/`).
+- Todo endpoint, servicio o repositorio nuevo trae pruebas en `app/backend/tests/` y no debe romper las existentes.
+- Agentes: lánzalos desde `app/`, `app/backend` o `app/frontend` para que carguen `app/AGENTS.md` y las skills de `app/.agents/skills/` (recomendación según la documentación de Codex, no una garantía).
+- Claude Code: desde `app/`, ejecuta una vez este comando local (esos archivos no se versionan):
+
+```bash
+printf '@AGENTS.md\n' > CLAUDE.md && mkdir -p .claude && ln -s ../.agents/skills .claude/skills
+```

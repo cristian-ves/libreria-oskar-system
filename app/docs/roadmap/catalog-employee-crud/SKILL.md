@@ -7,6 +7,25 @@ description: Implementar CRUD de catálogo y empleados con Express, Sequelize, R
 
 # CRUD de catálogo y empleados
 
+## Alcance de esta implementación
+- **EN ALCANCE**: CRUD administrativo de **usuarios** y de **categorías**.
+- **FUERA**: edición y baja de libros (`PUT /api/libros/:id`, fijar precio). Se hace aparte, como prerrequisito de ventas (`docs/roadmap/ventas/SPEC.md`).
+- Los cambios de esquema que hagan falta usan la migración 005 en adelante (la 004 está reservada para ventas) y requieren autorización explícita.
+
+## Puntos de partida verificados
+- `GET /api/usuarios` existe, solo Administrador (`backend/src/routes/index.js`, `authenticate` + `authorize('Administrador')`).
+- Contrato a conservar: arreglo de `{ id, nombre_completo, email, rol_nombre }`, solo usuarios con `activo = true`, ordenado por `nombre_completo` ASC, sin `password_hash` ni secretos 2FA (`backend/src/repositories/usuario.repository.js`, `findActivosConRol`; `backend/src/services/usuario.service.js`, `listarActivosConRol`).
+- `usuarioRepository` ya tiene `create` y `update` (`backend/src/repositories/usuario.repository.js`).
+- `categoriaRepository` tiene `findAll`, `findById`, `findByNombre` y `create`; no tiene `update` ni `delete` (`backend/src/repositories/categoria.repository.js`).
+- `movimientos_inventario.usuario_id` es `ON DELETE RESTRICT`: un usuario con movimientos no se puede borrar, solo desactivar (`database/schema.sql`).
+- `categorias` no tiene columna `activo` (solo `id`, `nombre` único y `creado_en`) (`database/schema.sql`).
+- `libros.categoria_id` es `ON DELETE SET NULL`: borrar una categoría deja sus libros sin categoría (`database/schema.sql`).
+
+## Decisiones pendientes (NO resueltas)
+- Baja lógica o borrado físico de categorías: **no decidido**.
+- Si se añade `activo` a `categorias` mediante la migración 005: **no decidido**.
+
+
 ## Procedimiento
 1. Revisar rutas, controladores, servicios, repositorios, modelos y pantallas actuales para no duplicar endpoints.
 2. Definir contratos de listar, crear, mostrar, editar y desactivar; preferir baja lógica si hay historial referenciado.

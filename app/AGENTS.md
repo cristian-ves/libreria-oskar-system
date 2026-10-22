@@ -66,6 +66,13 @@ Sistema web de inventario interno + catálogo informativo de libros. Sin carrito
 `app/docs/PROJECT_SPECS.md` es la fuente de verdad verificada. NO lo cargues completo: lee solo la sección necesaria. Si el código y las specs discrepan, manda el código.
 Índice: §3 BD, §4 backend (4.3 endpoints, 4.5 capas y transacciones, 4.6 auth/RBAC, 4.9 tests), §5 frontend, §6 flujos, §7 infraestructura, §8 permisos, §9 deuda técnica, §10 lo ausente, §11 convenciones, §12 docs y agentes.
 
+## Trabajo en equipo
+- Ramas nuevas desde `develop`; se integran en `develop`. Un push a `main` dispara el despliegue (`.github/workflows/deploy.yml`): no fusionar ni empujar a `main` sin acuerdo.
+- Migraciones: la 004 está reservada para ventas; los cambios de esquema nuevos usan la 005 en adelante y se reflejan también en `database/schema.sql` y en los modelos, siempre con autorización explícita.
+- Archivos compartidos con riesgo de conflicto: `backend/src/routes/index.js`, `backend/src/models/index.js`, `frontend/src/App.jsx`, `frontend/src/components/Navbar.jsx`, `database/schema.sql`, `docs/PROJECT_SPECS.md`. Trae `develop` antes de editarlos y mantén el cambio mínimo.
+- Todo endpoint, servicio o repositorio nuevo trae pruebas en `backend/tests/` (con `db-test` arriba) y no debe romper las existentes.
+- Alcance del CRUD admin pendiente: usuarios y categorías. La edición/baja de libros y las ventas se desarrollan aparte.
+
 ## Roadmap (NO implementado)
 2FA, alertas de inventario por correo, CRUD admin de empleados y catálogo, y ventas. No los asumas existentes. Sus specs están en `app/docs/roadmap/` (auth-2fa, inventory-email-alerts, catalog-employee-crud, ventas).
 
