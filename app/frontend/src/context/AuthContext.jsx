@@ -1,27 +1,19 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
+import { fetchSesion, loginRequest } from '../services/api/auth.api';
+import { getToken, setToken as saveToken, clearToken } from '../utils/tokenStorage';
+
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => {
-    try {
-      return localStorage.getItem('oskar_token');
-    } catch {
-      return null;
-    }
-  });
+  const [token, setToken] = useState(() => getToken());
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Al montar, si hay token lo valida con GET /api/auth/me y limpia la sesión si falla
   useEffect(() => {
     async function validarSesion() {
-      let storedToken = null;
-      try {
-        storedToken = localStorage.getItem('oskar_token');
-      } catch (err) {
-        console.error('[AUTH CONTEXT]: Error leyendo token:', err);
-      }
+      const storedToken = getToken();
 
       if (!storedToken) {
         setUser(null);
@@ -31,28 +23,20 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        const res = await fetch('/api/auth/me', {
-          headers: {
-            Authorization: `Bearer ${storedToken}`,
-          },
-        });
+        const res = await fetchSesion(storedToken);
 
         if (res.ok) {
           const json = await res.json();
           setUser(json.data);
           setToken(storedToken);
         } else {
-          try {
-            localStorage.removeItem('oskar_token');
-          } catch {}
+          clearToken();
           setUser(null);
           setToken(null);
         }
       } catch (err) {
         console.error('[AUTH CONTEXT]: Error al verificar sesión:', err);
-        try {
-          localStorage.removeItem('oskar_token');
-        } catch {}
+        clearToken();
         setUser(null);
         setToken(null);
       } finally {
@@ -64,13 +48,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (email, password) => {
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, password }),
-    });
+    const response = await loginRequest(email, password);
 
     const result = await response.json().catch(() => ({}));
 
@@ -80,11 +58,7 @@ export function AuthProvider({ children }) {
 
     const { token: nuevoToken, usuario } = result.data;
 
-    try {
-      localStorage.setItem('oskar_token', nuevoToken);
-    } catch (err) {
-      console.error('[AUTH CONTEXT]: Error guardando token en localStorage:', err);
-    }
+    saveToken(nuevoToken);
 
     setToken(nuevoToken);
     setUser(usuario);
@@ -92,11 +66,7 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
-    try {
-      localStorage.removeItem('oskar_token');
-    } catch (err) {
-      console.error('[AUTH CONTEXT]: Error al borrar token de localStorage:', err);
-    }
+    clearToken();
     setToken(null);
     setUser(null);
   };

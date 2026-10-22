@@ -9,6 +9,7 @@ import LibroDetalle from './views/LibroDetalle';
 import Nosotros from './views/Nosotros';
 import Inventario from './views/Inventario';
 import Login from './views/Login';
+import { ROLES_OPERATIVOS } from './utils/roles';
 
 export default function App() {
   const [toast, setToast] = useState(null);
@@ -44,7 +45,7 @@ export default function App() {
           <Route
             path="/registrar"
             element={
-              <ProtectedRoute roles={['Administrador', 'Empleado']}>
+              <ProtectedRoute roles={ROLES_OPERATIVOS}>
                 <RegistrarLibro onShowToast={showToast} />
               </ProtectedRoute>
             }
@@ -52,7 +53,7 @@ export default function App() {
           <Route
             path="/inventario"
             element={
-              <ProtectedRoute roles={['Administrador', 'Empleado']}>
+              <ProtectedRoute roles={ROLES_OPERATIVOS}>
                 <Inventario />
               </ProtectedRoute>
             }

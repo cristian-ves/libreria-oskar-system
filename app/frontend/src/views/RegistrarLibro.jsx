@@ -7,7 +7,7 @@ import {
 import BarcodeScanner from '../components/BarcodeScanner';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../context/AuthContext';
-import { apiFetch } from '../api/client';
+import { apiFetch } from '../services/api/client';
 
 const AUTOR_PLACEHOLDER = 'Autor de Biblioteca Internacional';
 

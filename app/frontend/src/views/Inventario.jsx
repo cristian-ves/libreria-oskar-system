@@ -5,7 +5,7 @@ import {
   ChevronLeft, ChevronRight, Info, DollarSign, Package,
   RefreshCw, BookOpen
 } from 'lucide-react';
-import { apiFetch } from '../api/client';
+import { apiFetch } from '../services/api/client';
 import Toast from '../components/Toast';
 
 function formatFecha(dateString) {
