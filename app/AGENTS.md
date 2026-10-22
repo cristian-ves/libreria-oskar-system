@@ -6,7 +6,7 @@ Sistema web de inventario interno + catálogo informativo de libros. Sin carrito
 - Frontend: React 18, Vite 5, Tailwind 3 (paleta `oskar`), lucide-react, html5-qrcode, react-router-dom 6. JSX, sin TypeScript. En `app/frontend/src/`:
   `views/` (orquestadores delgados), `components/` y `components/ui/`, `context/`, `features/{inventario,registrar-libro,catalogo}/{components,hooks}`, `hooks/`, `services/api/`, `utils/`.
 - Frontend, reglas: todo HTTP sale de `services/api/` (`apiFetch` inyecta el JWT y ante 401 con token limpia la sesión y va a `/login`; `auth.api.js` y `catalogo.api.js` usan `fetch` directo a propósito). Roles solo vía `utils/roles.js`; token solo vía `utils/tokenStorage.js`. Las vistas no contienen lógica de datos: va en hooks de la feature.
-- Backend: Node 22, Express 4, CommonJS, en `app/backend/src/`: `routes → controllers → services → repositories → models` (más `config/`, `middlewares/`, `utils/`, `database/`). Sequelize 6.37 sobre PostgreSQL, 11 modelos.
+- Backend: Node 22, Express 4, CommonJS, en `app/backend/src/`: `routes → controllers → services → repositories → models` (más `config/`, `middlewares/`, `utils/`, `database/`). Sequelize 6.37 sobre PostgreSQL, 13 modelos.
 - Backend, fachadas: `services/libro.service.js` (sobre `services/libro/*`), `repositories/inventario.repository.js` (sobre `repositories/inventario/*`) y `middlewares/validator.js` (sobre `middlewares/validators/*`) son fachadas. Los consumidores importan la fachada, nunca los módulos internos. `routes/index.js` solo cablea; los handlers viven en controladores.
 - Utilidades compartidas: `utils/isbn.js`, `utils/uuid.js`, `utils/slug.js`, `utils/errors.js`. No reimplementes validación de ISBN/UUID.
 - BD: PostgreSQL con UUID. `app/database/schema.sql` es la fuente de verdad; migraciones en `app/database/migrations/`.
@@ -68,13 +68,13 @@ Sistema web de inventario interno + catálogo informativo de libros. Sin carrito
 
 ## Trabajo en equipo
 - Ramas nuevas desde `develop`; se integran en `develop`. Un push a `main` dispara el despliegue (`.github/workflows/deploy.yml`): no fusionar ni empujar a `main` sin acuerdo.
-- Migraciones: la 004 está reservada para ventas; los cambios de esquema nuevos usan la 005 en adelante y se reflejan también en `database/schema.sql` y en los modelos, siempre con autorización explícita.
+- Migraciones: la 004 es la de ventas (ya aplicada al repositorio); los cambios de esquema nuevos usan la 005 en adelante y se reflejan también en `database/schema.sql` y en los modelos, siempre con autorización explícita.
 - Archivos compartidos con riesgo de conflicto: `backend/src/routes/index.js`, `backend/src/models/index.js`, `frontend/src/App.jsx`, `frontend/src/components/Navbar.jsx`, `database/schema.sql`, `docs/PROJECT_SPECS.md`. Trae `develop` antes de editarlos y mantén el cambio mínimo.
 - Todo endpoint, servicio o repositorio nuevo trae pruebas en `backend/tests/` (con `db-test` arriba) y no debe romper las existentes.
 - Alcance del CRUD admin pendiente: usuarios y categorías. La edición/baja de libros y las ventas se desarrollan aparte.
 
 ## Roadmap (NO implementado)
-2FA, alertas de inventario por correo, CRUD admin de empleados y catálogo, y ventas. No los asumas existentes. Sus specs están en `app/docs/roadmap/` (auth-2fa, inventory-email-alerts, catalog-employee-crud, ventas).
+2FA, alertas de inventario por correo, CRUD admin de empleados y catálogo, y ventas (esquema creado, sin API ni UI). No los asumas existentes. Sus specs están en `app/docs/roadmap/` (auth-2fa, inventory-email-alerts, catalog-employee-crud, ventas).
 
 ## Skills activas (`app/.agents/skills/<nombre>/SKILL.md`)
 | Skill | Úsala para |

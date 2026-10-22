@@ -16,7 +16,7 @@ src/
 ├── middlewares/             # auth.js, errorHandler.js, validator.js (fachada) + validators/
 ├── services/                # un servicio por dominio; libro.service.js es fachada de services/libro/
 ├── repositories/            # inventario.repository.js es fachada de repositories/inventario/
-├── models/                  # 11 modelos Sequelize (atributos en snake_case)
+├── models/                  # 13 modelos Sequelize (atributos en snake_case)
 ├── utils/                   # errors.js, isbn.js, uuid.js, slug.js
 └── database/                # migrate.js y seed.js (usan Sequelize)
 ```

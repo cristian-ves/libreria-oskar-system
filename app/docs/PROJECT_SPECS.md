@@ -162,14 +162,16 @@ app/
 │   │   │   ├── bodega.model.js (82)
 │   │   │   ├── categoria.model.js (45)
 │   │   │   ├── editorial.model.js (49)
-│   │   │   ├── index.js (47)
+│   │   │   ├── index.js (51)
 │   │   │   ├── inventario.model.js (93)
 │   │   │   ├── libro.model.js (126)
-│   │   │   ├── movimientoInventario.model.js (90)
+│   │   │   ├── movimientoInventario.model.js (105)
 │   │   │   ├── rol.model.js (49)
 │   │   │   ├── sucursal.model.js (62)
 │   │   │   ├── tipoMovimiento.model.js (42)
-│   │   │   └── usuario.model.js (94)
+│   │   │   ├── usuario.model.js (94)
+│   │   │   ├── venta.model.js (156)
+│   │   │   └── ventaDetalle.model.js (78)
 │   │   ├── repositories/
 │   │   │   ├── autor.repository.js (122)
 │   │   │   ├── bodega.repository.js (37)
@@ -224,19 +226,21 @@ app/
 │       ├── libroServiceSequelize.test.js (387)
 │       ├── movimientoRepository.test.js (245)
 │       ├── repositories.test.js (180)
-│       ├── sequelize.test.js (94)
+│       ├── sequelize.test.js (96)
 │       ├── usuarioRepository.test.js (103)
 │       ├── utilsIsbnUuid.test.js (166)
 │       ├── validatorsCaracterizacion.test.js (642)
+│       ├── ventasEsquema.test.js (266)
 │       └── helpers/
 │           └── httpMocks.js (50)
 ├── database/
-│   ├── schema.sql (290)
+│   ├── schema.sql (341)
 │   └── migrations/
 │       ├── 002_categorias.sql (25)
-│       └── 003_categorias_adicionales.sql (22)
+│       ├── 003_categorias_adicionales.sql (22)
+│       └── 004_ventas.sql (58)
 ├── docs/
-│   ├── PROJECT_SPECS.md (1095)
+│   ├── PROJECT_SPECS.md (1137)
 │   └── roadmap/
 │       ├── auth-2fa/
 │       │   └── SKILL.md (16)
@@ -245,7 +249,7 @@ app/
 │       ├── inventory-email-alerts/
 │       │   └── SKILL.md (17)
 │       └── ventas/
-│           └── SPEC.md (19)
+│           └── SPEC.md (30)
 └── frontend/
     ├── README.md (39)
     ├── index.html (16)
@@ -352,8 +356,9 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `app/backend/tests/api.e2e.test.js` | 539 | Pruebas HTTP end-to-end contra un servidor Express temporal. |
 | `app/backend/tests/inventarioRepository.test.js` | 468 | Persistencia de inventario: bloqueo `FOR UPDATE`, stock obsoleto, alertas y KPIs de resumen. |
 | `app/backend/tests/libroServiceSequelize.test.js` | 387 | Transacciones del servicio de libros: rollback, trigger, concurrencia de escaneo. |
-| `app/database/schema.sql` | 290 | DDL de 11 tablas, extensiones, trigger PL/pgSQL, 13 índices y semillas (roles, tipos de movimiento, 20 categorías). |
+| `app/database/schema.sql` | 341 | DDL de 13 tablas, extensiones, secuencia de ventas, trigger PL/pgSQL, 18 índices y semillas (roles, tipos de movimiento, 20 categorías). |
 | `app/backend/src/services/googleBooks.service.js` | 288 | Cliente de Google Books con fallback a OpenLibrary, catálogo de contingencia y caché TTL. |
+| `app/backend/tests/ventasEsquema.test.js` | 266 | Esquema de ventas: correlativo, CHECK, UNIQUE, FK RESTRICT y movimiento con `venta_id` (trigger). |
 | `app/frontend/src/features/inventario/components/TablaExistencias.jsx` | 261 | Tabla de existencias con `EstadoBadge` por fila. |
 | `app/frontend/src/features/registrar-libro/hooks/useRegistrarLibro.js` | 255 | Estado y acciones del asistente de registro (`paso`, consulta, ingreso, registro). |
 | `app/backend/src/repositories/libro.repository.js` | 260 | Búsqueda por ISBN/UUID, `upsert`/`create` con captura de `23505`, catálogo y detalle por `ref`. |
@@ -366,9 +371,10 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 - **Fuente de verdad**: `app/database/schema.sql` es la fuente de verdad declarada para nombres de tablas, columnas, restricciones, UUIDs y triggers.
 - **Mecanismo de migraciones**: Directorio `app/database/migrations/` ejecutado secuencialmente por `app/backend/src/database/migrate.js`, registrando ejecuciones en la tabla `schema_migrations`.
 - **Diferencias entre `schema.sql` y modelos Sequelize**:
-  - No hay divergencias estructurales: los 11 modelos definidos en `src/models/` mapean exactamente las 11 tablas del DDL.
+  - No hay divergencias estructurales: los 13 modelos definidos en `src/models/` mapean exactamente las 13 tablas del DDL.
   - La migración `002_categorias.sql` ya está integrada en el `schema.sql` principal.
   - `schema.sql` siembra las **20 categorías** (las 6 originales y las 14 de la migración `003_categorias_adicionales.sql`, con `ON CONFLICT (nombre) DO NOTHING`). Una BD creada desde cero con `schema.sql` ya equivale a aplicar `schema.sql + 002 + 003`. Las migraciones 002 y 003 permanecen como scripts idempotentes válidos para BDs ya existentes.
+  - La migración `004_ventas.sql` (secuencia `ventas_numero_seq`, tablas `ventas` y `venta_detalles`, columna `movimientos_inventario.venta_id` e índices) es idempotente y su DDL es el mismo que `schema.sql`: una BD nueva equivale a la BD anterior + 004. Solo existe el esquema y los modelos; no hay endpoints, servicios ni vistas de ventas.
   - La tabla `schema_migrations` es creada exclusivamente en runtime por `migrate.js` y no forma parte del `schema.sql` estático.
 
 ### 3.2 Catálogo de Tablas y Columnas Clave
@@ -432,6 +438,25 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `movimientos_inventario` | `cantidad` | `INT` | NOT NULL, CHECK (`cantidad >= 0`) |
 | `movimientos_inventario` | `motivo_detalle` | `TEXT` | Nullable (Justificación o detalle del movimiento) |
 | `movimientos_inventario` | `fecha_movimiento` | `TIMESTAMPTZ` | NOT NULL, DEFAULT CURRENT_TIMESTAMP |
+| `movimientos_inventario` | `venta_id` | `UUID` | FK -> `ventas(id)` ON DELETE RESTRICT, Nullable (última columna; venta que originó el movimiento) |
+| `ventas` | `id` | `UUID` | PK, `DEFAULT uuid_generate_v4()` |
+| `ventas` | `numero` | `INTEGER` | NOT NULL, UNIQUE, `DEFAULT nextval('ventas_numero_seq')` (puede tener huecos) |
+| `ventas` | `bodega_id` | `UUID` | FK -> `bodegas(id)` ON DELETE RESTRICT, NOT NULL |
+| `ventas` | `usuario_id` | `UUID` | FK -> `usuarios(id)` ON DELETE RESTRICT, NOT NULL (vendedor) |
+| `ventas` | `cliente_nombre` | `VARCHAR(150)` | NOT NULL, DEFAULT 'Consumidor final' |
+| `ventas` | `cliente_nit` | `VARCHAR(20)` | Nullable |
+| `ventas` | `metodo_pago` | `VARCHAR(20)` | NOT NULL, `ck_ventas_metodo_pago` ('Efectivo', 'Transferencia') |
+| `ventas` | `subtotal` / `descuento` / `total` | `NUMERIC(10,2)` | NOT NULL, todos `>= 0` (`descuento` DEFAULT 0); `ck_ventas_total`: `total = subtotal - descuento` |
+| `ventas` | `notas` | `TEXT` | Nullable |
+| `ventas` | `estado` | `VARCHAR(20)` | NOT NULL, DEFAULT 'Completada', `ck_ventas_estado` ('Completada', 'Anulada') |
+| `ventas` | `anulada_en` / `anulada_por` / `motivo_anulacion` | `TIMESTAMPTZ` / `UUID` / `TEXT` | Nullable; `anulada_por` FK -> `usuarios(id)` RESTRICT; `ck_ventas_anulacion` exige ambos con 'Anulada' y ninguno con 'Completada' |
+| `ventas` | `creado_en` | `TIMESTAMPTZ` | NOT NULL, DEFAULT CURRENT_TIMESTAMP (fecha de la venta) |
+| `venta_detalles` | `id` | `UUID` | PK, `DEFAULT uuid_generate_v4()` |
+| `venta_detalles` | `venta_id` | `UUID` | FK -> `ventas(id)` ON DELETE CASCADE, NOT NULL; `uq_venta_libro` UNIQUE (`venta_id`, `libro_id`) |
+| `venta_detalles` | `libro_id` | `UUID` | FK -> `libros(id)` ON DELETE RESTRICT, NOT NULL |
+| `venta_detalles` | `cantidad` | `INT` | NOT NULL, CHECK (`cantidad > 0`) |
+| `venta_detalles` | `precio_unitario` | `NUMERIC(10,2)` | NOT NULL, CHECK (`precio_unitario > 0`) (snapshot del precio) |
+| `venta_detalles` | `subtotal` | `NUMERIC(10,2)` | NOT NULL, `ck_venta_detalles_subtotal`: `subtotal = cantidad * precio_unitario` |
 
 ### 3.3 Enums y Tipos Categóricos
 - **Enums nativos en Postgres**: No existe ningún tipo `CREATE TYPE ... AS ENUM`.
@@ -467,10 +492,15 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `idx_movimientos_fecha` | `movimientos_inventario` | `fecha_movimiento DESC` | B-Tree ordenado descendente |
 | `idx_movimientos_inventario_id` | `movimientos_inventario` | `inventario_id` | B-Tree |
 | `idx_movimientos_usuario_id` | `movimientos_inventario` | `usuario_id` | B-Tree |
+| `idx_ventas_fecha` | `ventas` | `creado_en DESC` | B-Tree ordenado descendente |
+| `idx_ventas_estado_fecha` | `ventas` | `estado, creado_en DESC` | B-Tree compuesto |
+| `idx_ventas_usuario_id` | `ventas` | `usuario_id` | B-Tree |
+| `idx_venta_detalles_libro_id` | `venta_detalles` | `libro_id` | B-Tree |
+| `idx_movimientos_venta_id` | `movimientos_inventario` | `venta_id` | Parcial: `WHERE venta_id IS NOT NULL` |
 
 ### 3.6 Detalle Específico de Movimientos de Inventario
 - **Nombre de columna para motivo**: La columna se llama exactamente `motivo_detalle` (tipo `TEXT`).
-- **Existencia de campo de referencia adicional**: No existe columna `referencia` en la tabla `movimientos_inventario`.
+- **Existencia de campo de referencia adicional**: No existe columna `referencia` en la tabla `movimientos_inventario`. Sí existe `venta_id` (UUID nullable, FK a `ventas` ON DELETE RESTRICT): enlaza el movimiento con la venta que lo originó; ningún código de la app lo escribe todavía.
 - **Valores posibles para tipo de movimiento**: `'Ingreso'`, `'Salida'`, `'Ajuste'`, `'Ajuste Auditoria'` (soportados por el trigger PL/pgSQL).
 
 ---
@@ -555,7 +585,9 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `Libro` | `libro.model.js` | `libros` | `belongsTo(models.Autor, { as: 'autor' })`, `belongsTo(models.Editorial, { as: 'editorial' })`, `belongsTo(models.Categoria, { as: 'categoria' })`, `hasMany(models.Inventario, { as: 'inventarios', foreignKey: 'libro_id' })`, `belongsToMany(models.Bodega, { through: models.Inventario, as: 'bodegas', foreignKey: 'libro_id', otherKey: 'bodega_id' })` | No existe |
 | `Inventario` | `inventario.model.js` | `inventarios` | `belongsTo(models.Libro, { as: 'libro', foreignKey: 'libro_id' })`, `belongsTo(models.Bodega, { as: 'bodega', foreignKey: 'bodega_id' })`, `hasMany(models.MovimientoInventario, { as: 'movimientos', foreignKey: 'inventario_id' })` | No existe |
 | `TipoMovimiento` | `tipoMovimiento.model.js`| `tipo_movimientos` | `hasMany(models.MovimientoInventario, { as: 'movimientos', foreignKey: 'tipo_movimiento_id' })` | No existe |
-| `MovimientoInventario` | `movimientoInventario.model.js` | `movimientos_inventario` | `belongsTo(models.Inventario, { as: 'inventario', foreignKey: 'inventario_id' })`, `belongsTo(models.Usuario, { as: 'usuario', foreignKey: 'usuario_id' })`, `belongsTo(models.TipoMovimiento, { as: 'tipo_movimiento', foreignKey: 'tipo_movimiento_id' })` | No existe |
+| `MovimientoInventario` | `movimientoInventario.model.js` | `movimientos_inventario` | `belongsTo(models.Inventario, { as: 'inventario', foreignKey: 'inventario_id' })`, `belongsTo(models.Usuario, { as: 'usuario', foreignKey: 'usuario_id' })`, `belongsTo(models.TipoMovimiento, { as: 'tipo_movimiento', foreignKey: 'tipo_movimiento_id' })`, `belongsTo(models.Venta, { as: 'venta', foreignKey: 'venta_id' })` | No existe |
+| `Venta` | `venta.model.js` | `ventas` | `belongsTo(models.Bodega, { as: 'bodega' })`, `belongsTo(models.Usuario, { as: 'vendedor', foreignKey: 'usuario_id' })`, `belongsTo(models.Usuario, { as: 'anulador', foreignKey: 'anulada_por' })`, `hasMany(models.VentaDetalle, { as: 'detalles', foreignKey: 'venta_id' })`, `hasMany(models.MovimientoInventario, { as: 'movimientos', foreignKey: 'venta_id' })`. `numero` usa `defaultValue: literal("nextval('ventas_numero_seq')")`; los importes DECIMAL llegan como string. | No existe |
+| `VentaDetalle` | `ventaDetalle.model.js` | `venta_detalles` | `belongsTo(models.Venta, { as: 'venta', foreignKey: 'venta_id' })`, `belongsTo(models.Libro, { as: 'libro', foreignKey: 'libro_id' })` | No existe |
 
 ### 4.5 Firmas por Capa, Transacciones y Control de Concurrencia
 
@@ -672,7 +704,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 | `tests/validatorsCaracterizacion.test.js` | 47 | Unitaria | No requiere | Caracterización de los validadores de `middlewares/validators/` (incluye comportamientos defectuosos fijados, ver §9). |
 | `tests/errorHandler.test.js` | 5 | Unitaria | No requiere | Mapeo de errores Sequelize/PostgreSQL y formato JSON. |
 | `tests/googleBooks.test.js` | 10 | Unitaria / Mock | No requiere | Timeouts, errores 429/500, fallback a OpenLibrary y catálogo de contingencia (mock de `global.fetch`). |
-| `tests/sequelize.test.js` | 5 | Integración | `libreria_oskar_test` | Conectividad ORM y definición de los 11 modelos. |
+| `tests/sequelize.test.js` | 5 | Integración | `libreria_oskar_test` | Conectividad ORM y definición de los 13 modelos. |
 | `tests/repositories.test.js` | 5 | Integración | `libreria_oskar_test` | `CategoriaRepository`, `AutorRepository`, `EditorialRepository`. |
 | `tests/usuarioRepository.test.js` | 5 | Integración | `libreria_oskar_test` | Búsqueda por email/UUID, exclusión de credenciales, transacciones. |
 | `tests/libroPrecio.test.js` | 7 | End-to-End | `libreria_oskar_test` | `PATCH /api/libros/:id/precio`: 401, 403, 400 (id y precios inválidos), 404, 200 con precio persistido, detalle público, KPI `libros_sin_precio` y stock/movimientos intactos. No importa `config/db`. |
@@ -683,7 +715,8 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 | `tests/libroServiceSequelize.test.js` | 12 | Integración | `libreria_oskar_test` | Escaneo, registro por rol, ingresos repetidos y atomicidad (mock de `googleBooksService`). Importa `config/db`. |
 | `tests/escanear.integration.test.js` | 8 | Integración | `libreria_oskar_test` | Escaneo con sembrado dinámico y rollback inducido. Importa `config/db`. |
 | `tests/api.e2e.test.js` | 22 | End-to-End | `libreria_oskar_test` | Endpoints HTTP reales vía servidor Express temporal. Importa `config/db`. |
-| **Total** | **180** | | | `npm test`: 180 pasan, 0 fallan (ejecutado el 2026-10-22). |
+| `tests/ventasEsquema.test.js` | 7 | Integración | `libreria_oskar_test` | Esquema de ventas: correlativo `numero`, valores por defecto, CHECK, `uq_venta_libro`, FK RESTRICT, Salida con `venta_id` (trigger) y asociaciones. No importa `config/db`. |
+| **Total** | **187** | | | `npm test`: 187 pasan, 0 fallan (ejecutado el 2026-10-22). |
 
 - **Runner**: Node.js test runner nativo (`node --test --test-concurrency=1 tests/**/*.test.js`), lanzado por `src/run-tests.js`.
 - **Aislamiento**: `src/run-tests.js` aborta si `NODE_ENV === 'production'` y comprueba con Sequelize (`SELECT current_database()`) que la conexión apunta a `libreria_oskar_test`. Requiere `db-test` levantado (puerto host 5435).
@@ -1025,7 +1058,7 @@ Cada ítem cita su archivo como evidencia. Resueltos y retirados de esta secció
    - **Estado real**: En empleados solo existe `GET /api/usuarios`. No hay `POST`/`PUT`/`DELETE` de usuarios ni `PUT /api/libros/:id` (edición completa) ni baja de libros. Fijar solo el precio sí existe: `PATCH /api/libros/:id/precio`.
 4. **Ventas**:
    - Roadmap; diseño en `app/docs/roadmap/ventas/SPEC.md`.
-   - **Estado real**: No existen tablas, modelos, endpoints ni vistas de ventas.
+   - **Estado real**: El esquema y los modelos existen (migración `004_ventas.sql`, tablas `ventas` y `venta_detalles`, `movimientos_inventario.venta_id`, modelos `Venta` y `VentaDetalle`). NO hay endpoints, servicios ni vistas de ventas.
 5. **Validación de Sesión en el Lector Móvil**:
    - `BarcodeScanner.jsx` no valida permisos de rol; depende de la vista contenedora y del guardián de ruta.
 
@@ -1082,7 +1115,7 @@ La prioridad de fuentes de información para agentes y desarrolladores se rige p
 > **Regla de oro**: Ante cualquier discrepancia entre documentación, agentes o especificaciones, **el código fuente y la base de datos mandan**.
 
 ### 12.2 Estado de Archivos y Configuración de Agentes
-- **`app/AGENTS.md`**: guía concisa que se carga en cada sesión. Describe la estructura real, los roles, las reglas de persistencia e inventario y lista 2FA, correos, CRUD admin y ventas como "Roadmap (NO implementado)" (`app/docs/roadmap/`).
+- **`app/AGENTS.md`**: guía concisa que se carga en cada sesión. Describe la estructura real, los roles, las reglas de persistencia e inventario y lista 2FA, correos, CRUD admin y ventas como "Roadmap (NO implementado)" (de ventas existe solo el esquema) (`app/docs/roadmap/`).
 - **7 skills activas (`app/.agents/skills/`)**: `backend-engineer-nodejs`, `backend-testing`, `database-architect`, `devops-gcp-automation`, `frontend-engineer-react`, `inventory-transactions`, `sequelize-orm`. Las skills de funciones no implementadas viven como especificaciones en `app/docs/roadmap/`.
 - **Carga en Claude Code**: Claude Code lee `AGENTS.md` mediante un `CLAUDE.md` local que contiene `@AGENTS.md`, y las skills mediante un symlink `.claude/skills`. Esa configuración es local y no está versionada (`CLAUDE.md` y `.claude/` aparecen como no rastreados en `git status`).
 
@@ -1100,5 +1133,5 @@ La prioridad de fuentes de información para agentes y desarrolladores se rige p
 | `app/docs/roadmap/auth-2fa/SKILL.md` | Spec de 2FA TOTP. | No implementado. |
 | `app/docs/roadmap/catalog-employee-crud/SKILL.md` | Spec de CRUD de catálogo y empleados. | No implementado. |
 | `app/docs/roadmap/inventory-email-alerts/SKILL.md` | Spec de alertas de inventario por correo. | No implementado. |
-| `app/docs/roadmap/ventas/SPEC.md` | Documento de diseño del módulo de ventas. | No implementado. |
+| `app/docs/roadmap/ventas/SPEC.md` | Documento de diseño del módulo de ventas. | Esquema y modelos creados (migración 004); sin API ni UI. |
 | `app/.agents/skills/*/SKILL.md` (7) | Directrices por dominio de ingeniería. | Revisadas el 2026-10-22; correcciones puntuales donde contradecían la estructura real. |

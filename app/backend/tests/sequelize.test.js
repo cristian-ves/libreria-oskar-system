@@ -10,7 +10,7 @@ test('Sequelize - Conexión y autenticación exitosa a PostgreSQL sin modificar 
   assert.ok(connInfo.current_time, 'Debe retornar la hora del servidor de base de datos');
 });
 
-test('Sequelize - Los 11 modelos requeridos están correctamente definidos', () => {
+test('Sequelize - Los 13 modelos requeridos están correctamente definidos', () => {
   const modelKeys = [
     'Sucursal',
     'Bodega',
@@ -23,6 +23,8 @@ test('Sequelize - Los 11 modelos requeridos están correctamente definidos', () 
     'Inventario',
     'TipoMovimiento',
     'MovimientoInventario',
+    'Venta',
+    'VentaDetalle',
   ];
 
   modelKeys.forEach((key) => {

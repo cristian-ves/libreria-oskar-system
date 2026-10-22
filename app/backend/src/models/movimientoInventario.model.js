@@ -53,6 +53,15 @@ class MovimientoInventario extends Model {
           allowNull: false,
           defaultValue: DataTypes.NOW,
         },
+        venta_id: {
+          type: DataTypes.UUID,
+          allowNull: true,
+          references: {
+            model: 'ventas',
+            key: 'id',
+          },
+          onDelete: 'RESTRICT',
+        },
       },
       {
         sequelize,
@@ -82,6 +91,12 @@ class MovimientoInventario extends Model {
     MovimientoInventario.belongsTo(models.TipoMovimiento, {
       foreignKey: 'tipo_movimiento_id',
       as: 'tipo_movimiento',
+      onDelete: 'RESTRICT',
+    });
+
+    MovimientoInventario.belongsTo(models.Venta, {
+      foreignKey: 'venta_id',
+      as: 'venta',
       onDelete: 'RESTRICT',
     });
   }

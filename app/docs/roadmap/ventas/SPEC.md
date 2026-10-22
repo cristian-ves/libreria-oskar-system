@@ -1,6 +1,6 @@
 # Ventas — documento de diseño
 
-> **ESTADO: NO IMPLEMENTADO (roadmap).** Este documento recoge las decisiones de diseño tomadas por el usuario. No existen tablas, modelos, endpoints ni vistas de ventas en el código.
+> **ESTADO: esquema y modelos creados; sin API ni UI.** Este documento recoge las decisiones de diseño tomadas por el usuario. Existen las tablas y los modelos Sequelize (migración 004); no hay endpoints, servicios ni vistas de ventas.
 
 ## Decisiones
 
@@ -17,3 +17,14 @@
 11. **Reportes de ventas**: subtarea posterior. El modelo debe dejarlos viables (índices por fecha y estado).
 12. **Prerrequisito (cumplido)**: poder fijar el precio de un libro ya registrado. Lo que registra un Empleado queda en precio 0; el Administrador lo fija con `PATCH /api/libros/:id/precio` (botón en la ficha del libro). Una venta debe rechazar libros con precio 0.
 13. **Orden previsto**: migración 004 + `schema.sql` + modelos Sequelize; backend transaccional (riesgo alto); frontend de ventas; reportes.
+
+## Modelo de datos implementado (migración 004)
+
+Fuente de verdad: `database/schema.sql` (la migración `004_ventas.sql` lleva el mismo DDL).
+- `ventas` + `venta_detalles`; una línea por libro por venta (`uq_venta_libro`).
+- `descuento` es un monto fijo sobre el subtotal; `total = subtotal - descuento` lo exige la BD.
+- `precio_unitario` es un snapshot del precio al vender y debe ser mayor que 0.
+- `metodo_pago` y `estado` se validan con CHECK (sin tablas ni enums); la anulación exige `anulada_en` y `anulada_por`.
+- `numero` sale de la secuencia `ventas_numero_seq`: único, creciente y con posibles huecos.
+- Todas las FK son `RESTRICT` (libro, usuario, bodega, movimientos); solo los detalles caen en cascada con su venta.
+- `movimientos_inventario.venta_id` es nullable; no hay tipos nuevos en `tipo_movimientos`.

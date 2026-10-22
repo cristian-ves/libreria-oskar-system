@@ -11,6 +11,8 @@ const Libro = require('./libro.model');
 const Inventario = require('./inventario.model');
 const TipoMovimiento = require('./tipoMovimiento.model');
 const MovimientoInventario = require('./movimientoInventario.model');
+const Venta = require('./venta.model');
+const VentaDetalle = require('./ventaDetalle.model');
 
 const models = {
   Sucursal,
@@ -24,6 +26,8 @@ const models = {
   Inventario,
   TipoMovimiento,
   MovimientoInventario,
+  Venta,
+  VentaDetalle,
 };
 
 // Inicializar cada modelo vinculándolo a la instancia de Sequelize
