@@ -1,6 +1,6 @@
 # Ventas — documento de diseño
 
-> **ESTADO: esquema, API e interfaz creados; reportes pendientes.** Este documento recoge las decisiones de diseño tomadas por el usuario. Existen las tablas, los modelos Sequelize (migración 004), los endpoints y las pantallas de ventas; no hay reportes de ventas.
+> **ESTADO: esquema, API e interfaz creados; los reportes de ventas no forman parte de este módulo.** Este documento recoge las decisiones de diseño tomadas por el usuario. Existen las tablas, los modelos Sequelize (migración 004), los endpoints y las pantallas de ventas; los reportes de ventas se construirán en un módulo de reportes aparte (solo Administrador, con exportación a Excel y PDF).
 
 ## Decisiones
 
@@ -14,9 +14,9 @@
 8. **Correlativo**: simple (V-000123); puede tener huecos.
 9. **Concurrencia**: bloquear los `inventarios` en orden fijo (por id) para evitar deadlocks, y pre-validar el stock con `FOR UPDATE` para responder 409 con el título del libro (el trigger solo da un 400 genérico).
 10. **Facturación electrónica**: fuera de alcance, pero con la puerta abierta (NIT/cliente).
-11. **Reportes de ventas**: subtarea posterior. El modelo debe dejarlos viables (índices por fecha y estado).
+11. **Reportes de ventas**: fuera de este módulo; corresponden a un módulo de reportes aparte. El modelo los deja viables (índices por fecha y estado).
 12. **Prerrequisito (cumplido)**: poder fijar el precio de un libro ya registrado. Lo que registra un Empleado queda en precio 0; el Administrador lo fija con `PATCH /api/libros/:id/precio` (botón en la ficha del libro). Una venta debe rechazar libros con precio 0.
-13. **Orden previsto**: migración 004 + `schema.sql` + modelos Sequelize; backend transaccional (riesgo alto); frontend de ventas; reportes.
+13. **Orden previsto**: migración 004 + `schema.sql` + modelos Sequelize; backend transaccional (riesgo alto); frontend de ventas. Los reportes quedan fuera (módulo de reportes aparte).
 
 ## Modelo de datos implementado (migración 004)
 

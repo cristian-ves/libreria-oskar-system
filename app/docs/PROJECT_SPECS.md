@@ -207,12 +207,12 @@ app/
 │   │   │   ├── usuario.service.js (14)
 │   │   │   ├── venta.service.js (11)
 │   │   │   ├── libro/
-│   │   │       ├── escaneo.service.js (211)
-│   │   │       ├── ingreso.service.js (74)
-│   │   │       ├── precio.service.js (17)
-│   │   │       ├── maestros.service.js (47)
-│   │   │       ├── movimientoIngreso.service.js (36)
-│   │   │       └── registro.service.js (159)
+│   │   │   │   ├── escaneo.service.js (211)
+│   │   │   │   ├── ingreso.service.js (74)
+│   │   │   │   ├── maestros.service.js (47)
+│   │   │   │   ├── movimientoIngreso.service.js (36)
+│   │   │   │   ├── precio.service.js (17)
+│   │   │   │   └── registro.service.js (159)
 │   │   │   └── venta/
 │   │   │       ├── anular.service.js (64)
 │   │   │       ├── bloqueo.helper.js (26)
@@ -258,7 +258,7 @@ app/
 │       ├── 003_categorias_adicionales.sql (22)
 │       └── 004_ventas.sql (58)
 ├── docs/
-│   ├── PROJECT_SPECS.md (1201)
+│   ├── PROJECT_SPECS.md (1248)
 │   └── roadmap/
 │       ├── auth-2fa/
 │       │   └── SKILL.md (16)
@@ -267,7 +267,7 @@ app/
 │       ├── inventory-email-alerts/
 │       │   └── SKILL.md (17)
 │       └── ventas/
-│           └── SPEC.md (54)
+│           └── SPEC.md (64)
 └── frontend/
     ├── README.md (39)
     ├── index.html (16)
@@ -398,10 +398,10 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `app/backend/tests/libroServiceSequelize.test.js` | 387 | Transacciones del servicio de libros: rollback, trigger, concurrencia de escaneo. |
 | `app/database/schema.sql` | 341 | DDL de 13 tablas, extensiones, secuencia de ventas, trigger PL/pgSQL, 18 índices y semillas (roles, tipos de movimiento, 20 categorías). |
 | `app/backend/src/services/googleBooks.service.js` | 288 | Cliente de Google Books con fallback a OpenLibrary, catálogo de contingencia y caché TTL. |
+| `app/backend/src/repositories/libro.repository.js` | 276 | Búsqueda por ISBN/UUID (`findByIds` para ventas), `upsert`/`create` con captura de `23505`, catálogo y detalle por `ref`. |
 | `app/backend/tests/ventasEsquema.test.js` | 266 | Esquema de ventas: correlativo, CHECK, UNIQUE, FK RESTRICT y movimiento con `venta_id` (trigger). |
 | `app/frontend/src/features/inventario/components/TablaExistencias.jsx` | 261 | Tabla de existencias con `EstadoBadge` por fila. |
 | `app/frontend/src/features/registrar-libro/hooks/useRegistrarLibro.js` | 255 | Estado y acciones del asistente de registro (`paso`, consulta, ingreso, registro). |
-| `app/backend/src/repositories/libro.repository.js` | 276 | Búsqueda por ISBN/UUID (`findByIds` para ventas), `upsert`/`create` con captura de `23505`, catálogo y detalle por `ref`. |
 
 ---
 
@@ -414,7 +414,7 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
   - No hay divergencias estructurales: los 13 modelos definidos en `src/models/` mapean exactamente las 13 tablas del DDL.
   - La migración `002_categorias.sql` ya está integrada en el `schema.sql` principal.
   - `schema.sql` siembra las **20 categorías** (las 6 originales y las 14 de la migración `003_categorias_adicionales.sql`, con `ON CONFLICT (nombre) DO NOTHING`). Una BD creada desde cero con `schema.sql` ya equivale a aplicar `schema.sql + 002 + 003`. Las migraciones 002 y 003 permanecen como scripts idempotentes válidos para BDs ya existentes.
-  - La migración `004_ventas.sql` (secuencia `ventas_numero_seq`, tablas `ventas` y `venta_detalles`, columna `movimientos_inventario.venta_id` e índices) es idempotente y su DDL es el mismo que `schema.sql`: una BD nueva equivale a la BD anterior + 004. La API de ventas (crear, listar, consultar y anular) existe desde el segundo commit de la serie; no hay vistas.
+  - La migración `004_ventas.sql` (secuencia `ventas_numero_seq`, tablas `ventas` y `venta_detalles`, columna `movimientos_inventario.venta_id` e índices) es idempotente y su DDL es el mismo que `schema.sql`: una BD nueva equivale a la BD anterior + 004. La API de ventas (crear, listar, consultar y anular) existe desde el segundo commit de la serie y la interfaz (`/ventas`, `/ventas/nueva`, `/ventas/:id`) desde el tercero.
   - La tabla `schema_migrations` es creada exclusivamente en runtime por `migrate.js` y no forma parte del `schema.sql` estático.
 
 ### 3.2 Catálogo de Tablas y Columnas Clave
@@ -1064,7 +1064,8 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 - **Arranque y cierre del backend**: `server.js` verifica la BD con `testSequelizeConnection()` antes de escuchar y, ante `SIGINT`/`SIGTERM`, cierra el servidor HTTP y luego `sequelize.close()` (ver §4.2).
 
 ### 7.3 Workflows CI/CD (`app/.github/workflows/deploy.yml`)
-- **Disparadores**: `push` a la rama `main` o ejecución manual `workflow_dispatch`.
+- **Estado**: el archivo está en `app/.github/workflows/deploy.yml`, pero GitHub solo ejecuta workflows ubicados en `.github/workflows` en la raíz del repositorio, por lo que hoy NO se ejecuta. Además sus rutas (`backend/`, `database/`) suponen que `app/` es la raíz. Su funcionamiento no está verificado y será rehecho. Lo que sigue describe el contenido del archivo, no un comportamiento comprobado.
+- **Disparadores declarados**: `push` a la rama `main` o ejecución manual `workflow_dispatch` (sin efecto mientras el archivo siga en esa ubicación).
 - **Variables y Secretos**: `GCP_PROJECT_ID`, `GCP_SA_KEY`, `CLOUD_SQL_CONNECTION_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `GOOGLE_BOOKS_API_KEY`.
 - **Job 1: `test-and-verify` (CI)**:
   - Ejecuta en `ubuntu-latest`.
@@ -1168,7 +1169,7 @@ Cada ítem cita su archivo como evidencia. Resueltos y retirados de esta secció
    - **Estado real**: En empleados solo existe `GET /api/usuarios`. No hay `POST`/`PUT`/`DELETE` de usuarios ni `PUT /api/libros/:id` (edición completa) ni baja de libros. Fijar solo el precio sí existe: `PATCH /api/libros/:id/precio`.
 4. **Ventas**:
    - Diseño en `app/docs/roadmap/ventas/SPEC.md`.
-   - **Estado real**: Esquema, API e interfaz implementados; reportes pendientes. El esquema, los modelos y la API existen: `POST /api/ventas`, `GET /api/ventas`, `GET /api/ventas/:id` y `POST /api/ventas/:id/anular` (ver §4.3, §6.10 y §6.11). La interfaz también existe (`/ventas`, `/ventas/nueva`, `/ventas/:id`; ver §5.1 y §5.2). NO hay reportes de ventas. Pendientes de decisión: venta de libros inactivos (hoy no se bloquea) y visibilidad de ventas por rol (hoy ambos roles ven todas).
+   - **Estado real**: Esquema, API e interfaz implementados; los reportes de ventas no forman parte de este módulo (corresponden a un módulo de reportes aparte, solo Administrador, con exportación a Excel y PDF). El esquema, los modelos y la API existen: `POST /api/ventas`, `GET /api/ventas`, `GET /api/ventas/:id` y `POST /api/ventas/:id/anular` (ver §4.3, §6.10 y §6.11). La interfaz también existe (`/ventas`, `/ventas/nueva`, `/ventas/:id`; ver §5.1 y §5.2). NO hay reportes de ventas. Pendientes de decisión: venta de libros inactivos (hoy no se bloquea) y visibilidad de ventas por rol (hoy ambos roles ven todas).
 5. **Validación de Sesión en el Lector Móvil**:
    - `BarcodeScanner.jsx` no valida permisos de rol; depende de la vista contenedora y del guardián de ruta.
 
@@ -1225,7 +1226,7 @@ La prioridad de fuentes de información para agentes y desarrolladores se rige p
 > **Regla de oro**: Ante cualquier discrepancia entre documentación, agentes o especificaciones, **el código fuente y la base de datos mandan**.
 
 ### 12.2 Estado de Archivos y Configuración de Agentes
-- **`app/AGENTS.md`**: guía concisa que se carga en cada sesión. Describe la estructura real, los roles, las reglas de persistencia e inventario y lista 2FA, correos, CRUD admin y ventas como "Roadmap (NO implementado)" (de ventas existen el esquema, la API y la interfaz; los reportes están pendientes) (`app/docs/roadmap/`).
+- **`app/AGENTS.md`**: guía concisa que se carga en cada sesión. Describe la estructura real, los roles, las reglas de persistencia e inventario y lista 2FA, correos, CRUD admin y ventas como "Roadmap (NO implementado)" (de ventas existen el esquema, la API y la interfaz; los reportes de ventas corresponden a un módulo de reportes aparte) (`app/docs/roadmap/`).
 - **7 skills activas (`app/.agents/skills/`)**: `backend-engineer-nodejs`, `backend-testing`, `database-architect`, `devops-gcp-automation`, `frontend-engineer-react`, `inventory-transactions`, `sequelize-orm`. Las skills de funciones no implementadas viven como especificaciones en `app/docs/roadmap/`.
 - **Carga en Claude Code**: Claude Code lee `AGENTS.md` mediante un `CLAUDE.md` local que contiene `@AGENTS.md`, y las skills mediante un symlink `.claude/skills`. Esa configuración es local y no está versionada (`CLAUDE.md` y `.claude/` aparecen como no rastreados en `git status`).
 
@@ -1243,5 +1244,5 @@ La prioridad de fuentes de información para agentes y desarrolladores se rige p
 | `app/docs/roadmap/auth-2fa/SKILL.md` | Spec de 2FA TOTP. | No implementado. |
 | `app/docs/roadmap/catalog-employee-crud/SKILL.md` | Spec de CRUD de catálogo y empleados. | No implementado. |
 | `app/docs/roadmap/inventory-email-alerts/SKILL.md` | Spec de alertas de inventario por correo. | No implementado. |
-| `app/docs/roadmap/ventas/SPEC.md` | Documento de diseño del módulo de ventas. | Esquema, API e interfaz creados; reportes pendientes. Incluye las secciones "API implementada (backend)" e "Interfaz implementada". |
+| `app/docs/roadmap/ventas/SPEC.md` | Documento de diseño del módulo de ventas. | Esquema, API e interfaz creados; reportes en un módulo aparte. Incluye las secciones "API implementada (backend)" e "Interfaz implementada". |
 | `app/.agents/skills/*/SKILL.md` (7) | Directrices por dominio de ingeniería. | Revisadas el 2026-10-22; correcciones puntuales donde contradecían la estructura real. |

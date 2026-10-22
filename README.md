@@ -57,9 +57,9 @@ El frontend no tiene pruebas automatizadas; se verifica con `npm run frontend:bu
 
 ## Trabajo en equipo
 
-- Las ramas nuevas salen de `develop` y se integran en `develop`. Un push a `main` dispara el despliegue (`app/.github/workflows/deploy.yml`): no fusionar ni empujar a `main` sin acuerdo.
+- Las ramas nuevas salen de `develop` y se integran en `develop`. El workflow de despliegue está en `app/.github/workflows/deploy.yml`, pero GitHub no lo ejecuta desde esa ubicación (solo lee `.github/workflows` en la raíz del repo), sus rutas suponen que `app/` es la raíz, no está verificado y será rehecho. No fusionar ni empujar a `main` sin acuerdo.
 - Reparto vigente por tema: (1) CRUD administrativo de usuarios y categorías; (2) edición de libros ya registrados (fijar precio), ventas, paginación y escáner de cámara.
-- Migraciones: la 004 está reservada para ventas; los cambios de esquema nuevos usan la 005 en adelante, reflejados también en `app/database/schema.sql` y en los modelos.
+- Migraciones: la 004 es la de ventas (ya aplicada al repositorio); los cambios de esquema nuevos usan la 005 en adelante, reflejados también en `app/database/schema.sql` y en los modelos.
 - Archivos compartidos con riesgo de conflicto (trae `develop` antes de editarlos y mantén el cambio mínimo): `backend/src/routes/index.js`, `backend/src/models/index.js`, `frontend/src/App.jsx`, `frontend/src/components/Navbar.jsx`, `database/schema.sql` y `docs/PROJECT_SPECS.md` (rutas dentro de `app/`).
 - Todo endpoint, servicio o repositorio nuevo trae pruebas en `app/backend/tests/` y no debe romper las existentes.
 - Agentes: lánzalos desde `app/`, `app/backend` o `app/frontend` para que carguen `app/AGENTS.md` y las skills de `app/.agents/skills/` (recomendación según la documentación de Codex, no una garantía).
