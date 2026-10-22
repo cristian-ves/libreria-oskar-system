@@ -10,6 +10,12 @@ const {
   validateSalidaInventario,
   validateAjusteInventario,
 } = require('./validators/inventario.validators');
+const {
+  validateCrearVenta,
+  validateListarVentas,
+  validateVentaId,
+  validateAnularVenta,
+} = require('./validators/venta.validators');
 const { validateListarMovimientos } = require('./validators/movimiento.validators');
 
 module.exports = {
@@ -22,4 +28,8 @@ module.exports = {
   validateListarMovimientos,
   validateSalidaInventario,
   validateAjusteInventario,
+  validateCrearVenta,
+  validateListarVentas,
+  validateVentaId,
+  validateAnularVenta,
 };

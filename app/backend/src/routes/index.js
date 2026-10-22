@@ -26,5 +26,6 @@ router.use('/auth', authRoutes);
 router.use('/libros', libroRoutes);
 router.use('/inventario', require('./inventario.routes'));
 router.use('/movimientos', require('./movimiento.routes'));
+router.use('/ventas', require('./venta.routes'));
 
 module.exports = router;

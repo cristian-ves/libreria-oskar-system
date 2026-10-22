@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const {
   Inventario,
   Bodega,
@@ -26,6 +27,28 @@ module.exports = {
     });
 
     return inv || null;
+  },
+
+  /**
+   * Registros de inventario de varios libros en una bodega, ordenados por id (sin bloqueo).
+   * Los libros sin fila de inventario en esa bodega no aparecen.
+   * @param {string[]} libroIds
+   * @param {string} bodegaId
+   * @param {{ transaction?: import('sequelize').Transaction }} [options]
+   * @returns {Promise<Array<object>>}
+   */
+  async findByLibrosAndBodega(libroIds, bodegaId, options = {}) {
+    if (!Array.isArray(libroIds) || libroIds.length === 0) return [];
+    return Inventario.findAll({
+      where: {
+        libro_id: { [Op.in]: libroIds },
+        bodega_id: bodegaId,
+      },
+      attributes: ['id', 'libro_id', 'bodega_id', 'stock_actual', 'stock_minimo'],
+      order: [['id', 'ASC']],
+      raw: true,
+      ...options,
+    });
   },
 
   /**

@@ -144,19 +144,21 @@ app/
 │   │   │   ├── health.controller.js (36)
 │   │   │   ├── inventario.controller.js (111)
 │   │   │   ├── libro.controller.js (182)
-│   │   │   └── usuario.controller.js (19)
+│   │   │   ├── usuario.controller.js (19)
+│   │   │   └── venta.controller.js (70)
 │   │   ├── database/
 │   │   │   ├── migrate.js (74)
 │   │   │   └── seed.js (140)
 │   │   ├── middlewares/
 │   │   │   ├── auth.js (75)
 │   │   │   ├── errorHandler.js (73)
-│   │   │   ├── validator.js (25)
+│   │   │   ├── validator.js (35)
 │   │   │   └── validators/
 │   │   │       ├── common.js (29)
 │   │   │       ├── inventario.validators.js (90)
 │   │   │       ├── libro.validators.js (201)
-│   │   │       └── movimiento.validators.js (48)
+│   │   │       ├── movimiento.validators.js (48)
+│   │   │       └── venta.validators.js (155)
 │   │   ├── models/
 │   │   │   ├── autor.model.js (49)
 │   │   │   ├── bodega.model.js (82)
@@ -174,24 +176,26 @@ app/
 │   │   │   └── ventaDetalle.model.js (78)
 │   │   ├── repositories/
 │   │   │   ├── autor.repository.js (122)
-│   │   │   ├── bodega.repository.js (37)
+│   │   │   ├── bodega.repository.js (53)
 │   │   │   ├── categoria.repository.js (77)
 │   │   │   ├── editorial.repository.js (122)
 │   │   │   ├── inventario.repository.js (11)
-│   │   │   ├── libro.repository.js (260)
-│   │   │   ├── movimiento.repository.js (232)
+│   │   │   ├── libro.repository.js (276)
+│   │   │   ├── movimiento.repository.js (234)
 │   │   │   ├── usuario.repository.js (211)
+│   │   │   ├── venta.repository.js (152)
 │   │   │   └── inventario/
-│   │   │       ├── inventarioBasico.repository.js (217)
+│   │   │       ├── inventarioBasico.repository.js (240)
 │   │   │       ├── inventarioListado.repository.js (138)
 │   │   │       ├── inventarioResumen.repository.js (110)
 │   │   │       └── inventarioSubconsultas.helper.js (10)
 │   │   ├── routes/
 │   │   │   ├── auth.routes.js (13)
-│   │   │   ├── index.js (30)
+│   │   │   ├── index.js (31)
 │   │   │   ├── inventario.routes.js (63)
 │   │   │   ├── libro.routes.js (97)
-│   │   │   └── movimiento.routes.js (21)
+│   │   │   ├── movimiento.routes.js (21)
+│   │   │   └── venta.routes.js (65)
 │   │   ├── services/
 │   │   │   ├── auth.service.js (54)
 │   │   │   ├── bodega.service.js (13)
@@ -201,18 +205,25 @@ app/
 │   │   │   ├── inventario.service.js (187)
 │   │   │   ├── libro.service.js (14)
 │   │   │   ├── usuario.service.js (14)
-│   │   │   └── libro/
+│   │   │   ├── venta.service.js (11)
+│   │   │   ├── libro/
 │   │   │       ├── escaneo.service.js (211)
 │   │   │       ├── ingreso.service.js (74)
 │   │   │       ├── precio.service.js (17)
 │   │   │       ├── maestros.service.js (47)
 │   │   │       ├── movimientoIngreso.service.js (36)
 │   │   │       └── registro.service.js (159)
+│   │   │   └── venta/
+│   │   │       ├── anular.service.js (64)
+│   │   │       ├── bloqueo.helper.js (26)
+│   │   │       ├── consulta.service.js (101)
+│   │   │       └── crear.service.js (141)
 │   │   └── utils/
 │   │       ├── errors.js (50)
 │   │       ├── isbn.js (71)
 │   │       ├── slug.js (97)
-│   │       └── uuid.js (20)
+│   │       ├── uuid.js (20)
+│   │       └── ventas.js (129)
 │   └── tests/
 │       ├── api.e2e.test.js (539)
 │       ├── errorHandler.test.js (123)
@@ -230,9 +241,16 @@ app/
 │       ├── usuarioRepository.test.js (103)
 │       ├── utilsIsbnUuid.test.js (166)
 │       ├── validatorsCaracterizacion.test.js (642)
+│       ├── ventasApi.test.js (206)
+│       ├── ventasApiConsulta.test.js (169)
+│       ├── ventasConcurrencia.test.js (159)
 │       ├── ventasEsquema.test.js (266)
+│       ├── ventasServicio.test.js (227)
+│       ├── ventasUtils.test.js (84)
 │       └── helpers/
-│           └── httpMocks.js (50)
+│           ├── httpMocks.js (50)
+│           ├── ventasFixtures.js (118)
+│           └── ventasHttp.js (43)
 ├── database/
 │   ├── schema.sql (341)
 │   └── migrations/
@@ -240,7 +258,7 @@ app/
 │       ├── 003_categorias_adicionales.sql (22)
 │       └── 004_ventas.sql (58)
 ├── docs/
-│   ├── PROJECT_SPECS.md (1137)
+│   ├── PROJECT_SPECS.md (1201)
 │   └── roadmap/
 │       ├── auth-2fa/
 │       │   └── SKILL.md (16)
@@ -249,7 +267,7 @@ app/
 │       ├── inventory-email-alerts/
 │       │   └── SKILL.md (17)
 │       └── ventas/
-│           └── SPEC.md (30)
+│           └── SPEC.md (54)
 └── frontend/
     ├── README.md (39)
     ├── index.html (16)
@@ -361,7 +379,7 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `app/backend/tests/ventasEsquema.test.js` | 266 | Esquema de ventas: correlativo, CHECK, UNIQUE, FK RESTRICT y movimiento con `venta_id` (trigger). |
 | `app/frontend/src/features/inventario/components/TablaExistencias.jsx` | 261 | Tabla de existencias con `EstadoBadge` por fila. |
 | `app/frontend/src/features/registrar-libro/hooks/useRegistrarLibro.js` | 255 | Estado y acciones del asistente de registro (`paso`, consulta, ingreso, registro). |
-| `app/backend/src/repositories/libro.repository.js` | 260 | Búsqueda por ISBN/UUID, `upsert`/`create` con captura de `23505`, catálogo y detalle por `ref`. |
+| `app/backend/src/repositories/libro.repository.js` | 276 | Búsqueda por ISBN/UUID (`findByIds` para ventas), `upsert`/`create` con captura de `23505`, catálogo y detalle por `ref`. |
 
 ---
 
@@ -374,7 +392,7 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
   - No hay divergencias estructurales: los 13 modelos definidos en `src/models/` mapean exactamente las 13 tablas del DDL.
   - La migración `002_categorias.sql` ya está integrada en el `schema.sql` principal.
   - `schema.sql` siembra las **20 categorías** (las 6 originales y las 14 de la migración `003_categorias_adicionales.sql`, con `ON CONFLICT (nombre) DO NOTHING`). Una BD creada desde cero con `schema.sql` ya equivale a aplicar `schema.sql + 002 + 003`. Las migraciones 002 y 003 permanecen como scripts idempotentes válidos para BDs ya existentes.
-  - La migración `004_ventas.sql` (secuencia `ventas_numero_seq`, tablas `ventas` y `venta_detalles`, columna `movimientos_inventario.venta_id` e índices) es idempotente y su DDL es el mismo que `schema.sql`: una BD nueva equivale a la BD anterior + 004. Solo existe el esquema y los modelos; no hay endpoints, servicios ni vistas de ventas.
+  - La migración `004_ventas.sql` (secuencia `ventas_numero_seq`, tablas `ventas` y `venta_detalles`, columna `movimientos_inventario.venta_id` e índices) es idempotente y su DDL es el mismo que `schema.sql`: una BD nueva equivale a la BD anterior + 004. La API de ventas (crear, listar, consultar y anular) existe desde el segundo commit de la serie; no hay vistas.
   - La tabla `schema_migrations` es creada exclusivamente en runtime por `migrate.js` y no forma parte del `schema.sql` estático.
 
 ### 3.2 Catálogo de Tablas y Columnas Clave
@@ -500,7 +518,7 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 
 ### 3.6 Detalle Específico de Movimientos de Inventario
 - **Nombre de columna para motivo**: La columna se llama exactamente `motivo_detalle` (tipo `TEXT`).
-- **Existencia de campo de referencia adicional**: No existe columna `referencia` en la tabla `movimientos_inventario`. Sí existe `venta_id` (UUID nullable, FK a `ventas` ON DELETE RESTRICT): enlaza el movimiento con la venta que lo originó; ningún código de la app lo escribe todavía.
+- **Existencia de campo de referencia adicional**: No existe columna `referencia` en la tabla `movimientos_inventario`. Sí existe `venta_id` (UUID nullable, FK a `ventas` ON DELETE RESTRICT): enlaza el movimiento con la venta que lo originó; lo escriben la venta (`Salida`) y su anulación (`Ingreso`) mediante `movimientoRepository.createMovimiento({ ventaId })`; `GET /api/movimientos` no lo expone.
 - **Valores posibles para tipo de movimiento**: `'Ingreso'`, `'Salida'`, `'Ajuste'`, `'Ajuste Auditoria'` (soportados por el trigger PL/pgSQL).
 
 ---
@@ -548,7 +566,7 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 
 ### 4.3 Tabla Completa de Endpoints
 
-`src/routes/index.js` solo cablea rutas (sin lógica) y monta `auth.routes.js`, `libro.routes.js`, `inventario.routes.js` y `movimiento.routes.js`. Todos los handlers viven en controladores.
+`src/routes/index.js` solo cablea rutas (sin lógica) y monta `auth.routes.js`, `libro.routes.js`, `inventario.routes.js`, `movimiento.routes.js` y `venta.routes.js`. Todos los handlers viven en controladores.
 
 | Método | Ruta | Middlewares (Auth / Rol) | Controller.Función | Service.Función | Repository.Función | Descripción |
 |---|---|---|---|---|---|---|
@@ -570,6 +588,10 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `POST` | `/api/inventario/:id/salida` | `authenticate`, `authorize('Administrador', 'Empleado')`, `validateSalidaInventario` | `inventarioController.salida` | `inventarioService.registrarSalida` | `inventarioRepository.findByIdForUpdate`, `movimientoRepository.createMovimiento` | Registro de salida de stock con bloqueo pesimista. |
 | `POST` | `/api/inventario/:id/ajuste` | `authenticate`, `authorize('Administrador', 'Empleado')`, `validateAjusteInventario` | `inventarioController.ajuste` | `inventarioService.registrarAjuste` | `inventarioRepository.findByIdForUpdate`, `movimientoRepository.createMovimiento` | Ajuste directo de stock auditado con bloqueo pesimista. |
 | `GET` | `/api/movimientos` | `authenticate`, `authorize('Administrador', 'Empleado')`, `validateListarMovimientos` | `inventarioController.listarMovimientos` | `inventarioService.listarMovimientos` | `movimientoRepository.findAllWithFilters` | Kardex cronológico de movimientos paginado. |
+| `POST` | `/api/ventas` | `authenticate`, `authorize('Administrador', 'Empleado')`, `validateCrearVenta` | `ventaController.crear` | `ventaService.crearVenta` | `bodegaRepository.findActivaById`, `libroRepository.findByIds`, `inventarioRepository.findByLibrosAndBodega`, `inventarioRepository.findByIdForUpdate`, `ventaRepository.createVenta`, `ventaRepository.createDetalles`, `movimientoRepository.createMovimiento` | Registra una venta (cabecera, líneas y movimientos `Salida` con `venta_id`) en una transacción. Body: `{ bodegaId, items: [{ libroId, cantidad }], metodoPago, clienteNombre?, clienteNit?, descuento?, notas? }`. El precio sale de `libros.precio`; el vendedor, de `req.user.id`. 201 con el detalle; 400 validación; 404 libro/bodega; 409 stock o precio 0. |
+| `GET` | `/api/ventas` | `authenticate`, `authorize('Administrador', 'Empleado')`, `validateListarVentas` | `ventaController.listar` | `ventaService.listarVentas` | `ventaRepository.findPagina`, `ventaRepository.contarLineasPorVentas` | Lista paginada (más recientes primero) con `estado`, `desde`/`hasta` (días inclusivos en hora de Guatemala, UTC-6), `limit` (1-200, 50 por defecto) y `offset`. Ambos roles ven todas las ventas. |
+| `GET` | `/api/ventas/:id` | `authenticate`, `authorize('Administrador', 'Empleado')`, `validateVentaId` | `ventaController.obtener` | `ventaService.obtenerVenta` | `ventaRepository.findDetalleById` | Detalle de una venta con líneas, bodega, vendedor y datos de anulación. 400 si el id no es UUID; 404 si no existe. |
+| `POST` | `/api/ventas/:id/anular` | `authenticate`, `authorize('Administrador')`, `validateAnularVenta` | `ventaController.anular` | `ventaService.anularVenta` | `ventaRepository.findByIdForUpdate`, `ventaRepository.findLineasByVenta`, `inventarioRepository.findByIdForUpdate`, `movimientoRepository.createMovimiento`, `ventaRepository.marcarAnulada` | Anula la venta completa: movimientos `Ingreso` con `venta_id` y estado `Anulada`. Body: `{ motivo }` (obligatorio, máx. 500). 200 con el detalle; 404 no existe; 409 ya anulada. |
 
 ### 4.4 Modelos Sequelize (`src/models/`)
 
@@ -592,10 +614,10 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 ### 4.5 Firmas por Capa, Transacciones y Control de Concurrencia
 
 #### Capa de Rutas y Validadores
-- `routes/index.js` solo cablea: `/health`, `/bodegas`, `/usuarios`, `/categorias` y monta los routers de `/auth`, `/libros`, `/inventario` y `/movimientos`.
-- `middlewares/validator.js` es una **fachada**: reexporta 9 validadores (`validateEscanearLibro`, `validateConsultarLibro`, `validateRegistrarLibro`, `validateIngresoLibro`, `validateActualizarPrecioLibro`, `validateListarInventario`, `validateListarMovimientos`, `validateSalidaInventario`, `validateAjusteInventario`). Las rutas importan la fachada.
-- Implementación en `middlewares/validators/`: `common.js` (`validateIsbn`), `libro.validators.js` (escanear, consultar, registrar, ingreso, actualizar precio, `AUTOR_PLACEHOLDER_VALIDATOR`), `inventario.validators.js` (listar, salida, ajuste) y `movimiento.validators.js` (`validateListarMovimientos`).
-- Utilidades compartidas: `utils/isbn.js` (`normalizarIsbn`, `normalizarIsbnEstricto`, `hasValidIsbnChecksum`), `utils/uuid.js` (`UUID_REGEX`, `esUuid`) y `utils/slug.js` (`slugify`, `shortId`, `buildRef`, `parseRef`).
+- `routes/index.js` solo cablea: `/health`, `/bodegas`, `/usuarios`, `/categorias` y monta los routers de `/auth`, `/libros`, `/inventario`, `/movimientos` y `/ventas`.
+- `middlewares/validator.js` es una **fachada**: reexporta 13 validadores (`validateEscanearLibro`, `validateConsultarLibro`, `validateRegistrarLibro`, `validateIngresoLibro`, `validateActualizarPrecioLibro`, `validateListarInventario`, `validateListarMovimientos`, `validateSalidaInventario`, `validateAjusteInventario`, `validateCrearVenta`, `validateListarVentas`, `validateVentaId`, `validateAnularVenta`). Las rutas importan la fachada.
+- Implementación en `middlewares/validators/`: `common.js` (`validateIsbn`), `libro.validators.js` (escanear, consultar, registrar, ingreso, actualizar precio, `AUTOR_PLACEHOLDER_VALIDATOR`), `inventario.validators.js` (listar, salida, ajuste) `movimiento.validators.js` (`validateListarMovimientos`) y `venta.validators.js` (crear, listar, id y anular venta; nunca lanzan `TypeError` con tipos inesperados).
+- Utilidades compartidas: `utils/isbn.js` (`normalizarIsbn`, `normalizarIsbnEstricto`, `hasValidIsbnChecksum`), `utils/uuid.js` (`UUID_REGEX`, `esUuid`) `utils/slug.js` (`slugify`, `shortId`, `buildRef`, `parseRef`) y `utils/ventas.js` (dinero en centavos enteros: `aCentavos`, `deCentavos`, `subtotalLinea`, `MAX_CENTAVOS`; `codigoVenta`; `rangoFechasNegocio` y `OFFSET_GUATEMALA`).
 
 #### Capa de Controladores (`src/controllers/`)
 Todos son instancias de clase exportadas (`module.exports = new XController()`).
@@ -614,6 +636,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
   - `ingreso`: Extrae `id` de params, `bodegaId` y `cantidad` del body, inyecta `req.user.id`, llama a `libroService.ingresoLibro`.
   - `actualizarPrecio`: Extrae `id` de params y `precio` del body, llama a `libroService.actualizarPrecio` y responde 200 con el libro.
   - `detalle`: Extrae `ref` de params y llama a `catalogoService.detalle`.
+- `venta.controller.js`: `crear` (201), `listar`, `obtener` y `anular` delegan en `ventaService`; `crear` y `anular` toman el actor de `req.user.id` (un `usuarioId` en el body se ignora).
 - `inventario.controller.js`: `listar`, `resumen`, `listarMovimientos`, `salida` y `ajuste`; todos delegan en `inventarioService` (`listarInventario`, `obtenerResumen`, `listarMovimientos`, `registrarSalida`, `registrarAjuste`). `salida` y `ajuste` toman el actor de `req.user.id`.
 
 #### Capa de Servicios (`src/services/`)
@@ -634,14 +657,22 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
   - `registrarSalida({ inventarioId, cantidad, motivo, usuarioId })`: transacción; bloqueo con `findByIdForUpdate`; valida stock suficiente; inserta movimiento `Salida`.
   - `registrarAjuste({ inventarioId, stockNuevo, motivo, usuarioId })`: transacción; bloqueo con `findByIdForUpdate`; valida cambio; inserta movimiento `Ajuste` con cantidad = `stockNuevo`.
 
+- `venta.service.js` es una **fachada** (11 líneas, `Object.assign` sobre el prototipo de `VentaService`) de `services/venta/`:
+  - `venta/crear.service.js`: `crearVenta({ bodegaId, items, metodoPago, clienteNombre, clienteNit, descuento, notas, usuarioId })`. Una transacción; orden: bodega activa → libros y precios (`findByIds`; 404 si falta alguno, 409 si `precio <= 0`) → bloqueos de inventarios → validación de stock con lo leído bajo el bloqueo (409 con el título de cada libro afectado) → importes en centavos → cabecera (el `numero` lo asigna la BD) → líneas → movimientos `Salida` (uno por línea, mismo orden de bloqueo) con `ventaId` y `motivoDetalle` "Venta V-xxxxxx".
+  - `venta/anular.service.js`: `anularVenta({ ventaId, motivo, usuarioId })`. Una transacción: `Venta` con `FOR UPDATE` (404/409), bloqueo de inventarios en el mismo orden por id, un `Ingreso` por línea con `ventaId` y "Anulación de venta V-xxxxxx: <motivo>", y un solo UPDATE de `estado`, `anulada_en`, `anulada_por`, `motivo_anulacion`.
+  - `venta/consulta.service.js`: `obtenerVenta(id, options)` y `listarVentas({ estado, desde, hasta, limit, offset })`; formatea importes con 2 decimales y agrega `lineas`/`unidades` con una consulta agregada por los ids de la página.
+  - `venta/bloqueo.helper.js`: `bloquearInventariosOrdenados(libroIds, bodegaId, txOptions)`: lee los inventarios con `findByLibrosAndBodega`, los ORDENA por `id` y los bloquea uno a uno con `findByIdForUpdate`. Lo comparten crear y anular para evitar deadlocks entre ventas con las mismas líneas en distinto orden.
+
 #### Capa de Repositorios (`src/repositories/`)
-- `inventario.repository.js` es una **fachada** (misma técnica `Object.assign` sobre el prototipo) de `repositories/inventario/`: `inventarioBasico.repository.js` (`findByLibroAndBodega`, `findOrCreate`, `findById`, `findByLibroId`, `setStockMinimo`, `findByIdForUpdate`), `inventarioListado.repository.js` (`findAllWithDetails`), `inventarioResumen.repository.js` (`getResumen`) y el helper `inventarioSubconsultas.helper.js` (`ULTIMA_SALIDA_SQL`).
+- `inventario.repository.js` es una **fachada** (misma técnica `Object.assign` sobre el prototipo) de `repositories/inventario/`: `inventarioBasico.repository.js` (`findByLibroAndBodega`, `findOrCreate`, `findById`, `findByLibrosAndBodega` (varios libros en una bodega, ordenados por `id`, sin bloqueo), `findByLibroId`, `setStockMinimo`, `findByIdForUpdate`), `inventarioListado.repository.js` (`findAllWithDetails`), `inventarioResumen.repository.js` (`getResumen`) y el helper `inventarioSubconsultas.helper.js` (`ULTIMA_SALIDA_SQL`).
 - `usuario.repository.js`: `findByEmail`, `findById`, `findAll`, `create`, `update` y `findActivosConRol`. `findAll` y `findActivosConRol` tienen contratos distintos y NO se unificaron.
-- `bodega.repository.js` (`findActivas`), `categoria.repository.js` (`findAll`, `findById`, `findByNombre`, `create`), `autor.repository.js` y `editorial.repository.js` (`findByNombre`, `findById`, `findAll`, `create`, `upsert`), `libro.repository.js` (`findByIsbn`, `findById`, `updatePrecio`, `upsert`, `create`, `searchAndList`, `findDetalleByRef`) y `movimiento.repository.js` (`getTipoMovimientoByName`, `ensureTipoMovimiento`, `createMovimiento`, `findAllWithFilters`).
+- `venta.repository.js` (solo Sequelize, sin SQL crudo): `createVenta`, `createDetalles`, `findByIdForUpdate` (exige `{ transaction }`), `findLineasByVenta`, `marcarAnulada`, `findDetalleById`, `findPagina` y `contarLineasPorVentas` (COUNT/SUM agrupados).
+- `bodega.repository.js` (`findActivas`, `findActivaById`), `categoria.repository.js` (`findAll`, `findById`, `findByNombre`, `create`), `autor.repository.js` y `editorial.repository.js` (`findByNombre`, `findById`, `findAll`, `create`, `upsert`), `libro.repository.js` (`findByIsbn`, `findById`, `findByIds`, `updatePrecio`, `upsert`, `create`, `searchAndList`, `findDetalleByRef`) y `movimiento.repository.js` (`getTipoMovimientoByName`, `ensureTipoMovimiento`, `createMovimiento` (acepta `ventaId` opcional, guardado como `venta_id`), `findAllWithFilters`).
 
 #### Manejo de Transacciones y Control de Concurrencia
 - **Mecanismo transaccional**: `sequelize.transaction(async (transaction) => { ... })`. Todas las llamadas ORM dentro de la unidad de trabajo reciben `{ transaction }`.
 - **Bloqueo pesimista**: Se aplica en `inventarioRepository.findByIdForUpdate(id, { transaction })` mediante `lock: transaction.LOCK.UPDATE` (`SELECT ... FOR UPDATE`) para evitar *race conditions* en decrementos y ajustes simultáneos.
+- **Ventas**: crear y anular bloquean los `inventarios` de sus líneas en orden ascendente de `id` (`bloquearInventariosOrdenados`); la anulación bloquea además la fila de `ventas` antes de los inventarios. El stock se pre-valida bajo el bloqueo para responder 409 con el título (el trigger solo lanza un error genérico, mapeado a 400).
 - **Savepoints**: En `_upsertMasterRecord` (`services/libro/maestros.service.js`) y `MovimientoRepository.ensureTipoMovimiento` se usa una transacción anidada (savepoint) para aislar violaciones `UNIQUE` (`23505`) sin abortar la transacción principal.
 
 ### 4.6 Autenticación, 2FA y RBAC
@@ -716,7 +747,12 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 | `tests/escanear.integration.test.js` | 8 | Integración | `libreria_oskar_test` | Escaneo con sembrado dinámico y rollback inducido. Importa `config/db`. |
 | `tests/api.e2e.test.js` | 22 | End-to-End | `libreria_oskar_test` | Endpoints HTTP reales vía servidor Express temporal. Importa `config/db`. |
 | `tests/ventasEsquema.test.js` | 7 | Integración | `libreria_oskar_test` | Esquema de ventas: correlativo `numero`, valores por defecto, CHECK, `uq_venta_libro`, FK RESTRICT, Salida con `venta_id` (trigger) y asociaciones. No importa `config/db`. |
-| **Total** | **187** | | | `npm test`: 187 pasan, 0 fallan (ejecutado el 2026-10-22). |
+| `tests/ventasUtils.test.js` | 9 | Unitaria | No requiere | `utils/ventas.js`: centavos, redondeo exacto, rechazos, código `V-xxxxxx`, desbordamiento y rango de fechas de Guatemala. |
+| `tests/ventasServicio.test.js` | 11 | Integración | `libreria_oskar_test` | Crear venta: importes, precio de BD, actor, defaults, rechazos sin persistir (precio 0, stock, 404, descuento, desborde NUMERIC) y rollback con fallo en la segunda línea. No importa `config/db`. |
+| `tests/ventasConcurrencia.test.js` | 6 | Integración | `libreria_oskar_test` | Última unidad vendida a la vez (409), 20 ventas simultáneas [A,B]/[B,A] sin deadlock, anulación (stock, doble anulación, anulaciones simultáneas, rollback). No importa `config/db`. |
+| `tests/ventasApi.test.js` | 7 | End-to-End | `libreria_oskar_test` | `POST /api/ventas` y `POST /api/ventas/:id/anular` por HTTP: 401/403, validaciones 400, errores 404/409 y anulación del Administrador. No importa `config/db`. |
+| `tests/ventasApiConsulta.test.js` | 5 | End-to-End | `libreria_oskar_test` | `GET /api/ventas` y `/:id`: roles, filtros por estado y fechas (venta a las 23:30 de Guatemala), paginación, `lineas`/`unidades`, parámetros inválidos y compatibilidad de `GET /api/movimientos`. No importa `config/db`. |
+| **Total** | **225** | | | `npm test`: 225 pasan, 0 fallan (ejecutado el 2026-10-22). |
 
 - **Runner**: Node.js test runner nativo (`node --test --test-concurrency=1 tests/**/*.test.js`), lanzado por `src/run-tests.js`.
 - **Aislamiento**: `src/run-tests.js` aborta si `NODE_ENV === 'production'` y comprueba con Sequelize (`SELECT current_database()`) que la conexión apunta a `libreria_oskar_test`. Requiere `db-test` levantado (puerto host 5435).
@@ -935,6 +971,31 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
    - Top 10 alertas críticas de desabastecimiento ordenadas por déficit.
 3. **Vista**: `ResumenKpis` renderiza las tarjetas de KPIs.
 
+### 6.10 Flujo 10: Registro de Venta
+1. **Vista**: no existe (el frontend de ventas no está implementado). Solo API y pruebas.
+2. **Cliente**: `POST /api/ventas` con `{ bodegaId, items: [{ libroId, cantidad }], metodoPago, clienteNombre?, clienteNit?, descuento?, notas? }`.
+3. **Middlewares**: `authenticate`, `authorize('Administrador', 'Empleado')`, `validateCrearVenta`.
+4. **Controlador**: `ventaController.crear` delega a `ventaService.crearVenta` con `usuarioId = req.user.id` (se ignoran `usuarioId`, `precio`, `subtotal` y `total` del body).
+5. **Servicio** (`services/venta/crear.service.js`), en una sola `sequelize.transaction(...)`:
+   - Verifica la bodega activa (404) y lee los libros con `libroRepository.findByIds` (404 si falta alguno; 409 si algún `precio <= 0`).
+   - Bloquea los inventarios de las líneas en orden de `id` (`bloquearInventariosOrdenados`) y valida el stock leído bajo el bloqueo; un libro sin inventario cuenta como stock 0. Si falta stock, `ConflictError` (409) con el título de cada libro afectado.
+   - Calcula subtotal, descuento y total en centavos enteros (400 si el descuento supera el subtotal o si se excede `99999999.99`).
+   - Inserta la venta (el `numero` lo asigna `ventas_numero_seq`), sus líneas con el precio como snapshot y un movimiento `Salida` por línea con `venta_id` y motivo "Venta V-xxxxxx".
+6. **Base de Datos (Trigger)**: cada movimiento resta de `stock_actual`. Si algo falla, no queda nada (puede quedar un hueco en el correlativo).
+7. **Confirmación**: 201 con el detalle de la venta.
+
+### 6.11 Flujo 11: Anulación de Venta
+1. **Vista**: no existe. Solo API y pruebas.
+2. **Cliente**: `POST /api/ventas/:id/anular` con `{ motivo }`.
+3. **Middlewares**: `authenticate`, `authorize('Administrador')`, `validateAnularVenta`.
+4. **Controlador**: `ventaController.anular` delega a `ventaService.anularVenta` con `usuarioId = req.user.id`.
+5. **Servicio** (`services/venta/anular.service.js`), en una sola transacción:
+   - Bloquea la venta con `FOR UPDATE` (404 si no existe; 409 si ya está `Anulada`, también ante dos anulaciones simultáneas).
+   - Bloquea los inventarios de sus líneas en orden de `id` y registra un movimiento `Ingreso` por línea con `venta_id` y motivo "Anulación de venta V-xxxxxx: <motivo>".
+   - Actualiza `estado`, `anulada_en`, `anulada_por` y `motivo_anulacion` en un solo UPDATE (cumple `ck_ventas_anulacion`).
+6. **Base de Datos (Trigger)**: cada `Ingreso` suma a `stock_actual`.
+7. **Confirmación**: 200 con el detalle actualizado. No hay anulación parcial, edición ni devoluciones.
+
 ---
 
 ## 7. Infraestructura y DevOps
@@ -1000,6 +1061,9 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 | Registrar Salida Stock | `POST /api/inventario/:id/salida`| Denegado (401) | Permitido | Permitido | Denegado (403) |
 | Registrar Ajuste Stock | `POST /api/inventario/:id/ajuste`| Denegado (401) | Permitido | Permitido | Denegado (403) |
 | Consultar Kardex | `GET /api/movimientos` | Denegado (401) | Permitido | Permitido | Denegado (403) |
+| Registrar Venta | `POST /api/ventas` | Denegado (401) | Permitido | Permitido | Denegado (403) |
+| Listar y Consultar Ventas | `GET /api/ventas`, `GET /api/ventas/:id` | Denegado (401) | Permitido (todas las ventas) | Permitido | Denegado (403) |
+| Anular Venta | `POST /api/ventas/:id/anular` | Denegado (401) | Denegado (403) | Permitido | Denegado (403) |
 
 ### 8.2 Diferencias con lo Declarado en AGENTS.md
 1. **Rol Usuario**: `AGENTS.md` lo describe como existente en BD y sin acceso a nada protegido. Así es en el backend (403 en endpoints protegidos). En el frontend, el `Navbar` muestra Registrar e Inventario a cualquier sesión (incluido `Usuario`) y `ProtectedRoute` responde con el 403 visual; es una decisión de producto vigente. No existe endpoint de autorregistro.
@@ -1057,8 +1121,8 @@ Cada ítem cita su archivo como evidencia. Resueltos y retirados de esta secció
    - Roadmap; spec en `app/docs/roadmap/catalog-employee-crud/`. Alcance de la implementación en curso: usuarios y categorías; la edición/baja de libros y las ventas se desarrollan aparte (ver la sección "Alcance de esta implementación" de esa spec).
    - **Estado real**: En empleados solo existe `GET /api/usuarios`. No hay `POST`/`PUT`/`DELETE` de usuarios ni `PUT /api/libros/:id` (edición completa) ni baja de libros. Fijar solo el precio sí existe: `PATCH /api/libros/:id/precio`.
 4. **Ventas**:
-   - Roadmap; diseño en `app/docs/roadmap/ventas/SPEC.md`.
-   - **Estado real**: El esquema y los modelos existen (migración `004_ventas.sql`, tablas `ventas` y `venta_detalles`, `movimientos_inventario.venta_id`, modelos `Venta` y `VentaDetalle`). NO hay endpoints, servicios ni vistas de ventas.
+   - Diseño en `app/docs/roadmap/ventas/SPEC.md`.
+   - **Estado real**: El esquema, los modelos y la API existen: `POST /api/ventas`, `GET /api/ventas`, `GET /api/ventas/:id` y `POST /api/ventas/:id/anular` (ver §4.3, §6.10 y §6.11). NO hay vistas de ventas ni reportes. Pendientes de decisión: venta de libros inactivos (hoy no se bloquea) y visibilidad de ventas por rol (hoy ambos roles ven todas).
 5. **Validación de Sesión en el Lector Móvil**:
    - `BarcodeScanner.jsx` no valida permisos de rol; depende de la vista contenedora y del guardián de ruta.
 
@@ -1115,7 +1179,7 @@ La prioridad de fuentes de información para agentes y desarrolladores se rige p
 > **Regla de oro**: Ante cualquier discrepancia entre documentación, agentes o especificaciones, **el código fuente y la base de datos mandan**.
 
 ### 12.2 Estado de Archivos y Configuración de Agentes
-- **`app/AGENTS.md`**: guía concisa que se carga en cada sesión. Describe la estructura real, los roles, las reglas de persistencia e inventario y lista 2FA, correos, CRUD admin y ventas como "Roadmap (NO implementado)" (de ventas existe solo el esquema) (`app/docs/roadmap/`).
+- **`app/AGENTS.md`**: guía concisa que se carga en cada sesión. Describe la estructura real, los roles, las reglas de persistencia e inventario y lista 2FA, correos, CRUD admin y ventas como "Roadmap (NO implementado)" (de ventas existen el esquema y la API, sin UI) (`app/docs/roadmap/`).
 - **7 skills activas (`app/.agents/skills/`)**: `backend-engineer-nodejs`, `backend-testing`, `database-architect`, `devops-gcp-automation`, `frontend-engineer-react`, `inventory-transactions`, `sequelize-orm`. Las skills de funciones no implementadas viven como especificaciones en `app/docs/roadmap/`.
 - **Carga en Claude Code**: Claude Code lee `AGENTS.md` mediante un `CLAUDE.md` local que contiene `@AGENTS.md`, y las skills mediante un symlink `.claude/skills`. Esa configuración es local y no está versionada (`CLAUDE.md` y `.claude/` aparecen como no rastreados en `git status`).
 
@@ -1133,5 +1197,5 @@ La prioridad de fuentes de información para agentes y desarrolladores se rige p
 | `app/docs/roadmap/auth-2fa/SKILL.md` | Spec de 2FA TOTP. | No implementado. |
 | `app/docs/roadmap/catalog-employee-crud/SKILL.md` | Spec de CRUD de catálogo y empleados. | No implementado. |
 | `app/docs/roadmap/inventory-email-alerts/SKILL.md` | Spec de alertas de inventario por correo. | No implementado. |
-| `app/docs/roadmap/ventas/SPEC.md` | Documento de diseño del módulo de ventas. | Esquema y modelos creados (migración 004); sin API ni UI. |
+| `app/docs/roadmap/ventas/SPEC.md` | Documento de diseño del módulo de ventas. | Esquema y API creados; sin UI. Incluye la sección "API implementada (backend)". |
 | `app/.agents/skills/*/SKILL.md` (7) | Directrices por dominio de ingeniería. | Revisadas el 2026-10-22; correcciones puntuales donde contradecían la estructura real. |

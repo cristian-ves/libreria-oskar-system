@@ -17,7 +17,7 @@ async function main() {
     const connInfo = await testSequelizeConnection();
     console.log(`[CONEXIÓN OK]: PostgreSQL | BD: "${connInfo.db_name}" | Hora Servidor: ${connInfo.current_time}`);
 
-    // 2. Verificar carga de los 11 modelos
+    // 2. Verificar carga de los 13 modelos
     const modelNames = [
       'Sucursal',
       'Bodega',

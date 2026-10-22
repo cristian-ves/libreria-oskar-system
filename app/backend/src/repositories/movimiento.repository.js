@@ -90,7 +90,8 @@ class MovimientoRepository {
    *   usuarioId: string,
    *   tipoMovimientoId: string,
    *   cantidad: number,
-   *   motivoDetalle?: string
+   *   motivoDetalle?: string,
+   *   ventaId?: string | null
    * }} data
    * @returns {Promise<{
    *   id: string,
@@ -102,7 +103,7 @@ class MovimientoRepository {
    *   fecha_movimiento: Date
    * }>}
    */
-  async createMovimiento(options, { inventarioId, usuarioId, tipoMovimientoId, cantidad, motivoDetalle = null }) {
+  async createMovimiento(options, { inventarioId, usuarioId, tipoMovimientoId, cantidad, motivoDetalle = null, ventaId = null }) {
     const txOption = options.transaction ? { transaction: options.transaction } : {};
 
     const mov = await MovimientoInventario.create(
@@ -112,6 +113,7 @@ class MovimientoRepository {
         tipo_movimiento_id: tipoMovimientoId,
         cantidad: Number(cantidad),
         motivo_detalle: motivoDetalle || null,
+        venta_id: ventaId || null,
       },
       txOption
     );

@@ -52,6 +52,22 @@ class LibroRepository {
     return libroPlano(libro);
   }
 
+  /**
+   * Libros por lista de ids, en formato plano (sin relaciones). Los ids inexistentes no aparecen.
+   * @param {string[]} ids
+   * @param {{ transaction?: import('sequelize').Transaction }} [options]
+   * @returns {Promise<Array<{ id: string, titulo: string, isbn: string, precio: string, activo: boolean }>>}
+   */
+  async findByIds(ids, options = {}) {
+    if (!Array.isArray(ids) || ids.length === 0) return [];
+    return Libro.findAll({
+      where: { id: { [Op.in]: ids } },
+      attributes: ['id', 'titulo', 'isbn', 'precio', 'activo'],
+      raw: true,
+      ...transactionOption(options),
+    });
+  }
+
   async updatePrecio(id, precio, options = {}) {
     const [filas] = await Libro.update({ precio }, { where: { id }, ...transactionOption(options) });
     if (!filas) return null;
