@@ -9,7 +9,7 @@ description: Implementar CRUD de catálogo y empleados con Express, Sequelize, R
 
 ## Alcance de esta implementación
 - **EN ALCANCE**: CRUD administrativo de **usuarios** y de **categorías**.
-- **FUERA**: edición y baja de libros (`PUT /api/libros/:id`, fijar precio). Se hace aparte, como prerrequisito de ventas (`docs/roadmap/ventas/SPEC.md`).
+- **FUERA**: edición completa y baja de libros (`PUT /api/libros/:id`), que sigue pendiente y se hace aparte. Fijar el precio ya quedó implementado con `PATCH /api/libros/:id/precio` (solo Administrador), prerrequisito de ventas (`docs/roadmap/ventas/SPEC.md`).
 - Los cambios de esquema que hagan falta usan la migración 005 en adelante (la 004 está reservada para ventas) y requieren autorización explícita.
 
 ## Puntos de partida verificados

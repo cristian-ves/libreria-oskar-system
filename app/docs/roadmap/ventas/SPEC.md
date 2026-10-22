@@ -15,5 +15,5 @@
 9. **Concurrencia**: bloquear los `inventarios` en orden fijo (por id) para evitar deadlocks, y pre-validar el stock con `FOR UPDATE` para responder 409 con el título del libro (el trigger solo da un 400 genérico).
 10. **Facturación electrónica**: fuera de alcance, pero con la puerta abierta (NIT/cliente).
 11. **Reportes de ventas**: subtarea posterior. El modelo debe dejarlos viables (índices por fecha y estado).
-12. **Prerrequisito**: poder fijar el precio de un libro ya registrado. Hoy lo que registra un Empleado queda en precio 0 y no se podría vender; ver roadmap `catalog-employee-crud`.
+12. **Prerrequisito (cumplido)**: poder fijar el precio de un libro ya registrado. Lo que registra un Empleado queda en precio 0; el Administrador lo fija con `PATCH /api/libros/:id/precio` (botón en la ficha del libro). Una venta debe rechazar libros con precio 0.
 13. **Orden previsto**: migración 004 + `schema.sql` + modelos Sequelize; backend transaccional (riesgo alto); frontend de ventas; reportes.

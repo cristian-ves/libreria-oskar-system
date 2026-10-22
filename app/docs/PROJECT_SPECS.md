@@ -143,7 +143,7 @@ app/
 │   │   │   ├── categoria.controller.js (22)
 │   │   │   ├── health.controller.js (36)
 │   │   │   ├── inventario.controller.js (111)
-│   │   │   ├── libro.controller.js (162)
+│   │   │   ├── libro.controller.js (182)
 │   │   │   └── usuario.controller.js (19)
 │   │   ├── database/
 │   │   │   ├── migrate.js (74)
@@ -151,11 +151,11 @@ app/
 │   │   ├── middlewares/
 │   │   │   ├── auth.js (75)
 │   │   │   ├── errorHandler.js (73)
-│   │   │   ├── validator.js (23)
+│   │   │   ├── validator.js (25)
 │   │   │   └── validators/
 │   │   │       ├── common.js (29)
 │   │   │       ├── inventario.validators.js (90)
-│   │   │       ├── libro.validators.js (165)
+│   │   │       ├── libro.validators.js (201)
 │   │   │       └── movimiento.validators.js (48)
 │   │   ├── models/
 │   │   │   ├── autor.model.js (49)
@@ -176,7 +176,7 @@ app/
 │   │   │   ├── categoria.repository.js (77)
 │   │   │   ├── editorial.repository.js (122)
 │   │   │   ├── inventario.repository.js (11)
-│   │   │   ├── libro.repository.js (254)
+│   │   │   ├── libro.repository.js (260)
 │   │   │   ├── movimiento.repository.js (232)
 │   │   │   ├── usuario.repository.js (211)
 │   │   │   └── inventario/
@@ -188,7 +188,7 @@ app/
 │   │   │   ├── auth.routes.js (13)
 │   │   │   ├── index.js (30)
 │   │   │   ├── inventario.routes.js (63)
-│   │   │   ├── libro.routes.js (83)
+│   │   │   ├── libro.routes.js (97)
 │   │   │   └── movimiento.routes.js (21)
 │   │   ├── services/
 │   │   │   ├── auth.service.js (54)
@@ -197,11 +197,12 @@ app/
 │   │   │   ├── categoria.service.js (14)
 │   │   │   ├── googleBooks.service.js (288)
 │   │   │   ├── inventario.service.js (187)
-│   │   │   ├── libro.service.js (13)
+│   │   │   ├── libro.service.js (14)
 │   │   │   ├── usuario.service.js (14)
 │   │   │   └── libro/
 │   │   │       ├── escaneo.service.js (211)
 │   │   │       ├── ingreso.service.js (74)
+│   │   │       ├── precio.service.js (17)
 │   │   │       ├── maestros.service.js (47)
 │   │   │       ├── movimientoIngreso.service.js (36)
 │   │   │       └── registro.service.js (159)
@@ -218,6 +219,7 @@ app/
 │       ├── inventarioRepository.test.js (468)
 │       ├── inventarioService.test.js (204)
 │       ├── isbnValidation.test.js (90)
+│       ├── libroPrecio.test.js (149)
 │       ├── libroRepository.test.js (237)
 │       ├── libroServiceSequelize.test.js (387)
 │       ├── movimientoRepository.test.js (245)
@@ -281,9 +283,10 @@ app/
         │   │   │   ├── DisponibilidadItem.jsx (44)
         │   │   │   ├── DrawerFiltros.jsx (179)
         │   │   │   ├── EtiquetasFiltros.jsx (41)
-        │   │   │   ├── FichaLibro.jsx (130)
+        │   │   │   ├── FichaLibro.jsx (139)
         │   │   │   ├── LibroError.jsx (31)
         │   │   │   ├── LibroNoEncontrado.jsx (23)
+        │   │   │   ├── ModalPrecioLibro.jsx (100)
         │   │   │   ├── PanelFiltros.jsx (106)
         │   │   │   └── SinResultados.jsx (50)
         │   │   └── hooks/
@@ -324,7 +327,7 @@ app/
         │       ├── categorias.api.js (5)
         │       ├── client.js (34)
         │       ├── inventario.api.js (27)
-        │       └── libros.api.js (22)
+        │       └── libros.api.js (29)
         ├── utils/
         │   ├── formatters.js (16)
         │   ├── parsers.js (10)
@@ -333,7 +336,7 @@ app/
         └── views/
             ├── Catalogo.jsx (171)
             ├── Inventario.jsx (187)
-            ├── LibroDetalle.jsx (38)
+            ├── LibroDetalle.jsx (66)
             ├── Login.jsx (119)
             ├── Nosotros.jsx (88)
             └── RegistrarLibro.jsx (187)
@@ -353,7 +356,7 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `app/backend/src/services/googleBooks.service.js` | 288 | Cliente de Google Books con fallback a OpenLibrary, catálogo de contingencia y caché TTL. |
 | `app/frontend/src/features/inventario/components/TablaExistencias.jsx` | 261 | Tabla de existencias con `EstadoBadge` por fila. |
 | `app/frontend/src/features/registrar-libro/hooks/useRegistrarLibro.js` | 255 | Estado y acciones del asistente de registro (`paso`, consulta, ingreso, registro). |
-| `app/backend/src/repositories/libro.repository.js` | 254 | Búsqueda por ISBN/UUID, `upsert`/`create` con captura de `23505`, catálogo y detalle por `ref`. |
+| `app/backend/src/repositories/libro.repository.js` | 260 | Búsqueda por ISBN/UUID, `upsert`/`create` con captura de `23505`, catálogo y detalle por `ref`. |
 
 ---
 
@@ -531,6 +534,7 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `POST` | `/api/libros/consultar`| `authenticate`, `authorize('Administrador', 'Empleado')`, `validateConsultarLibro` | `libroController.consultar` | `libroService.consultarLibro` | `libroRepository.findByIsbn`, `inventarioRepository.findByLibroId` | Verifica existencia local o sugiere metadatos de Google Books sin persistir. |
 | `POST` | `/api/libros/registrar`| `authenticate`, `authorize('Administrador', 'Empleado')`, `validateRegistrarLibro` | `libroController.registrar` | `libroService.registrarLibro` | `libroRepository.create`, `inventarioRepository.findOrCreate`, `movimientoRepository.createMovimiento` | Registro manual de libro con regla de precio por rol e ingreso inicial. |
 | `POST` | `/api/libros/:id/ingreso` | `authenticate`, `authorize('Administrador', 'Empleado')`, `validateIngresoLibro` | `libroController.ingreso` | `libroService.ingresoLibro` | `libroRepository.findById`, `inventarioRepository.findOrCreate`, `movimientoRepository.createMovimiento` | Ingreso de unidades de stock a un libro existente en bodega. |
+| `PATCH` | `/api/libros/:id/precio` | `authenticate`, `authorize('Administrador')`, `validateActualizarPrecioLibro` | `libroController.actualizarPrecio` | `libroService.actualizarPrecio` | `libroRepository.updatePrecio` | Fija o corrige el precio de un libro existente. Body: `{ precio }` (0 a 99999999.99, máximo 2 decimales). 400 si es inválido, 404 si el libro no existe, 200 con el libro plano. No toca stock ni movimientos. |
 | `GET` | `/api/inventario/resumen` | `authenticate`, `authorize('Administrador', 'Empleado')` | `inventarioController.resumen` | `inventarioService.obtenerResumen` | `inventarioRepository.getResumen` | Métricas generales de stock, bajo stock, obsoletos y sin precio. |
 | `GET` | `/api/inventario` | `authenticate`, `authorize('Administrador', 'Empleado')`, `validateListarInventario` | `inventarioController.listar` | `inventarioService.listarInventario` | `inventarioRepository.findAllWithDetails` | Listado de inventario con filtros por estado, término y bodega. |
 | `POST` | `/api/inventario/:id/salida` | `authenticate`, `authorize('Administrador', 'Empleado')`, `validateSalidaInventario` | `inventarioController.salida` | `inventarioService.registrarSalida` | `inventarioRepository.findByIdForUpdate`, `movimientoRepository.createMovimiento` | Registro de salida de stock con bloqueo pesimista. |
@@ -557,8 +561,8 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 
 #### Capa de Rutas y Validadores
 - `routes/index.js` solo cablea: `/health`, `/bodegas`, `/usuarios`, `/categorias` y monta los routers de `/auth`, `/libros`, `/inventario` y `/movimientos`.
-- `middlewares/validator.js` es una **fachada**: reexporta los mismos 8 validadores (`validateEscanearLibro`, `validateConsultarLibro`, `validateRegistrarLibro`, `validateIngresoLibro`, `validateListarInventario`, `validateListarMovimientos`, `validateSalidaInventario`, `validateAjusteInventario`). Las rutas importan la fachada.
-- Implementación en `middlewares/validators/`: `common.js` (`validateIsbn`), `libro.validators.js` (escanear, consultar, registrar, ingreso, `AUTOR_PLACEHOLDER_VALIDATOR`), `inventario.validators.js` (listar, salida, ajuste) y `movimiento.validators.js` (`validateListarMovimientos`).
+- `middlewares/validator.js` es una **fachada**: reexporta 9 validadores (`validateEscanearLibro`, `validateConsultarLibro`, `validateRegistrarLibro`, `validateIngresoLibro`, `validateActualizarPrecioLibro`, `validateListarInventario`, `validateListarMovimientos`, `validateSalidaInventario`, `validateAjusteInventario`). Las rutas importan la fachada.
+- Implementación en `middlewares/validators/`: `common.js` (`validateIsbn`), `libro.validators.js` (escanear, consultar, registrar, ingreso, actualizar precio, `AUTOR_PLACEHOLDER_VALIDATOR`), `inventario.validators.js` (listar, salida, ajuste) y `movimiento.validators.js` (`validateListarMovimientos`).
 - Utilidades compartidas: `utils/isbn.js` (`normalizarIsbn`, `normalizarIsbnEstricto`, `hasValidIsbnChecksum`), `utils/uuid.js` (`UUID_REGEX`, `esUuid`) y `utils/slug.js` (`slugify`, `shortId`, `buildRef`, `parseRef`).
 
 #### Capa de Controladores (`src/controllers/`)
@@ -576,6 +580,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
   - `consultar`: Extrae `isbn`, llama a `libroService.consultarLibro`.
   - `registrar`: Extrae el payload del libro, inyecta `req.user.id` y `req.user.rol`, llama a `libroService.registrarLibro`.
   - `ingreso`: Extrae `id` de params, `bodegaId` y `cantidad` del body, inyecta `req.user.id`, llama a `libroService.ingresoLibro`.
+  - `actualizarPrecio`: Extrae `id` de params y `precio` del body, llama a `libroService.actualizarPrecio` y responde 200 con el libro.
   - `detalle`: Extrae `ref` de params y llama a `catalogoService.detalle`.
 - `inventario.controller.js`: `listar`, `resumen`, `listarMovimientos`, `salida` y `ajuste`; todos delegan en `inventarioService` (`listarInventario`, `obtenerResumen`, `listarMovimientos`, `registrarSalida`, `registrarAjuste`). `salida` y `ajuste` toman el actor de `req.user.id`.
 
@@ -590,6 +595,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
   - `libro/escaneo.service.js`: `escanearLibro({ isbn, bodegaId, usuarioId })` (valida bodega y usuario antes de la transacción; consulta la API externa fuera de la transacción) y `consultarLibro({ isbn })` (sin escribir en BD).
   - `libro/registro.service.js`: `registrarLibro({ ..., usuarioId, usuarioRol })`: regla de precio (si `usuarioRol !== 'Administrador'`, `precio = 0` y `precio_pendiente = true`), upsert de autor/editorial, creación del libro, inventario y movimiento `Ingreso`.
   - `libro/ingreso.service.js`: `ingresoLibro({ libroId, bodegaId, cantidad, usuarioId })`.
+  - `libro/precio.service.js`: `actualizarPrecio({ libroId, precio })`: delega en `libroRepository.updatePrecio`; `NotFoundError` si el libro no existe.
 - `inventario.service.js`:
   - `listarInventario({ estado, q, bodegaId })` y `obtenerResumen()`: aplican `diasStockObsoleto` de `env.js` y consultan el repositorio.
   - `listarMovimientos({ libroId, bodegaId, tipo, limit, offset })`: valida límites y consulta el kardex.
@@ -599,7 +605,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 #### Capa de Repositorios (`src/repositories/`)
 - `inventario.repository.js` es una **fachada** (misma técnica `Object.assign` sobre el prototipo) de `repositories/inventario/`: `inventarioBasico.repository.js` (`findByLibroAndBodega`, `findOrCreate`, `findById`, `findByLibroId`, `setStockMinimo`, `findByIdForUpdate`), `inventarioListado.repository.js` (`findAllWithDetails`), `inventarioResumen.repository.js` (`getResumen`) y el helper `inventarioSubconsultas.helper.js` (`ULTIMA_SALIDA_SQL`).
 - `usuario.repository.js`: `findByEmail`, `findById`, `findAll`, `create`, `update` y `findActivosConRol`. `findAll` y `findActivosConRol` tienen contratos distintos y NO se unificaron.
-- `bodega.repository.js` (`findActivas`), `categoria.repository.js` (`findAll`, `findById`, `findByNombre`, `create`), `autor.repository.js` y `editorial.repository.js` (`findByNombre`, `findById`, `findAll`, `create`, `upsert`), `libro.repository.js` (`findByIsbn`, `findById`, `upsert`, `create`, `searchAndList`, `findDetalleByRef`) y `movimiento.repository.js` (`getTipoMovimientoByName`, `ensureTipoMovimiento`, `createMovimiento`, `findAllWithFilters`).
+- `bodega.repository.js` (`findActivas`), `categoria.repository.js` (`findAll`, `findById`, `findByNombre`, `create`), `autor.repository.js` y `editorial.repository.js` (`findByNombre`, `findById`, `findAll`, `create`, `upsert`), `libro.repository.js` (`findByIsbn`, `findById`, `updatePrecio`, `upsert`, `create`, `searchAndList`, `findDetalleByRef`) y `movimiento.repository.js` (`getTipoMovimientoByName`, `ensureTipoMovimiento`, `createMovimiento`, `findAllWithFilters`).
 
 #### Manejo de Transacciones y Control de Concurrencia
 - **Mecanismo transaccional**: `sequelize.transaction(async (transaction) => { ... })`. Todas las llamadas ORM dentro de la unidad de trabajo reciben `{ transaction }`.
@@ -669,6 +675,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 | `tests/sequelize.test.js` | 5 | Integración | `libreria_oskar_test` | Conectividad ORM y definición de los 11 modelos. |
 | `tests/repositories.test.js` | 5 | Integración | `libreria_oskar_test` | `CategoriaRepository`, `AutorRepository`, `EditorialRepository`. |
 | `tests/usuarioRepository.test.js` | 5 | Integración | `libreria_oskar_test` | Búsqueda por email/UUID, exclusión de credenciales, transacciones. |
+| `tests/libroPrecio.test.js` | 7 | End-to-End | `libreria_oskar_test` | `PATCH /api/libros/:id/precio`: 401, 403, 400 (id y precios inválidos), 404, 200 con precio persistido, detalle público, KPI `libros_sin_precio` y stock/movimientos intactos. No importa `config/db`. |
 | `tests/libroRepository.test.js` | 7 | Integración | `libreria_oskar_test` | Búsqueda por ISBN/UUID, inserción, concurrencia y agregaciones de stock. Importa `config/db`. |
 | `tests/movimientoRepository.test.js` | 7 | Integración | `libreria_oskar_test` | Tipos de movimiento, trigger y rollback. Importa `config/db`. |
 | `tests/inventarioRepository.test.js` | 14 | Integración | `libreria_oskar_test` | Bloqueo `FOR UPDATE`, stock obsoleto, alertas y KPIs. Importa `config/db`. |
@@ -676,7 +683,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 | `tests/libroServiceSequelize.test.js` | 12 | Integración | `libreria_oskar_test` | Escaneo, registro por rol, ingresos repetidos y atomicidad (mock de `googleBooksService`). Importa `config/db`. |
 | `tests/escanear.integration.test.js` | 8 | Integración | `libreria_oskar_test` | Escaneo con sembrado dinámico y rollback inducido. Importa `config/db`. |
 | `tests/api.e2e.test.js` | 22 | End-to-End | `libreria_oskar_test` | Endpoints HTTP reales vía servidor Express temporal. Importa `config/db`. |
-| **Total** | **173** | | | `npm test`: 173 pasan, 0 fallan (ejecutado el 2026-10-22). |
+| **Total** | **180** | | | `npm test`: 180 pasan, 0 fallan (ejecutado el 2026-10-22). |
 
 - **Runner**: Node.js test runner nativo (`node --test --test-concurrency=1 tests/**/*.test.js`), lanzado por `src/run-tests.js`.
 - **Aislamiento**: `src/run-tests.js` aborta si `NODE_ENV === 'production'` y comprueba con Sequelize (`SELECT current_database()`) que la conexión apunta a `libreria_oskar_test`. Requiere `db-test` levantado (puerto host 5435).
@@ -728,9 +735,9 @@ Reglas de la estructura: las llamadas HTTP salen solo de `services/api/`; las vi
 - **Componentes**: `PanelFiltros`, `DrawerFiltros`, `EtiquetasFiltros`, `BookGrid`, `SinResultados` (en `features/catalogo/components/`; `BtnCategoria` lo usan los paneles), `Footer`.
 - **Precio**: `BookGrid` usa `formatPrecio`: `Q 12.50` o "Precio por confirmar".
 
-#### 2. `LibroDetalle.jsx` (38 líneas)
-- **Responsabilidades**: Lee `:ref` y delega en `useLibroDetalle(ref, navigate)`; según el estado muestra `DetalleSkeleton`, `LibroNoEncontrado`, `LibroError` o `FichaLibro` (que incluye disponibilidad por bodega/sucursal con `DisponibilidadItem`).
-- **Endpoints consumidos**: `GET /api/libros/:ref` (`getLibroDetalle` en `catalogo.api.js`).
+#### 2. `LibroDetalle.jsx` (66 líneas)
+- **Responsabilidades**: Lee `:ref` y delega en `useLibroDetalle(ref, navigate)`; según el estado muestra `DetalleSkeleton`, `LibroNoEncontrado`, `LibroError` o `FichaLibro` (que incluye disponibilidad por bodega/sucursal con `DisponibilidadItem`). Usa `useAuth` y `esAdministrador(user)`: solo para el Administrador `FichaLibro` muestra el botón "Fijar precio" ("Cambiar precio" si el precio actual es > 0), que abre `ModalPrecioLibro`; al guardar cierra el modal y recarga el libro con `reintentar` de `useLibroDetalle`.
+- **Endpoints consumidos**: `GET /api/libros/:ref` (`getLibroDetalle` en `catalogo.api.js`) y `PATCH /api/libros/:id/precio` (`actualizarPrecioLibro` en `libros.api.js`, vía `ModalPrecioLibro`).
 - **Precio**: `FichaLibro` usa `formatPrecio` (`Q 12.50` o "Precio por confirmar").
 
 #### 3. `RegistrarLibro.jsx` (187 líneas)
@@ -776,6 +783,7 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 
 #### Otros módulos
 - `utils/formatters.js` (`formatFecha`, `formatPrecio`), `utils/parsers.js` (`orNull`, `toNum`), `hooks/useDebouncedValue.js`.
+- `features/catalogo/components/ModalPrecioLibro.jsx`: modal (sobre `components/ui/Modal`) que muestra el título y el precio actual, pide el nuevo precio y llama a `actualizarPrecioLibro(libroId, precio)` (`libros.api.js`, `PATCH`); muestra `message` y `details` del backend con `ErrorBox`.
 - Hooks de feature: `useCatalogo`, `useLibroDetalle`, `useInventarioData`, `useKardex`, `useRegistrarLibro`.
 
 #### `context/AuthContext.jsx` (`AuthProvider` y `useAuth`)
@@ -953,6 +961,7 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 | Consultar ISBN Previo | `POST /api/libros/consultar` | Denegado (401) | Permitido | Permitido | Denegado (403) |
 | Ingreso Stock Existente | `POST /api/libros/:id/ingreso`| Denegado (401) | Permitido | Permitido | Denegado (403) |
 | Registro Manual de Libro | `POST /api/libros/registrar` | Denegado (401) | Permitido (Precio = 0) | Permitido (Define Precio) | Denegado (403) |
+| Fijar Precio de Libro | `PATCH /api/libros/:id/precio` | Denegado (401) | Denegado (403) | Permitido | Denegado (403) |
 | Ver Dashboard / Resumen | `GET /api/inventario/resumen` | Denegado (401) | Permitido | Permitido | Denegado (403) |
 | Listar Existencias | `GET /api/inventario` | Denegado (401) | Permitido | Permitido | Denegado (403) |
 | Registrar Salida Stock | `POST /api/inventario/:id/salida`| Denegado (401) | Permitido | Permitido | Denegado (403) |
@@ -964,7 +973,7 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 2. **Escaneo por ISBN (`POST /api/libros/escanear`)**: La ruta exige `authenticate` + `authorize('Administrador', 'Empleado')`; el rol `Usuario` recibe 403 y sin token se responde 401. El frontend no lo consume.
 3. **Gestión de Empleados**: AGENTS.md la lista en "Roadmap (NO implementado)" y sus specs están en `app/docs/roadmap/`. En el código solo existe `GET /api/usuarios` (lectura).
 4. **"El Empleado ve precios"**: AGENTS.md dice que el Empleado ve precios pero no los fija. En el código, el Empleado ve el precio en el Catálogo y el Detalle públicos, pero NO en la ficha del libro existente de `RegistrarLibro` (`FichaLibroExistente.jsx` la condiciona a `esAdmin`). Inventario no muestra precios.
-5. **Fijar el precio de un libro ya registrado**: no existe UI ni endpoint para ello (el Administrador solo lo define al registrar); `PUT /api/libros/:id` está en el roadmap `catalog-employee-crud`.
+5. **Fijar el precio de un libro ya registrado** (resuelto): `PATCH /api/libros/:id/precio` (solo Administrador) y botón "Fijar precio" / "Cambiar precio" en `LibroDetalle`. La edición completa con `PUT /api/libros/:id` sigue en el roadmap `catalog-employee-crud`.
 
 ### 8.3 Ocultamiento de Precios al Empleado (Comportamiento Exacto)
 - **En Backend (`POST /api/libros/registrar`)**: `libroService.registrarLibro` (`services/libro/registro.service.js`) evalúa `esAdmin = (usuarioRol === 'Administrador')`. Si el usuario no es Administrador, ignora cualquier `precio` enviado, fuerza `precio = 0` y devuelve `"precio_pendiente": true`.
@@ -999,7 +1008,6 @@ Cada ítem cita su archivo como evidencia. Resueltos y retirados de esta secció
 | **Monorepo sin `workspaces`** | `package.json` | Usa scripts con `--prefix`; no declara `"workspaces"`. |
 | **Sin Dockerfile de frontend** | `frontend/` | Solo existe `backend/Dockerfile`; el frontend corre en el host con `npm run frontend:dev`. |
 | **Escáner de cámara (reportado, no diagnosticado)** | `frontend/src/components/BarcodeScanner.jsx` | El usuario reporta que no captura códigos. Sin diagnóstico: no verificado. |
-| **Sin forma de fijar el precio de un libro ya registrado** | `backend/src/routes/libro.routes.js` (no hay `PUT /api/libros/:id`) | Lo que registra un Empleado queda con `precio = 0`; ni UI ni endpoint permiten corregirlo. Roadmap `catalog-employee-crud`. |
 
 ---
 
@@ -1014,7 +1022,7 @@ Cada ítem cita su archivo como evidencia. Resueltos y retirados de esta secció
    - **Estado real**: No hay servicio de correo, dependencias SMTP en `package.json` ni tareas programadas.
 3. **CRUD Administrativo de Catálogo y Empleados**:
    - Roadmap; spec en `app/docs/roadmap/catalog-employee-crud/`. Alcance de la implementación en curso: usuarios y categorías; la edición/baja de libros y las ventas se desarrollan aparte (ver la sección "Alcance de esta implementación" de esa spec).
-   - **Estado real**: En empleados solo existe `GET /api/usuarios`. No hay `POST`/`PUT`/`DELETE` de usuarios ni `PUT /api/libros/:id` ni baja de libros.
+   - **Estado real**: En empleados solo existe `GET /api/usuarios`. No hay `POST`/`PUT`/`DELETE` de usuarios ni `PUT /api/libros/:id` (edición completa) ni baja de libros. Fijar solo el precio sí existe: `PATCH /api/libros/:id/precio`.
 4. **Ventas**:
    - Roadmap; diseño en `app/docs/roadmap/ventas/SPEC.md`.
    - **Estado real**: No existen tablas, modelos, endpoints ni vistas de ventas.
