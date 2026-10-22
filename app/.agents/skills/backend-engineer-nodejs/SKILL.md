@@ -14,8 +14,9 @@ El perfil **backend-engineer-nodejs** se encarga de diseñar e implementar una A
    - `routes/`: Definición de endpoints HTTP y aplicación de middlewares.
    - `controllers/`: Manejo de peticiones/respuestas HTTP, códigos de estado y serialización.
    - `services/`: Lógica central de negocio, orquestación de transacciones y reglas de dominio.
-   - `repositories/` o `daos/`: Acceso a base de datos PostgreSQL mediante pool de conexiones (`pg`).
-   - `middlewares/`: Autenticación, autorización RBAC, validación de schemas (Zod/Joi) y error handler centralizado.
+   - `repositories/`: Acceso a PostgreSQL con métodos Sequelize (nunca el cliente `pg` directo).
+   - `middlewares/`: Autenticación, autorización RBAC, validadores propios (`validator.js` es fachada de `validators/`) y error handler centralizado.
+   - Fachadas (`services/libro.service.js`, `repositories/inventario.repository.js`): los consumidores importan la fachada, no los módulos de `services/libro/` ni `repositories/inventario/`. `routes/index.js` solo cablea; los handlers viven en controladores.
 2. **Transacciones ACID**:
    - Para operaciones atómicas (ej. movimientos de inventario), usar una sola transacción Sequelize y pasar `{ transaction: t }` a cada operación:
      ```javascript
@@ -24,7 +25,7 @@ El perfil **backend-engineer-nodejs** se encarga de diseñar e implementar una A
      });
      ```
 3. **Seguridad y Control de Acceso**:
-   - Autenticación mediante JWT con tokens de acceso y refresh tokens.
+   - Autenticación mediante JWT de acceso (no hay refresh tokens).
    - 2FA: roadmap, NO implementado (ver `app/docs/roadmap/`).
    - Roles definidos: Administrador, Empleado, Usuario.
    - Hashing con bcrypt y parámetros de seguridad (salt rounds >= 10).

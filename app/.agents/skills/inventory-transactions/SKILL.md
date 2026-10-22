@@ -13,8 +13,8 @@ description: Preservar integridad de stock, triggers PL/pgSQL y transacciones al
 - Una bodega puede tener múltiples inventarios (uno por libro). `UNIQUE (libro_id,bodega_id)` impide duplicados.
 
 ## Procedimiento
-1. Inspeccionar `libro.service.js`, `inventario.service.js`, repositorios dependientes, trigger y tests aplicables.
-2. Mapear altas/lecturas/movimientos bajo `db.withTransaction` antes de convertir a `sequelize.transaction(async transaction => ...)`.
+1. Inspeccionar `libro.service.js` (y `services/libro/`), `inventario.service.js`, repositorios dependientes, trigger y tests aplicables.
+2. Mapear altas/lecturas/movimientos bajo una sola `sequelize.transaction(async transaction => ...)` y pasar el mismo `{ transaction }` a cada llamada. `libro.service.js` es una fachada de `services/libro/`; `inventario.repository.js`, de `repositories/inventario/`.
 3. En salidas/ajustes utilizar bloqueo de fila en la misma transacción: `Inventario.findByPk(id, { transaction, lock: transaction.LOCK.UPDATE })`.
 4. Insertar movimiento, dejar actuar al trigger y releer stock dentro de la transacción. Proteger contra errores de concurrencia y constraints.
 5. Probar: ingreso único, rollback tras movimiento, dos salidas del último ejemplar, dos escaneos del mismo ISBN y dos altas del mismo inventario.

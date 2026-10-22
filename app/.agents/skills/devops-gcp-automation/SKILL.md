@@ -13,7 +13,7 @@ El perfil **devops-gcp-automation** gestiona la infraestructura, empaquetado y e
 1. **Contenedores Docker Multi-stage**:
    - Backend: Etapa de compilación/instalación y etapa de producción ligera con Node Alpine, ejecutando bajo usuario sin privilegios root (`USER node`).
    - Frontend: Etapa de compilación Vite y etapa de servicio con Nginx Alpine configurado para Single Page Applications (`try_files $uri $uri/ /index.html;`) con compresión gzip.
-   - `docker-compose.yml` para desarrollo local que levante PostgreSQL con `script.sql` precargado, backend y frontend.
+   - `docker-compose.yml` para desarrollo local: hoy levanta PostgreSQL con `database/schema.sql` precargado, `db-test` (perfil `test`) y backend; el frontend corre en el host y no tiene Dockerfile.
 2. **Despliegue en Google Cloud Platform (GCP)**:
    - Configuración para Google Cloud Run (serverless, escalabilidad automática de 0 a N instancias).
    - Integración con Cloud SQL (PostgreSQL) usando Cloud SQL Auth Proxy o socket unix.

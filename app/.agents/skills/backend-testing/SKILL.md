@@ -13,7 +13,8 @@ description: Diagnosticar tests Node.js/PostgreSQL y asegurar cobertura de regre
 5. Probar comportamiento del ORM, respuesta HTTP y transacciones reales; mocks no sustituyen pruebas de integración.
 6. Reportar resumen de pruebas que pasan, fallan y se omiten y evidencia del cambio.
 
-## Caso conocido en esta rama
-- Último reporte de Codex: `npm test`: 49/53 pasaron; 4 tests nuevos de inventario fallan porque insertan ISBN de longitud > 20, mientras `libros.isbn` es `VARCHAR(20)`.
-- Antes de corregir, confirmar que esos son los fallos actuales y revisar archivos modificados/sin seguimiento. Ajustar generadores de ISBN/fixtures a <=20 caracteres; para comportamiento de escaneo usar ISBN-13 válido si el validador lo exige.
-- Reejecutar primero tests relevantes y después la suite entera; no prometer 53/53 sin ejecutarla.
+## Contexto actual
+- `npm test` (desde `app/`) requiere `db-test` arriba (`docker compose --profile test up -d db-test`). Línea base verificada el 2026-10-22: 173 pasan, 0 fallan (detalle por archivo en `docs/PROJECT_SPECS.md` §4.9).
+- `libros.isbn` es `VARCHAR(20)`: los fixtures usan ISBN-13 válido de 20 caracteres o menos.
+- Siete pruebas aún importan `config/db.js` (cliente `pg`); no lo uses en pruebas nuevas.
+- Reejecutar primero las pruebas relevantes y después la suite entera; no prometer un total sin ejecutarla.

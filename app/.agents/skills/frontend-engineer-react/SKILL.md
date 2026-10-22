@@ -11,6 +11,7 @@ El perfil **frontend-engineer-react** lidera el desarrollo de la interfaz de usu
 
 ## Directrices Técnicas
 1. **Estructura y Organización**:
+   - Estructura real de `src/`: `views/` (orquestadores delgados), `components/` y `components/ui/`, `features/<feature>/{components,hooks}`, `hooks/`, `services/api/` (todo el HTTP, vía `apiFetch`), `utils/` (`roles.js`, `tokenStorage.js`, `formatters.js`, `parsers.js`).
    - Componentes UI reutilizables y accesibles.
    - Vistas y módulos funcionales: Catálogo Público, Panel de Inventario, Registro de Movimientos, Auditoría y Alertas, Gestión de Usuarios y Auth.
    - Manejo de rutas con React Router v6, protegiendo rutas según roles de usuario (RBAC).
