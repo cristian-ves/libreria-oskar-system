@@ -1,7 +1,7 @@
 import { PackagePlus } from 'lucide-react';
 import ErrorBox from '../../../components/ui/ErrorBox';
 import FieldLabel from '../../../components/ui/FieldLabel';
-import Input from '../../../components/ui/Input';
+import ControlCantidad from '../../../components/ui/ControlCantidad';
 import Select from '../../../components/ui/Select';
 
 export default function FormularioIngreso({ errorBox, ingresoForm, setIngresoForm, bodegas, loadingMaestros, isLoading, onSubmit }) {
@@ -34,14 +34,10 @@ export default function FormularioIngreso({ errorBox, ingresoForm, setIngresoFor
         </div>
         <div>
           <FieldLabel required>Cantidad</FieldLabel>
-          <Input
-            type="number"
-            min={1}
-            step={1}
-            value={ingresoForm.cantidad}
-            onChange={e => setIngresoForm(f => ({ ...f, cantidad: e.target.value }))}
+          <ControlCantidad
+            cantidad={ingresoForm.cantidad}
+            onChange={cantidad => setIngresoForm(f => ({ ...f, cantidad }))}
             disabled={isLoading}
-            placeholder="1"
           />
         </div>
         <button

@@ -16,7 +16,7 @@ export default function Toast({ toast, onClose }) {
   const isError = toast.type === 'error';
 
   return (
-    <div className="fixed top-5 right-5 z-50 max-w-md w-full animate-bounce-in transition-all duration-300">
+    <div className="fixed top-5 right-5 z-[60] max-w-md w-full animate-bounce-in transition-all duration-300">
       <div
         className={`p-4 rounded-2xl shadow-xl border flex items-start gap-3.5 bg-white ${
           isSuccess

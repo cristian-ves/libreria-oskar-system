@@ -1,7 +1,11 @@
-import { Warehouse } from 'lucide-react';
+import { useState } from 'react';
+import { Tag, Warehouse } from 'lucide-react';
+import ModalPrecioLibro from '../../../components/ModalPrecioLibro';
+import { formatPrecio } from '../../../utils/formatters';
 
-export default function FichaLibroExistente({ libroExistente, inventarios, esAdmin }) {
-  const precio = Number(libroExistente.precio);
+export default function FichaLibroExistente({ libroExistente, inventarios, esAdmin, onPrecioActualizado }) {
+  const [precioAbierto, setPrecioAbierto] = useState(false);
+  const tienePrecio = Number(libroExistente.precio) > 0;
   return (
     <>
       {/* Tarjeta del libro */}
@@ -33,9 +37,19 @@ export default function FichaLibroExistente({ libroExistente, inventarios, esAdm
               <p className="text-xs text-gray-400">{libroExistente.editorial_nombre}</p>
             )}
             {esAdmin && (
-              <p className="text-xs text-[#b07c19] font-mono font-bold mt-1">
-                Precio: Q{precio.toFixed(2)}
-              </p>
+              <div className="flex items-center flex-wrap gap-2 mt-1">
+                <p className="text-xs text-[#b07c19] font-mono font-bold">
+                  Precio: {formatPrecio(libroExistente.precio)}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setPrecioAbierto(true)}
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold text-[#252525] bg-[#e19922] hover:bg-[#b07c19] hover:text-white transition-all cursor-pointer"
+                >
+                  <Tag className="w-3 h-3" />
+                  {tienePrecio ? 'Cambiar precio' : 'Fijar precio'}
+                </button>
+              </div>
             )}
             {libroExistente.isbn && (
               <p className="text-[10px] text-gray-400 font-mono mt-1 font-medium">ISBN: {libroExistente.isbn}</p>
@@ -73,6 +87,17 @@ export default function FichaLibroExistente({ libroExistente, inventarios, esAdm
             ))}
           </div>
         </div>
+      )}
+
+      {esAdmin && precioAbierto && (
+        <ModalPrecioLibro
+          libro={libroExistente}
+          onClose={() => setPrecioAbierto(false)}
+          onSuccess={(libroActualizado) => {
+            setPrecioAbierto(false);
+            onPrecioActualizado(libroActualizado);
+          }}
+        />
       )}
     </>
   );

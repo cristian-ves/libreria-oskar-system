@@ -15,6 +15,7 @@ const FALLBACK_CATALOG = {
     imagen_url: 'https://images.isbndb.com/covers/08/84/9780132350884.jpg',
     precio: 45.99,
     fuente: 'Catálogo Bibliográfico de Respaldo',
+    relleno: [], // campos sin dato real; solo la portada puede faltar aquí
   },
   '9780135957059': {
     isbn: '9780135957059',
@@ -25,6 +26,7 @@ const FALLBACK_CATALOG = {
     imagen_url: 'https://images.isbndb.com/covers/70/59/9780135957059.jpg',
     precio: 49.99,
     fuente: 'Catálogo Bibliográfico de Respaldo',
+    relleno: [], // campos sin dato real; solo la portada puede faltar aquí
   },
   '9788424116286': {
     isbn: '9788424116286',
@@ -35,6 +37,7 @@ const FALLBACK_CATALOG = {
     imagen_url: null,
     precio: 18.50,
     fuente: 'Catálogo Bibliográfico de Respaldo',
+    relleno: ['imagen_url'], // campos sin dato real; solo la portada puede faltar aquí
   },
   '9780307474728': {
     isbn: '9780307474728',
@@ -45,6 +48,7 @@ const FALLBACK_CATALOG = {
     imagen_url: null,
     precio: 15.99,
     fuente: 'Catálogo Bibliográfico de Respaldo',
+    relleno: ['imagen_url'], // campos sin dato real; solo la portada puede faltar aquí
   }
 };
 
@@ -183,6 +187,14 @@ class GoogleBooksService {
       }
     }
 
+    // Campos que la fuente no aportó y que arriba quedaron con texto por defecto.
+    const relleno = [];
+    if (!info.title) relleno.push('titulo');
+    if (!(Array.isArray(info.authors) && info.authors.length > 0)) relleno.push('autor');
+    if (!info.publisher) relleno.push('editorial');
+    if (!info.description) relleno.push('resena');
+    if (!imagen_url) relleno.push('imagen_url');
+
     // Precio referencial
     let precio = 0.00;
     if (volume.saleInfo && volume.saleInfo.listPrice && volume.saleInfo.listPrice.amount) {
@@ -198,6 +210,7 @@ class GoogleBooksService {
       imagen_url,
       precio: Math.max(0, precio),
       fuente: 'Google Books API',
+      relleno,
     };
   }
 
@@ -243,6 +256,7 @@ class GoogleBooksService {
 
     // Resolver autores desde claves /authors/OLxxA usando Promise.allSettled (máx 3)
     let autorResuelto = AUTOR_PLACEHOLDER;
+    let autorReal = false; // true solo si algún autor se resolvió de verdad
     if (Array.isArray(data.authors) && data.authors.length > 0) {
       const claves = data.authors
         .slice(0, 3)
@@ -268,9 +282,18 @@ class GoogleBooksService {
 
         if (nombres.length > 0) {
           autorResuelto = nombres.join(', ').substring(0, 150);
+          autorReal = true;
         }
       }
     }
+
+    // Campos que la fuente no aportó y que arriba quedaron con texto por defecto.
+    const relleno = [];
+    if (!data.title) relleno.push('titulo');
+    if (!autorReal) relleno.push('autor');
+    if (!(Array.isArray(data.publishers) && data.publishers.length > 0)) relleno.push('editorial');
+    if (!(typeof data.description === 'string' || (data.description && data.description.value))) relleno.push('resena');
+    if (!imagen_url) relleno.push('imagen_url');
 
     return {
       isbn,
@@ -281,6 +304,7 @@ class GoogleBooksService {
       imagen_url,
       precio: 0.00,
       fuente: 'OpenLibrary Fallback',
+      relleno,
     };
   }
 }

@@ -9,12 +9,12 @@ const TEXTOS = {
 
 const RETRASOS_PUNTOS = ['', '[animation-delay:150ms]', '[animation-delay:300ms]'];
 
-// Presentacional: muestra el texto de la fase actual; no conoce la cámara.
+// Presentacional: bloque bajo el visor (alto mínimo de dos líneas); muestra el texto de la fase actual; no conoce la cámara.
 export default function EstadoEscaner({ fase, onEscribir }) {
   const texto = TEXTOS[fase];
   if (!texto) return null;
   return (
-    <div className="absolute inset-x-0 bottom-2 px-2 pointer-events-none flex flex-col items-center gap-1.5">
+    <div className="mt-1.5 min-h-[2.5rem] flex flex-col items-center gap-1.5">
       <p
         role="status"
         aria-live="polite"
@@ -36,7 +36,7 @@ export default function EstadoEscaner({ fase, onEscribir }) {
         <button
           type="button"
           onClick={onEscribir}
-          className="pointer-events-auto flex items-center gap-1.5 text-[11px] font-bold bg-white text-[#252525] px-2.5 py-1 rounded-md shadow-xs hover:bg-[#f3f3f3]"
+          className="flex items-center gap-1.5 text-[11px] font-bold bg-white text-[#252525] px-2.5 py-1 rounded-md shadow-xs hover:bg-[#f3f3f3]"
         >
           <Keyboard className="w-3.5 h-3.5" />
           Escribir el ISBN

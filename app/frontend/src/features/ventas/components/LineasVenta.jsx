@@ -1,6 +1,6 @@
 import { Trash2, ShoppingBag } from 'lucide-react';
 import { formatQuetzales } from '../../../utils/dinero';
-import ControlCantidad from './ControlCantidad';
+import ControlCantidad from '../../../components/ui/ControlCantidad';
 
 export default function LineasVenta({ lineas, onCantidad, onQuitar }) {
   if (lineas.length === 0) {

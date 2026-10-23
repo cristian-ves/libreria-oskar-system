@@ -10,6 +10,7 @@ import FormularioIngreso from '../features/registrar-libro/components/Formulario
 import ResultadoIngreso from '../features/registrar-libro/components/ResultadoIngreso';
 import FormularioRegistro from '../features/registrar-libro/components/FormularioRegistro';
 import ResultadoRegistro from '../features/registrar-libro/components/ResultadoRegistro';
+import { rotuloSugerencia } from '../features/registrar-libro/camposFaltantes';
 
 export default function RegistrarLibro({ onShowToast }) {
   const { user } = useAuth();
@@ -21,9 +22,9 @@ export default function RegistrarLibro({ onShowToast }) {
     paso, isLoading, errorBox,
     libroExistente, inventarios, sugerencia,
     ingresoForm, setIngresoForm, ingresoResultado,
-    regForm, setRegForm, fieldErrors, setFieldErrors, imgError, setImgError, regResultado,
+    regForm, setRegForm, camposFaltantes, fieldErrors, setFieldErrors, imgError, setImgError, regResultado,
     historial,
-    handleConsultar, handleScanSuccess, handleAgregarManual, reiniciar, handleIngreso, handleRegistrar,
+    handleConsultar, handleScanSuccess, handleAgregarManual, reiniciar, handleIngreso, handleRegistrar, handlePrecioActualizado,
   } = useRegistrarLibro({ esAdmin, onShowToast });
 
   const panelLateral = (
@@ -101,7 +102,12 @@ export default function RegistrarLibro({ onShowToast }) {
           {panelLateral}
 
           <div className="lg:col-span-8 space-y-5">
-            <FichaLibroExistente libroExistente={libroExistente} inventarios={inventarios} esAdmin={esAdmin} />
+            <FichaLibroExistente
+              libroExistente={libroExistente}
+              inventarios={inventarios}
+              esAdmin={esAdmin}
+              onPrecioActualizado={handlePrecioActualizado}
+            />
 
             {/* Formulario ingreso */}
             {!ingresoResultado ? (
@@ -133,7 +139,7 @@ export default function RegistrarLibro({ onShowToast }) {
           <div>
             <div className="flex items-center gap-2 text-[#b07c19] text-xs font-bold uppercase tracking-wider mb-1">
               <AlertCircle className="w-4 h-4 text-[#e19922]" />
-              <span>{sugerencia ? 'Sugerencia de Google Books' : 'Libro no encontrado'}</span>
+              <span>{sugerencia ? rotuloSugerencia(sugerencia.fuente) : 'Libro no encontrado'}</span>
             </div>
             <h1 className="text-2xl font-extrabold text-[#252525] tracking-tight">Registrar Libro Nuevo</h1>
           </div>
@@ -151,10 +157,10 @@ export default function RegistrarLibro({ onShowToast }) {
           {panelLateral}
 
           <div className="lg:col-span-8 space-y-5">
-            {!sugerencia && (
-              <div className="flex items-start gap-2.5 p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+            {!sugerencia && camposFaltantes.length > 0 && (
+              <div role="status" aria-live="polite" className="flex items-start gap-2.5 p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
                 <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-[#b07c19]" />
-                <span>No se encontró información en Google Books ni Open Library. Completa los datos manualmente.</span>
+                <span>No se encontró información de este ISBN. Completa los datos del libro.</span>
               </div>
             )}
 
@@ -164,6 +170,7 @@ export default function RegistrarLibro({ onShowToast }) {
               <FormularioRegistro
                 regForm={regForm}
                 setRegForm={setRegForm}
+                camposFaltantes={camposFaltantes}
                 fieldErrors={fieldErrors}
                 setFieldErrors={setFieldErrors}
                 imgError={imgError}

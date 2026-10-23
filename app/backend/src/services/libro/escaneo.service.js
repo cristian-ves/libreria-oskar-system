@@ -5,6 +5,9 @@ const movimientoRepository = require('../../repositories/movimiento.repository')
 const googleBooksService = require('../googleBooks.service');
 const { ValidationError, NotFoundError } = require('../../utils/errors');
 
+// Campos que una fuente externa puede rellenar con texto genérico, en el orden de `campos_faltantes`.
+const CAMPOS_SUGERIBLES = ['titulo', 'autor', 'editorial', 'resena', 'imagen_url'];
+
 // Los métodos usan `this` (fachada LibroService) para conservar la resolución dinámica
 // de _upsertAutor/_upsertEditorial/_crearMovimientoIngreso y su parcheo en pruebas.
 module.exports = {
@@ -167,7 +170,8 @@ module.exports = {
   /**
    * Consulta si un libro existe localmente por ISBN.
    * Si existe devuelve { existe: true, libro, inventarios }.
-   * Si no existe consulta Google Books y devuelve { existe: false, sugerencia }.
+   * Si no existe consulta Google Books y devuelve { existe: false, sugerencia }, donde los datos
+   * que la fuente no aportó van vacíos y se listan en `sugerencia.campos_faltantes`.
    * Nunca lanza 404 ni 500 por ausencia del libro o fallo de la API externa.
    *
    * @param {{ isbn: string }} params
@@ -191,14 +195,19 @@ module.exports = {
     try {
       const bookData = await googleBooksService.buscarPorIsbn(cleanIsbn);
       if (bookData) {
+        // Objeto nuevo: bookData puede ser el del caché y no se debe mutar (ni su arreglo `relleno`).
+        const relleno = Array.isArray(bookData.relleno) ? bookData.relleno : [];
+        const vacio = (campo, valorVacio) => (relleno.includes(campo) ? valorVacio : bookData[campo]);
         sugerencia = {
           isbn: bookData.isbn,
-          titulo: bookData.titulo,
-          autor: bookData.autor,
-          editorial: bookData.editorial,
-          resena: bookData.resena,
-          imagen_url: bookData.imagen_url,
+          titulo: vacio('titulo', ''),
+          autor: vacio('autor', ''),
+          editorial: vacio('editorial', ''),
+          resena: vacio('resena', ''),
+          imagen_url: vacio('imagen_url', null),
           fuente: bookData.fuente,
+          // Orden canónico; `categoria` siempre falta porque ninguna fuente la aporta.
+          campos_faltantes: [...CAMPOS_SUGERIBLES.filter((c) => relleno.includes(c)), 'categoria'],
           // precio excluido intencionalmente
         };
       }

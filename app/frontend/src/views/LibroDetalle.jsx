@@ -5,7 +5,7 @@ import DetalleSkeleton from '../features/catalogo/components/DetalleSkeleton';
 import LibroNoEncontrado from '../features/catalogo/components/LibroNoEncontrado';
 import LibroError from '../features/catalogo/components/LibroError';
 import FichaLibro from '../features/catalogo/components/FichaLibro';
-import ModalPrecioLibro from '../features/catalogo/components/ModalPrecioLibro';
+import ModalPrecioLibro from '../components/ModalPrecioLibro';
 import { useAuth } from '../context/AuthContext';
 import { esAdministrador } from '../utils/roles';
 

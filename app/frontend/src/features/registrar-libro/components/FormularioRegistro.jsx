@@ -2,11 +2,14 @@ import { AlertCircle, BookOpen, ShieldCheck } from 'lucide-react';
 import ErrorBox from '../../../components/ui/ErrorBox';
 import FieldLabel from '../../../components/ui/FieldLabel';
 import Input from '../../../components/ui/Input';
+import ControlCantidad from '../../../components/ui/ControlCantidad';
 import Select from '../../../components/ui/Select';
 import { AUTOR_PLACEHOLDER } from '../validacion';
+import { CLASE_AMBAR, estaFaltante, obligatoriosFaltantes, obligatoriosVacios, pendientesParaGuardar } from '../camposFaltantes';
+import AvisoCamposFaltantes, { PistaOpcional } from './AvisoCamposFaltantes';
 
 export default function FormularioRegistro({
-  regForm, setRegForm, fieldErrors, setFieldErrors, imgError, setImgError,
+  regForm, setRegForm, camposFaltantes, fieldErrors, setFieldErrors, imgError, setImgError,
   errorBox, isLoading, loadingMaestros, bodegas, categorias, esAdmin, onSubmit,
 }) {
   const ramasDerecho = categorias
@@ -19,7 +22,10 @@ export default function FormularioRegistro({
 
   const autorValido = regForm.autor.trim() !== '' && regForm.autor.trim() !== AUTOR_PLACEHOLDER;
   const categoriaValida = Boolean(regForm.categoriaId);
-  const botonGuardarDeshabilitado = isLoading || !autorValido || !categoriaValida;
+  const vacios = obligatoriosVacios(regForm);
+  const botonGuardarDeshabilitado = isLoading || !autorValido || !categoriaValida || vacios.length > 0;
+  const falta = clave => estaFaltante(regForm, camposFaltantes, clave);
+  const ambar = clave => (falta(clave) ? CLASE_AMBAR : '');
 
   return (
     <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
@@ -27,6 +33,8 @@ export default function FormularioRegistro({
         <BookOpen className="w-4 h-4 text-[#e19922]" />
         Datos del Libro
       </h3>
+
+      <AvisoCamposFaltantes campos={obligatoriosFaltantes(regForm, camposFaltantes)} />
 
       <ErrorBox error={errorBox} />
 
@@ -50,6 +58,7 @@ export default function FormularioRegistro({
             onChange={e => setRegForm(f => ({ ...f, titulo: e.target.value }))}
             disabled={isLoading}
             placeholder="Título completo del libro"
+            className={ambar('titulo')}
           />
         </div>
 
@@ -65,7 +74,7 @@ export default function FormularioRegistro({
               }}
               disabled={isLoading}
               placeholder="Nombre del autor"
-              className={fieldErrors.autor ? 'border-red-500' : ''}
+              className={fieldErrors.autor ? 'border-red-500' : ambar('autor')}
             />
             {fieldErrors.autor && (
               <p className="text-[11px] text-red-600 mt-1 flex items-center gap-1 font-medium">
@@ -82,7 +91,9 @@ export default function FormularioRegistro({
               onChange={e => setRegForm(f => ({ ...f, editorial: e.target.value }))}
               disabled={isLoading}
               placeholder="Nombre de la editorial"
+              aria-describedby={falta('editorial') ? 'pista-editorial' : undefined}
             />
+            {falta('editorial') && <PistaOpcional id="pista-editorial" />}
           </div>
         </div>
 
@@ -95,7 +106,7 @@ export default function FormularioRegistro({
               if (fieldErrors.categoriaId) setFieldErrors(fe => ({ ...fe, categoriaId: null }));
             }}
             disabled={isLoading || loadingMaestros}
-            className={fieldErrors.categoriaId ? 'border-red-500' : ''}
+            className={fieldErrors.categoriaId ? 'border-red-500' : ambar('categoriaId')}
           >
             <option value="" disabled>Selecciona una categoría</option>
             {ramasDerecho.length > 0 && (
@@ -133,7 +144,7 @@ export default function FormularioRegistro({
             disabled={isLoading}
             rows={4}
             placeholder="Descripción o sinopsis del libro..."
-            className="w-full bg-[#f3f3f3] border border-gray-200 text-[#252525] text-sm rounded-xl px-3.5 py-2.5 outline-none focus:border-[#b07c19] focus:ring-1 focus:ring-[#b07c19] transition-all placeholder:text-gray-400 disabled:opacity-50 resize-none"
+            className={`w-full bg-[#f3f3f3] border border-gray-200 text-[#252525] text-sm rounded-xl px-3.5 py-2.5 outline-none focus:border-[#b07c19] focus:ring-1 focus:ring-[#b07c19] transition-all placeholder:text-gray-400 disabled:opacity-50 resize-none ${ambar('resena')}`}
           />
         </div>
 
@@ -145,7 +156,9 @@ export default function FormularioRegistro({
             onChange={e => { setRegForm(f => ({ ...f, imagenUrl: e.target.value })); setImgError(false); }}
             disabled={isLoading}
             placeholder="https://..."
+            aria-describedby={falta('imagenUrl') ? 'pista-portada' : undefined}
           />
+          {falta('imagenUrl') && <PistaOpcional id="pista-portada" />}
           {regForm.imagenUrl && !imgError && (
             <div className="mt-2">
               <img
@@ -181,14 +194,10 @@ export default function FormularioRegistro({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <FieldLabel required>Cantidad inicial</FieldLabel>
-            <Input
-              type="number"
-              min={1}
-              step={1}
-              value={regForm.cantidad}
-              onChange={e => setRegForm(f => ({ ...f, cantidad: e.target.value }))}
+            <ControlCantidad
+              cantidad={regForm.cantidad}
+              onChange={cantidad => setRegForm(f => ({ ...f, cantidad }))}
               disabled={isLoading}
-              placeholder="1"
             />
           </div>
           <div>
@@ -232,6 +241,7 @@ export default function FormularioRegistro({
           <BookOpen className="w-4 h-4" />
           {isLoading ? 'Guardando...' : 'Registrar Libro'}
         </button>
+        {!isLoading && <AvisoCamposFaltantes variante="linea" campos={pendientesParaGuardar(regForm)} />}
       </form>
     </div>
   );

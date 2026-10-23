@@ -6,14 +6,17 @@ const BTN =
 export default function ControlCantidad({ cantidad, max, onChange, disabled, titulo }) {
   // El estado guarda texto; los botones operan con enteros y respetan [1, max].
   const n = /^\d+$/.test(cantidad) ? Number(cantidad) : null;
+  // Sin max no hay tope: Infinity deja a Math.min igual a n ± 1 (con undefined daría NaN).
+  const tope = max ?? Infinity;
+  const de = titulo ? ` de ${titulo}` : '';
 
   return (
     <div className="flex items-center gap-1.5">
       <button
         type="button"
-        onClick={() => onChange(String(Math.min(max, n - 1)))}
+        onClick={() => onChange(String(Math.min(tope, n - 1)))}
         disabled={disabled || n === null || n <= 1}
-        aria-label={`Disminuir cantidad de ${titulo}`}
+        aria-label={`Disminuir cantidad${de}`}
         className={BTN}
       >
         <Minus className="w-4 h-4" />
@@ -27,14 +30,14 @@ export default function ControlCantidad({ cantidad, max, onChange, disabled, tit
         value={cantidad}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        aria-label={`Cantidad de ${titulo}`}
+        aria-label={`Cantidad${de}`}
         className="w-16 min-h-[44px] text-center bg-[#f3f3f3] border border-gray-200 text-[#252525] text-sm rounded-xl px-2 outline-none focus:border-[#b07c19] font-mono font-bold [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
       />
       <button
         type="button"
-        onClick={() => onChange(n === null ? '1' : String(Math.min(max, n + 1)))}
-        disabled={disabled || (n !== null && n >= max)}
-        aria-label={`Aumentar cantidad de ${titulo}`}
+        onClick={() => onChange(n === null ? '1' : String(Math.min(tope, n + 1)))}
+        disabled={disabled || (n !== null && n >= tope)}
+        aria-label={`Aumentar cantidad${de}`}
         className={BTN}
       >
         <Plus className="w-4 h-4" />

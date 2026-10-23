@@ -2,8 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { getBodegas } from '../../../services/api/bodegas.api';
 import { getCategorias } from '../../../services/api/categorias.api';
 import { consultarLibro, ingresarLibro, registrarLibro } from '../../../services/api/libros.api';
+import { formatPrecio } from '../../../utils/formatters';
 import { orNull, toNum } from '../../../utils/parsers';
-import { AUTOR_PLACEHOLDER, validarRegistro } from '../validacion';
+import { validarRegistro } from '../validacion';
+import { aplicarPrellenado, prellenarDesdeSugerencia, REINICIO_CONSULTA } from '../camposFaltantes';
 
 export default function useRegistrarLibro({ esAdmin, onShowToast }) {
   const [bodegas, setBodegas] = useState([]);
@@ -29,6 +31,7 @@ export default function useRegistrarLibro({ esAdmin, onShowToast }) {
     categoriaId: '', resena: '', imagenUrl: '',
     precio: '', cantidad: 1, stockMinimo: 5, bodegaId: '',
   });
+  const [camposFaltantes, setCamposFaltantes] = useState([]);
   const [fieldErrors, setFieldErrors] = useState({});
   const [imgError, setImgError] = useState(false);
   const [regResultado, setRegResultado] = useState(null);
@@ -92,16 +95,9 @@ export default function useRegistrarLibro({ esAdmin, onShowToast }) {
         setPaso('existe');
       } else {
         setSugerencia(sug);
-        setRegForm(f => ({
-          ...f,
-          isbn: sug?.isbn || isbn,
-          titulo: sug?.titulo || '',
-          autor: (!sug || sug.autor === AUTOR_PLACEHOLDER) ? '' : (sug.autor || ''),
-          editorial: sug?.editorial || '',
-          resena: sug?.resena || '',
-          imagenUrl: sug?.imagen_url || '',
-          precio: '',
-        }));
+        const { valores, camposFaltantes: faltantes } = prellenarDesdeSugerencia(sug, isbn);
+        setRegForm(f => aplicarPrellenado(f, valores));
+        setCamposFaltantes(faltantes);
         setFieldErrors({});
         setImgError(false);
         setPaso('noExiste');
@@ -124,12 +120,13 @@ export default function useRegistrarLibro({ esAdmin, onShowToast }) {
     setErrorBox(null);
     setFieldErrors({});
     setSugerencia(null);
+    setCamposFaltantes([]);
     setRegForm(f => ({
       ...f,
       isbn: isbnInput.trim(),
       titulo: '', autor: '', editorial: '',
-      categoriaId: '', resena: '', imagenUrl: '',
-      precio: '', cantidad: 1, stockMinimo: 5,
+      resena: '', imagenUrl: '',
+      precio: '', ...REINICIO_CONSULTA,
     }));
     setImgError(false);
     setPaso('noExiste');
@@ -141,6 +138,7 @@ export default function useRegistrarLibro({ esAdmin, onShowToast }) {
     setLibroExistente(null);
     setInventarios([]);
     setSugerencia(null);
+    setCamposFaltantes([]);
     setIngresoResultado(null);
     setRegResultado(null);
     setErrorBox(null);
@@ -181,6 +179,16 @@ export default function useRegistrarLibro({ esAdmin, onShowToast }) {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handlePrecioActualizado = (libroActualizado) => {
+    setLibroExistente(l => ({ ...l, precio: libroActualizado.precio }));
+    onShowToast({
+      type: 'success',
+      title: 'Precio actualizado',
+      bookTitle: libroExistente.titulo,
+      message: formatPrecio(libroActualizado.precio),
+    });
   };
 
   const handleRegistrar = async (e) => {
@@ -248,8 +256,9 @@ export default function useRegistrarLibro({ esAdmin, onShowToast }) {
     paso, isLoading, errorBox,
     libroExistente, inventarios, sugerencia,
     ingresoForm, setIngresoForm, ingresoResultado,
-    regForm, setRegForm, fieldErrors, setFieldErrors, imgError, setImgError, regResultado,
+    regForm, setRegForm, camposFaltantes, fieldErrors, setFieldErrors, imgError, setImgError, regResultado,
     historial,
     handleConsultar, handleScanSuccess, handleAgregarManual, reiniciar, handleIngreso, handleRegistrar,
+    handlePrecioActualizado,
   };
 }

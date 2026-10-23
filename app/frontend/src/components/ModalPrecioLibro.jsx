@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Tag, X } from 'lucide-react';
-import { actualizarPrecioLibro } from '../../../services/api/libros.api';
-import { formatPrecio } from '../../../utils/formatters';
-import Modal from '../../../components/ui/Modal';
-import ErrorBox from '../../../components/ui/ErrorBox';
-import FieldLabel from '../../../components/ui/FieldLabel';
-import Input from '../../../components/ui/Input';
+import { actualizarPrecioLibro } from '../services/api/libros.api';
+import { formatPrecio } from '../utils/formatters';
+import Modal from './ui/Modal';
+import ErrorBox from './ui/ErrorBox';
+import FieldLabel from './ui/FieldLabel';
+import Input from './ui/Input';
 
 export default function ModalPrecioLibro({ libro, onClose, onSuccess }) {
   const [formPrecio, setFormPrecio] = useState(Number(libro.precio) > 0 ? String(libro.precio) : '');
@@ -27,7 +27,7 @@ export default function ModalPrecioLibro({ libro, onClose, onSuccess }) {
         });
         return;
       }
-      onSuccess();
+      onSuccess(json.data);
     } catch (err) {
       setModalError({ message: err.message || 'Error de conexión con el servidor.' });
     } finally {

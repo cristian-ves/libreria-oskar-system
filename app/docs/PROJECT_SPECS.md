@@ -207,14 +207,14 @@ app/
 │   │   │   ├── bodega.service.js (13)
 │   │   │   ├── catalogo.service.js (46)
 │   │   │   ├── categoria.service.js (14)
-│   │   │   ├── googleBooks.service.js (288)
+│   │   │   ├── googleBooks.service.js (312)
 │   │   │   ├── inventario.service.js (187)
 │   │   │   ├── libro.service.js (14)
 │   │   │   ├── mail.service.js (15)
 │   │   │   ├── usuario.service.js (14)
 │   │   │   ├── venta.service.js (11)
 │   │   │   ├── libro/
-│   │   │   │   ├── escaneo.service.js (211)
+│   │   │   │   ├── escaneo.service.js (220)
 │   │   │   │   ├── ingreso.service.js (74)
 │   │   │   │   ├── maestros.service.js (47)
 │   │   │   │   ├── movimientoIngreso.service.js (36)
@@ -239,6 +239,7 @@ app/
 │   │       └── ventas.js (129)
 │   └── tests/
 │       ├── api.e2e.test.js (539)
+│       ├── consultarSugerencia.test.js (130)
 │       ├── errorHandler.test.js (123)
 │       ├── escanear.integration.test.js (151)
 │       ├── googleBooks.test.js (145)
@@ -254,6 +255,7 @@ app/
 │       ├── movimientoRepository.test.js (245)
 │       ├── repositories.test.js (180)
 │       ├── sequelize.test.js (96)
+│       ├── sugerenciaRelleno.test.js (80)
 │       ├── usuarioRepository.test.js (103)
 │       ├── utilsIsbnUuid.test.js (166)
 │       ├── validatorsCaracterizacion.test.js (642)
@@ -274,7 +276,7 @@ app/
 │       ├── 003_categorias_adicionales.sql (22)
 │       └── 004_ventas.sql (58)
 ├── docs/
-│   ├── PROJECT_SPECS.md (1280)
+│   ├── PROJECT_SPECS.md (1298)
 │   └── roadmap/
 │       ├── auth-2fa/
 │       │   └── SKILL.md (16)
@@ -298,14 +300,16 @@ app/
         ├── assets/
         │   └── logo.jpg
         ├── components/
-        │   ├── BarcodeScanner.jsx (422)
+        │   ├── BarcodeScanner.jsx (139)
         │   ├── EstadoEscaner.jsx (47)
         │   ├── Footer.jsx (23)
         │   ├── LoadingSpinner.jsx (30)
+        │   ├── ModalPrecioLibro.jsx (100)
         │   ├── Navbar.jsx (125)
         │   ├── ProtectedRoute.jsx (47)
         │   ├── Toast.jsx (73)
         │   └── ui/
+        │       ├── ControlCantidad.jsx (47)
         │       ├── ErrorBox.jsx (18)
         │       ├── FieldLabel.jsx (7)
         │       ├── Input.jsx (8)
@@ -326,7 +330,6 @@ app/
         │   │   │   ├── FichaLibro.jsx (139)
         │   │   │   ├── LibroError.jsx (31)
         │   │   │   ├── LibroNoEncontrado.jsx (23)
-        │   │   │   ├── ModalPrecioLibro.jsx (100)
         │   │   │   ├── PanelFiltros.jsx (106)
         │   │   │   └── SinResultados.jsx (50)
         │   │   └── hooks/
@@ -345,22 +348,23 @@ app/
         │   │       ├── useInventarioData.js (112)
         │   │       └── useKardex.js (80)
         │   ├── registrar-libro/
+        │   │   ├── camposFaltantes.js (85)
         │   │   ├── validacion.js (33)
         │   │   ├── components/
-        │   │   │   ├── FichaLibroExistente.jsx (79)
-        │   │   │   ├── FormularioIngreso.jsx (58)
-        │   │   │   ├── FormularioRegistro.jsx (238)
+        │   │   │   ├── AvisoCamposFaltantes.jsx (32)
+        │   │   │   ├── FichaLibroExistente.jsx (104)
+        │   │   │   ├── FormularioIngreso.jsx (54)
+        │   │   │   ├── FormularioRegistro.jsx (248)
         │   │   │   ├── HistorialSesion.jsx (33)
         │   │   │   ├── PanelConsulta.jsx (75)
         │   │   │   ├── PanelLateral.jsx (62)
         │   │   │   ├── ResultadoIngreso.jsx (40)
         │   │   │   └── ResultadoRegistro.jsx (40)
         │   │   └── hooks/
-        │   │       └── useRegistrarLibro.js (255)
+        │   │       └── useRegistrarLibro.js (264)
         │   └── ventas/
         │       ├── components/
         │       │   ├── BuscadorLibrosVenta.jsx (62)
-        │       │   ├── ControlCantidad.jsx (44)
         │       │   ├── EstadoVentaBadge.jsx (10)
         │       │   ├── FichaVenta.jsx (72)
         │       │   ├── FiltrosVentas.jsx (46)
@@ -374,7 +378,10 @@ app/
         │           ├── useVentaDetalle.js (37)
         │           └── useVentas.js (61)
         ├── hooks/
-        │   └── useDebouncedValue.js (14)
+        │   ├── useCamaraEscaner.js (225)
+        │   ├── useDebouncedValue.js (14)
+        │   ├── useDiagnosticoEscaner.js (29)
+        │   └── useGeometriaEscaner.js (36)
         ├── services/
         │   └── api/
         │       ├── auth.api.js (18)
@@ -388,7 +395,9 @@ app/
         ├── utils/
         │   ├── cargarDetectorDeCodigos.js (29)
         │   ├── dinero.js (24)
+        │   ├── errorCamara.js (16)
         │   ├── formatters.js (30)
+        │   ├── geometriaEscaner.js (33)
         │   ├── parsers.js (10)
         │   ├── roles.js (9)
         │   └── tokenStorage.js (26)
@@ -399,7 +408,7 @@ app/
             ├── Login.jsx (119)
             ├── Nosotros.jsx (88)
             ├── NuevaVenta.jsx (98)
-            ├── RegistrarLibro.jsx (187)
+            ├── RegistrarLibro.jsx (194)
             ├── VentaDetalle.jsx (88)
             └── Ventas.jsx (55)
 ```
@@ -413,14 +422,13 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `app/backend/tests/validatorsCaracterizacion.test.js` | 642 | Pruebas de caracterización de los 8 validadores (fijan también comportamientos defectuosos, ver §9). |
 | `app/backend/tests/api.e2e.test.js` | 539 | Pruebas HTTP end-to-end contra un servidor Express temporal. |
 | `app/backend/tests/inventarioRepository.test.js` | 468 | Persistencia de inventario: bloqueo `FOR UPDATE`, stock obsoleto, alertas y KPIs de resumen. |
-| `app/frontend/src/components/BarcodeScanner.jsx` | 422 | Visor de cámara con `html5-qrcode`: lee EAN-13/EAN-8/UPC-A/UPC-E, evita lecturas repetidas, vibra al leer si el dispositivo lo permite, lleva la fase del escaneo (iniciando, buscando, ayuda), informa errores de cámara por causa, ajusta la geometría del visor y ofrece entrada manual de ISBN. |
 | `app/backend/tests/libroServiceSequelize.test.js` | 387 | Transacciones del servicio de libros: rollback, trigger, concurrencia de escaneo. |
 | `app/database/schema.sql` | 341 | DDL de 13 tablas, extensiones, secuencia de ventas, trigger PL/pgSQL, 18 índices y semillas (roles, tipos de movimiento, 20 categorías). |
-| `app/backend/src/services/googleBooks.service.js` | 288 | Cliente de Google Books con fallback a OpenLibrary, catálogo de contingencia y caché TTL. |
+| `app/backend/src/services/googleBooks.service.js` | 312 | Cliente de Google Books con fallback a OpenLibrary, catálogo de contingencia y caché TTL; cada resultado trae `relleno`. |
 | `app/backend/src/repositories/libro.repository.js` | 276 | Búsqueda por ISBN/UUID (`findByIds` para ventas), `upsert`/`create` con captura de `23505`, catálogo y detalle por `ref`. |
 | `app/backend/tests/ventasEsquema.test.js` | 266 | Esquema de ventas: correlativo, CHECK, UNIQUE, FK RESTRICT y movimiento con `venta_id` (trigger). |
+| `app/frontend/src/features/registrar-libro/hooks/useRegistrarLibro.js` | 264 | Estado y acciones del asistente de registro (`paso`, consulta, ingreso, registro; `camposFaltantes`). |
 | `app/frontend/src/features/inventario/components/TablaExistencias.jsx` | 261 | Tabla de existencias con `EstadoBadge` por fila. |
-| `app/frontend/src/features/registrar-libro/hooks/useRegistrarLibro.js` | 255 | Estado y acciones del asistente de registro (`paso`, consulta, ingreso, registro). |
 
 ---
 
@@ -627,7 +635,7 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `GET` | `/api/libros` | Ninguno (Público) | `libroController.listar` | `catalogoService.listar` | `libroRepository.searchAndList` | Catálogo de libros con filtros `q` y categoría. |
 | `GET` | `/api/libros/:ref` | Ninguno (Público) | `libroController.detalle` | `catalogoService.detalle` | `libroRepository.findDetalleByRef` | Ficha técnica pública y disponibilidad por ref/UUID. |
 | `POST` | `/api/libros/escanear` | `authenticate`, `authorize('Administrador', 'Empleado')`, `validateEscanearLibro` | `libroController.escanear` | `libroService.escanearLibro` | `libroRepository.upsert`, `inventarioRepository.findOrCreate`, `movimientoRepository.createMovimiento` | Escaneo de ISBN, registro atómico e ingreso de 1 unidad. Body: `{ isbn, bodegaId }`. Actor (`usuarioId`) tomado de `req.user.id`. El frontend no lo consume (solo API y pruebas). |
-| `POST` | `/api/libros/consultar`| `authenticate`, `authorize('Administrador', 'Empleado')`, `validateConsultarLibro` | `libroController.consultar` | `libroService.consultarLibro` | `libroRepository.findByIsbn`, `inventarioRepository.findByLibroId` | Verifica existencia local o sugiere metadatos de Google Books sin persistir. |
+| `POST` | `/api/libros/consultar`| `authenticate`, `authorize('Administrador', 'Empleado')`, `validateConsultarLibro` | `libroController.consultar` | `libroService.consultarLibro` | `libroRepository.findByIsbn`, `inventarioRepository.findByLibroId` | Verifica existencia local o sugiere metadatos externos sin persistir. La sugerencia tiene la forma `{ isbn, titulo, autor, editorial, resena, imagen_url, fuente, campos_faltantes }`: lo que la fuente no aportó va vacío (`''`, `imagen_url` en `null`) y se lista en `campos_faltantes` (orden `titulo`, `autor`, `editorial`, `resena`, `imagen_url`, `categoria`; `categoria` siempre). Sin precio. |
 | `POST` | `/api/libros/registrar`| `authenticate`, `authorize('Administrador', 'Empleado')`, `validateRegistrarLibro` | `libroController.registrar` | `libroService.registrarLibro` | `libroRepository.create`, `inventarioRepository.findOrCreate`, `movimientoRepository.createMovimiento` | Registro manual de libro con regla de precio por rol e ingreso inicial. |
 | `POST` | `/api/libros/:id/ingreso` | `authenticate`, `authorize('Administrador', 'Empleado')`, `validateIngresoLibro` | `libroController.ingreso` | `libroService.ingresoLibro` | `libroRepository.findById`, `inventarioRepository.findOrCreate`, `movimientoRepository.createMovimiento` | Ingreso de unidades de stock a un libro existente en bodega. |
 | `PATCH` | `/api/libros/:id/precio` | `authenticate`, `authorize('Administrador')`, `validateActualizarPrecioLibro` | `libroController.actualizarPrecio` | `libroService.actualizarPrecio` | `libroRepository.updatePrecio` | Fija o corrige el precio de un libro existente. Body: `{ precio }` (0 a 99999999.99, máximo 2 decimales). 400 si es inválido, 404 si el libro no existe, 200 con el libro plano. No toca stock ni movimientos. |
@@ -695,7 +703,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 - `libro.service.js` es una **fachada**: una instancia de la clase `LibroService` vacía a cuyo prototipo se le aplica `Object.assign` con los módulos de `services/libro/`. Los consumidores (controlador, pruebas) importan la fachada, no los módulos internos:
   - `libro/maestros.service.js`: `_upsertMasterRecord(Model, transaction, nombre, defaults, updates)` (savepoint), `_upsertAutor`, `_upsertEditorial`.
   - `libro/movimientoIngreso.service.js`: `_crearMovimientoIngreso(transaction, { inventarioId, usuarioId, cantidad, motivoDetalle })`.
-  - `libro/escaneo.service.js`: `escanearLibro({ isbn, bodegaId, usuarioId })` (valida bodega y usuario antes de la transacción; consulta la API externa fuera de la transacción) y `consultarLibro({ isbn })` (sin escribir en BD).
+  - `libro/escaneo.service.js`: `escanearLibro({ isbn, bodegaId, usuarioId })` (valida bodega y usuario antes de la transacción; consulta la API externa fuera de la transacción) y `consultarLibro({ isbn })` (sin escribir en BD). Si el libro no existe, arma la sugerencia como objeto nuevo a partir de `buscarPorIsbn`: vacía los campos listados en su `relleno` (un `relleno` ausente se trata como `[]`) y añade `campos_faltantes` con `categoria` al final, sin mutar el objeto del caché ni su arreglo.
   - `libro/registro.service.js`: `registrarLibro({ ..., usuarioId, usuarioRol })`: regla de precio (si `usuarioRol !== 'Administrador'`, `precio = 0` y `precio_pendiente = true`), upsert de autor/editorial, creación del libro, inventario y movimiento `Ingreso`.
   - `libro/ingreso.service.js`: `ingresoLibro({ libroId, bodegaId, cantidad, usuarioId })`.
   - `libro/precio.service.js`: `actualizarPrecio({ libroId, precio })`: delega en `libroRepository.updatePrecio`; `NotFoundError` si el libro no existe.
@@ -755,6 +763,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
   - Resolución de autores: Itera hasta 3 claves `/authors/OL...json` en paralelo con `Promise.allSettled`, ignorando fallos individuales.
 - **Proveedor terciario (Contingencia estática)**: `FALLBACK_CATALOG` en memoria (contiene datos bibliográficos completos de 4 obras clásicas de software y literatura: Clean Code, The Pragmatic Programmer, Don Quijote, Cien años de soledad).
 - **Caché**: Instancia `Map` en memoria con TTL de 1 hora (`60 * 60 * 1000` ms).
+- **Campo `relleno`**: arreglo que `buscarPorIsbn` añade al resultado (rutas Google y OpenLibrary, y entradas de `FALLBACK_CATALOG`) con los campos que la fuente no aportó y que quedaron con texto por defecto, en el orden `titulo`, `autor`, `editorial`, `resena`, `imagen_url`. Los valores devueltos no cambian (siguen con el texto genérico, que `tests/googleBooks.test.js` fija). En el catálogo de respaldo solo las dos obras sin portada traen `['imagen_url']`. `escanearLibro` sigue guardando esos textos genéricos (ver §9).
 
 ### 4.8 Manejo de Errores y Formato de Respuestas
 - **Jerarquía de Errores (`src/utils/errors.js`)**:
@@ -784,6 +793,8 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 | `tests/validatorsCaracterizacion.test.js` | 47 | Unitaria | No requiere | Caracterización de los validadores de `middlewares/validators/` (incluye comportamientos defectuosos fijados, ver §9). |
 | `tests/errorHandler.test.js` | 5 | Unitaria | No requiere | Mapeo de errores Sequelize/PostgreSQL y formato JSON. |
 | `tests/googleBooks.test.js` | 10 | Unitaria / Mock | No requiere | Timeouts, errores 429/500, fallback a OpenLibrary y catálogo de contingencia (mock de `global.fetch`). |
+| `tests/sugerenciaRelleno.test.js` | 7 | Unitaria / Mock | No requiere | `relleno` de `buscarPorIsbn` en las rutas Google (parcial, `imageLinks` vacío, completa), OpenLibrary (parcial, completa, autor no resuelto) y catálogo de respaldo (con y sin portada), con `global.fetch` simulado. |
+| `tests/consultarSugerencia.test.js` | 9 | Integración / End-to-End | `libreria_oskar_test` | `consultarLibro` con `buscarPorIsbn` simulado (relleno, sin relleno, sin la propiedad, sin mutar, caché real, `sugerencia: null`, libro existente) y `POST /api/libros/consultar` por HTTP: 401, 403, 400 y 200 con la forma nueva. |
 | `tests/sequelize.test.js` | 5 | Integración | `libreria_oskar_test` | Conectividad ORM y definición de los 13 modelos. |
 | `tests/repositories.test.js` | 5 | Integración | `libreria_oskar_test` | `CategoriaRepository`, `AutorRepository`, `EditorialRepository`. |
 | `tests/usuarioRepository.test.js` | 5 | Integración | `libreria_oskar_test` | Búsqueda por email/UUID, exclusión de credenciales, transacciones. |
@@ -804,7 +815,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 | `tests/mailConfig.test.js` | 6 | Unitaria | No requiere | `leerConfigCorreo`: `test` fuerza consola, producción sin variables (aviso, sin lanzar), alias, `MAIL_FROM` y rechazo de proveedor/puerto inválidos. |
 | `tests/mailReintentos.test.js` | 8 | Unitaria / Mock | No requiere | `enviar` nunca rechaza; reintentos (2 fallos → 3 intentos, 4 intentos y descarte, error permanente → 1); tope de pendientes; validación sin llamar al proveedor; secretos fuera de logs. |
 | `tests/mailProveedores.test.js` | 3 | Unitaria / Mock | No requiere | SMTP con transporte inyectado (puertos 587 y 465, auth, timeouts, `MAIL_FROM`), configuración incompleta y consola (bandeja de 100, enmascarado, cuerpo solo en `development`). |
-| **Total** | **242** | | | `npm test`: 242 pasan, 0 fallan (ejecutado el 2026-10-22). |
+| **Total** | **258** | | | `npm test`: 258 pasan, 0 fallan (ejecutado el 2026-10-23). |
 
 - **Runner**: Node.js test runner nativo (`node --test --test-concurrency=1 tests/**/*.test.js`), lanzado por `src/run-tests.js`.
 - **Aislamiento**: `src/run-tests.js` aborta si `NODE_ENV === 'production'` y comprueba con Sequelize (`SELECT current_database()`) que la conexión apunta a `libreria_oskar_test`. Requiere `db-test` levantado (puerto host 5435).
@@ -821,17 +832,17 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 src/
 ├── App.jsx, main.jsx, index.css
 ├── views/                  Orquestadores de ruta (Catalogo, LibroDetalle, RegistrarLibro, Inventario, Login, Nosotros, Ventas, NuevaVenta, VentaDetalle)
-├── components/             Compartidos: Navbar, Footer, Toast, LoadingSpinner, ProtectedRoute, BarcodeScanner, EstadoEscaner
-│   └── ui/                 Modal, ErrorBox, FieldLabel, Input, OpcionesSegmentadas, Select
+├── components/             Compartidos: Navbar, Footer, Toast, LoadingSpinner, ModalPrecioLibro, ProtectedRoute, BarcodeScanner, EstadoEscaner
+│   └── ui/                 Modal, ErrorBox, FieldLabel, Input, ControlCantidad, OpcionesSegmentadas, Select
 ├── context/                AuthContext.jsx
 ├── features/
 │   ├── catalogo/           components/ + hooks/ (useCatalogo, useLibroDetalle)
 │   ├── inventario/         components/ + hooks/ (useInventarioData, useKardex)
-│   ├── registrar-libro/    components/ + hooks/ (useRegistrarLibro) + validacion.js
+│   ├── registrar-libro/    components/ + hooks/ (useRegistrarLibro) + validacion.js + camposFaltantes.js
 │   └── ventas/             components/ + hooks/ (useNuevaVenta, useVentas, useVentaDetalle)
-├── hooks/                  useDebouncedValue.js
+├── hooks/                  useDebouncedValue.js, useCamaraEscaner.js, useGeometriaEscaner.js, useDiagnosticoEscaner.js
 ├── services/api/           client.js, auth.api.js, catalogo.api.js, bodegas.api.js, categorias.api.js, inventario.api.js, libros.api.js, ventas.api.js
-└── utils/                  tokenStorage.js, roles.js, formatters.js, parsers.js, dinero.js, cargarDetectorDeCodigos.js
+└── utils/                  tokenStorage.js, roles.js, formatters.js, parsers.js, dinero.js, cargarDetectorDeCodigos.js, errorCamara.js, geometriaEscaner.js
 ```
 
 Reglas de la estructura: las llamadas HTTP salen solo de `services/api/`; las vistas son orquestadoras delgadas (leen sesión, invocan el hook de su feature y componen componentes); los roles se consultan con `utils/roles.js` (`ROLES`, `ROLES_OPERATIVOS`, `esAdministrador`) y el token con `utils/tokenStorage.js`.
@@ -861,16 +872,16 @@ Reglas de la estructura: las llamadas HTTP salen solo de `services/api/`; las vi
 - **Precio**: `BookGrid` usa `formatPrecio`: `Q 12.50` o "Precio por confirmar".
 
 #### 2. `LibroDetalle.jsx` (66 líneas)
-- **Responsabilidades**: Lee `:ref` y delega en `useLibroDetalle(ref, navigate)`; según el estado muestra `DetalleSkeleton`, `LibroNoEncontrado`, `LibroError` o `FichaLibro` (que incluye disponibilidad por bodega/sucursal con `DisponibilidadItem`). Usa `useAuth` y `esAdministrador(user)`: solo para el Administrador `FichaLibro` muestra el botón "Fijar precio" ("Cambiar precio" si el precio actual es > 0), que abre `ModalPrecioLibro`; al guardar cierra el modal y recarga el libro con `reintentar` de `useLibroDetalle`.
+- **Responsabilidades**: Lee `:ref` y delega en `useLibroDetalle(ref, navigate)`; según el estado muestra `DetalleSkeleton`, `LibroNoEncontrado`, `LibroError` o `FichaLibro` (que incluye disponibilidad por bodega/sucursal con `DisponibilidadItem`). Usa `useAuth` y `esAdministrador(user)`: solo para el Administrador `FichaLibro` muestra el botón "Fijar precio" ("Cambiar precio" si el precio actual es > 0), que abre `ModalPrecioLibro`; al guardar cierra el modal y recarga el libro con `reintentar` de `useLibroDetalle` (ignora el libro que recibe `onSuccess`).
 - **Endpoints consumidos**: `GET /api/libros/:ref` (`getLibroDetalle` en `catalogo.api.js`) y `PATCH /api/libros/:id/precio` (`actualizarPrecioLibro` en `libros.api.js`, vía `ModalPrecioLibro`).
 - **Precio**: `FichaLibro` usa `formatPrecio` (`Q 12.50` o "Precio por confirmar").
 
-#### 3. `RegistrarLibro.jsx` (187 líneas)
+#### 3. `RegistrarLibro.jsx` (194 líneas)
 - **Responsabilidades**: Orquestador del asistente. Estado y acciones en `features/registrar-libro/hooks/useRegistrarLibro.js`. `paso` toma los valores `'consulta'` \| `'existe'` \| `'noExiste'` (inicial `'consulta'`).
 - **Endpoints consumidos** (vía `bodegas.api.js`, `categorias.api.js`, `libros.api.js`, todos con `apiFetch`): `GET /api/bodegas`, `GET /api/categorias`, `POST /api/libros/consultar`, `POST /api/libros/:id/ingreso`, `POST /api/libros/registrar`. **No llama a `POST /api/libros/escanear`** (sin coincidencias en `src/`).
-- **Componentes**: `PanelLateral` (aloja `BarcodeScanner`, que muestra `EstadoEscaner`, e `HistorialSesion`), `PanelConsulta`, `FichaLibroExistente`, `FormularioIngreso`, `ResultadoIngreso`, `FormularioRegistro`, `ResultadoRegistro`, `LoadingSpinner`, y `components/ui/*`.
+- **Componentes**: `PanelLateral` (aloja `BarcodeScanner`, que muestra `EstadoEscaner`, e `HistorialSesion`), `PanelConsulta`, `FichaLibroExistente`, `FormularioIngreso`, `ResultadoIngreso`, `FormularioRegistro` (con `AvisoCamposFaltantes`), `ResultadoRegistro`, `LoadingSpinner`, y `components/ui/*`. En el paso `noExiste` el rótulo es "Sugerencia de <fuente real>" (`rotuloSugerencia(sugerencia.fuente)`) o "Libro no encontrado"; si la consulta no halló nada (`sugerencia` null y `camposFaltantes` no vacío) muestra el aviso "No se encontró información de este ISBN. Completa los datos del libro." (no aparece en el registro manual).
 - **Validación en cliente**: `features/registrar-libro/validacion.js` (`validarRegistro`): autor obligatorio y distinto del marcador `AUTOR_PLACEHOLDER`, categoría, título, reseña, bodega y cantidad ≥ 1. **No hay validación de checksum de ISBN en el cliente**; el checksum se valida solo en el backend.
-- **Precio por rol**: `esAdmin = esAdministrador(user)`. Solo el Administrador ve el precio en `FichaLibroExistente` (`Precio: Q12.50`, sin espacio) y puede editarlo en `FormularioRegistro`; el hook solo envía `precio` si `esAdmin`.
+- **Precio por rol**: `esAdmin = esAdministrador(user)`. Solo el Administrador ve el precio en `FichaLibroExistente` (`Precio: Q 12.50` o `Precio por confirmar`, con `formatPrecio`) y puede editarlo en `FormularioRegistro`; en la ficha tiene además un botón "Fijar precio" ("Cambiar precio" si el precio es > 0) que abre `ModalPrecioLibro` (estado local de la ficha) y, al guardar, `handlePrecioActualizado` del hook actualiza `precio` de `libroExistente` y muestra un aviso; el hook solo envía `precio` si `esAdmin`.
 
 #### 4. `Inventario.jsx` (187 líneas)
 - **Responsabilidades**: Orquestador de pestañas (`activeTab`: `'existencias'` \| `'kardex'`) y de los modales; datos en `useInventarioData` (bodegas, resumen, existencias, filtros con `useDebouncedValue(searchInput, 300)`) y `useKardex` (paginación con `KARDEX_LIMIT = 25`).
@@ -892,7 +903,7 @@ Reglas de la estructura: las llamadas HTTP salen solo de `services/api/`; las vi
 #### 8. `NuevaVenta.jsx` (97 líneas)
 - **Responsabilidades**: Orquestador del formulario; todo el estado en `features/ventas/hooks/useNuevaVenta.js` (bodega, búsqueda con `useDebouncedValue(…, 300)`, líneas, descuento, método de pago, cliente, NIT, notas, envío). Los importes se calculan en centavos enteros con `utils/dinero.js`.
 - **Endpoints consumidos** (vía `ventas.api.js` y `bodegas.api.js`, con `apiFetch`): `GET /api/bodegas`, `GET /api/libros?q=` (`buscarLibrosParaVenta`; se eligió porque `GET /api/inventario` no devuelve el precio; usa `id`, `titulo`, `autor_nombre`, `isbn`, `precio`, `stock_total`) y `POST /api/ventas`.
-- **Componentes**: `BuscadorLibrosVenta` (máx. 20 resultados; "Sin precio", "Sin stock" o "En la venta" deshabilitan "Agregar"), `LineasVenta` (con `ControlCantidad`: botones − y + alrededor del input de cantidad), `ResumenVenta`, `FormularioCliente` (método de pago con `OpcionesSegmentadas`; la bodega, si hay varias, también).
+- **Componentes**: `BuscadorLibrosVenta` (máx. 20 resultados; "Sin precio", "Sin stock" o "En la venta" deshabilitan "Agregar"), `LineasVenta` (con `ControlCantidad`, ahora en `components/ui/`: botones − y + alrededor del input de cantidad), `ResumenVenta`, `FormularioCliente` (método de pago con `OpcionesSegmentadas`; la bodega, si hay varias, también).
 - **Reglas**: el payload lleva solo `bodegaId`, `items`, `metodoPago` y, si no están vacíos, `clienteNombre`, `clienteNit`, `descuento` y `notas`; nunca precio, subtotal, total ni `usuarioId`. Un `useRef` y el `disabled` evitan el doble envío. Un error 400/404/409 se muestra con `ErrorBox` sin vaciar las líneas; un error de red muestra un aviso con enlace al listado en pestaña nueva (la venta pudo haberse registrado). Un 201 navega a `/ventas/:id` con `state: { recienCreada: true }`.
 
 #### 9. `VentaDetalle.jsx` (88 líneas)
@@ -908,9 +919,15 @@ Reglas de la estructura: las llamadas HTTP salen solo de `services/api/`; las vi
 | `Navbar` | `components/Navbar.jsx` | Ninguna | Barra superior responsive. Con sesión muestra Registrar, Catálogo, Inventario, Ventas y Nosotros (a cualquier rol, incluido `Usuario`); sin sesión, Catálogo y Nosotros. |
 | `Footer` | `components/Footer.jsx` | Ninguna | Pie de página. |
 | `LoadingSpinner` | `components/LoadingSpinner.jsx` | `message` (String, default: "Cargando...") | Spinner para llamadas asíncronas. |
-| `Toast` | `components/Toast.jsx` | `toast` (Objeto), `onClose` (Función) | Notificación flotante con temporizador. |
-| `BarcodeScanner` | `components/BarcodeScanner.jsx` | `onScanSuccess`, `isProcessing`, `onClose` (opcional) | Visor de cámara con `html5-qrcode`. Se usa desde `PanelLateral`. Lee solo EAN-13, EAN-8, UPC-A y UPC-E (`formatsToSupport` en el constructor), pide 1280x720 ideal, usa un `qrbox` en función (90 % del ancho del video, alto limitado a la parte visible), maqueta el visor con ancho lógico de 800 px reducido con `transform: scale()` (el alto del marco sigue al del video, con tope 4:3; un video vertical se recorta arriba y abajo y el recuadro queda dentro de lo visible), apaga la instancia según `getState()` de la librería, arranca la cámara una vez (callback e `isProcessing` por `useRef`), ignora el mismo código 3 s y muestra errores distintos por causa. Antes de crear `Html5Qrcode` espera `cargarDetectorDeCodigos()` (`utils/cargarDetectorDeCodigos.js`): con `BarcodeDetector` nativo no importa nada; sin él carga en un chunk aparte el lector de respaldo `barcode-detector/polyfill` (WASM servido desde el propio sitio) y, si falla, sigue con el decodificador en JavaScript. Sobre el visor muestra el estado de la fase (`EstadoEscaner`): `iniciando` hasta que `start()` resuelve, `buscando` con la cámara activa y `ayuda` tras 8 s (`AYUDA_TRAS_MS`) sin lectura, con un botón que abre la entrada manual; un efecto que depende solo de la fase lleva el temporizador. Al leer llama `navigator.vibrate?.(80)` dentro de `try/catch`. En desarrollo hay un botón «Diag escáner» que despliega una línea de diagnóstico (incluye `motor: nativo | wasm | js`); no llega al build. Lectura real con cámara pendiente de prueba manual (ver §9). |
-| `EstadoEscaner` | `components/EstadoEscaner.jsx` | `fase` (`iniciando` \| `buscando` \| `ayuda`), `onEscribir` (opcional) | Presentacional, sin lógica de cámara. Muestra el texto de la fase en una región `role="status"` con `aria-live="polite"`, con una animación de espera en las fases `iniciando` y `buscando`; en `ayuda` añade el botón «Escribir el ISBN». Lo usa `BarcodeScanner`. |
+| `Toast` | `components/Toast.jsx` | `toast` (Objeto), `onClose` (Función) | Notificación flotante con temporizador; capa `z-[60]`, por encima de Navbar, `Modal`, `LoadingSpinner` y `DrawerFiltros` (`z-50`). |
+| `ModalPrecioLibro` | `components/ModalPrecioLibro.jsx` | `libro`, `onClose`, `onSuccess` | Modal (sobre `ui/Modal`) que muestra título y precio actual, pide el nuevo precio y llama a `actualizarPrecioLibro` (`PATCH /api/libros/:id/precio`); muestra `message` y `details` con `ErrorBox`. Llama `onSuccess(json.data)` con el libro actualizado. Lo usan `LibroDetalle` y `FichaLibroExistente`. |
+| `ControlCantidad` | `components/ui/ControlCantidad.jsx` | `cantidad` (texto), `onChange`, `max` (opcional), `disabled`, `titulo` (opcional) | Botones − y + alrededor de un input numérico (mín. 1, 44 px). Sin `max` no hay tope y el input no lleva `max`. Lo usan `LineasVenta` (con `max` = stock), `FormularioIngreso` y `FormularioRegistro` (sin `max`). |
+| `BarcodeScanner` | `components/BarcodeScanner.jsx` | `onScanSuccess`, `isProcessing`, `onClose` (opcional) | Vista del escáner (139 líneas): JSX (selector de cámara, entrada manual, «Cerrar visor», visor con el overlay de error dentro, `EstadoEscaner` debajo del visor), el estado de la entrada manual y el cableado de los tres hooks de abajo. Se usa desde `PanelLateral`. Lee solo EAN-13, EAN-8, UPC-A y UPC-E; el resto del comportamiento (resolución ideal 1280x720, `qrbox` en función, ancho lógico de 800 px con `transform: scale()`, alto visible máximo 1:1 (`MAX_VISIBLE_RATIO = 1`), apagado según `getState()`, arranque único con callback e `isProcessing` por `useRef`, cooldown de 3 s, fases `iniciando`/`buscando`/`ayuda` con ayuda tras 8 s, `navigator.vibrate?.(80)`, espera de `cargarDetectorDeCodigos()` antes de `new Html5Qrcode` y su lector de respaldo WASM) vive en los hooks y utilidades descritos en las filas siguientes. En desarrollo hay un botón «Diag escáner» con una línea de diagnóstico (incluye `motor: nativo \| wasm \| js`); no llega al build. Lectura real con cámara pendiente de prueba manual (ver §9). |
+| `useCamaraEscaner` | `hooks/useCamaraEscaner.js` | `{ onScanSuccess, isProcessing, abrirEntradaManual }` (el último debe ser estable) | Ciclo de vida de `Html5Qrcode`: cola de promesas (`enqueue`), `stopInstance`, `startScanner`, `initCameras` (con id de enumeración contra el doble montaje de StrictMode), `handleDecoded` (cooldown, vibración), fase y su temporizador. Exporta `READER_ELEMENT_ID`. Devuelve `cameras`, `selectedCameraId`, `cameraError`, `isCameraActive`, `fase`, `reintentar`, `cambiarCamara` y `refsDiagnostico`. |
+| `useGeometriaEscaner` | `hooks/useGeometriaEscaner.js` | — | `ResizeObserver` sobre marco y lector; devuelve `frameRef`, `readerRef`, `frameStyle` y `stageStyle`. |
+| `useDiagnosticoEscaner` | `hooks/useDiagnosticoEscaner.js` | refs del escáner | Solo en desarrollo (`import.meta.env.DEV`): arma la línea de diagnóstico cada segundo; devuelve `diag`, `showDiag` y `alternarDiag`. |
+| `geometriaEscaner` / `errorCamara` | `utils/geometriaEscaner.js`, `utils/errorCamara.js` | — | Puras. `geometriaEscaner`: constantes de geometría, `calcularQrbox`, `GEOMETRIA_INICIAL`, `calcularEstilosVisor`. `errorCamara`: `describeCameraError`. |
+| `EstadoEscaner` | `components/EstadoEscaner.jsx` | `fase` (`iniciando` \| `buscando` \| `ayuda`), `onEscribir` (opcional) | Presentacional, sin lógica de cámara. Se renderiza debajo del visor, en el flujo normal (no superpuesto), con un alto mínimo de dos líneas (`min-h-[2.5rem]`). Muestra el texto de la fase en una región `role="status"` con `aria-live="polite"`, con una animación de espera en las fases `iniciando` y `buscando`; en `ayuda` añade el botón «Escribir el ISBN». Lo usa `BarcodeScanner`. |
 | `ProtectedRoute` | `components/ProtectedRoute.jsx` | `children`, `roles` (opcional) | Guardián de navegación: verifica sesión y rol. |
 | `Modal`, `ErrorBox`, `FieldLabel`, `Input`, `Select` | `components/ui/*.jsx` | Ver cada archivo | Primitivas de UI reutilizadas por los formularios y modales de las features. |
 | `OpcionesSegmentadas` | `components/ui/OpcionesSegmentadas.jsx` | `opciones` (`{ valor, etiqueta }`), `valor`, `onChange`, `ariaLabel`, `disabled` | Botones táctiles (`role="radiogroup"`/`radio`, mín. 44 px) en lugar de un `<select>`; hoy los usa la interfaz de ventas. |
@@ -927,7 +944,7 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 
 #### Otros módulos
 - `utils/formatters.js` (`formatFecha`, `formatPrecio`, `formatFechaVenta`: fecha en `America/Guatemala`, "—" si es nula o inválida), `utils/dinero.js` (centavos enteros sin punto flotante: `aCentavos`, `deCentavos`, `formatQuetzales`, `formatMonto`), `services/api/ventas.api.js` (`crearVenta`, `getVentas`, `getVenta`, `anularVenta`, `buscarLibrosParaVenta`), `utils/parsers.js` (`orNull`, `toNum`), `hooks/useDebouncedValue.js`.
-- `features/catalogo/components/ModalPrecioLibro.jsx`: modal (sobre `components/ui/Modal`) que muestra el título y el precio actual, pide el nuevo precio y llama a `actualizarPrecioLibro(libroId, precio)` (`libros.api.js`, `PATCH`); muestra `message` y `details` del backend con `ErrorBox`.
+- `components/ModalPrecioLibro.jsx`: modal (sobre `components/ui/Modal`) que muestra el título y el precio actual, pide el nuevo precio y llama a `actualizarPrecioLibro(libroId, precio)` (`libros.api.js`, `PATCH`); muestra `message` y `details` del backend con `ErrorBox`.
 - Hooks de feature: `useCatalogo`, `useLibroDetalle`, `useInventarioData`, `useKardex`, `useRegistrarLibro`, `useNuevaVenta`, `useVentas`, `useVentaDetalle`.
 
 #### `context/AuthContext.jsx` (`AuthProvider` y `useAuth`)
@@ -981,8 +998,8 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 7. **Servicio**: Relee el stock dentro de la transacción y confirma. Responde HTTP 201 (libro nuevo) o 200 (ya existía).
 
 ### 6.4 Flujo 4: Consulta por ISBN y Registro Manual de Libro
-1. **Consulta (paso `consulta`)**: `PanelConsulta` (ISBN escrito o leído por `BarcodeScanner`) → `handleConsultar` en `useRegistrarLibro` → `POST /api/libros/consultar` (`libros.api.js`). No hay validación de checksum en el cliente; el backend valida el ISBN con `validateConsultarLibro`. Si `data.existe` es true, `paso = 'existe'` (ver §6.5); si no, `paso = 'noExiste'` con la `sugerencia` precargada en el formulario.
-2. **Vista (paso `noExiste`)**: `FormularioRegistro`. `validarRegistro` (`validacion.js`) revisa campos obligatorios antes de enviar.
+1. **Consulta (paso `consulta`)**: `PanelConsulta` (ISBN escrito o leído por `BarcodeScanner`) → `handleConsultar` en `useRegistrarLibro` → `POST /api/libros/consultar` (`libros.api.js`). No hay validación de checksum en el cliente; el backend valida el ISBN con `validateConsultarLibro`. Si `data.existe` es true, `paso = 'existe'` (ver §6.5); si no, `paso = 'noExiste'` con la `sugerencia` precargada en el formulario. Desde el backend la sugerencia trae vacío (no texto genérico) en lo que la fuente no aportó y `campos_faltantes` lista esos campos más `categoria`; el frontend lo consume: `prellenarDesdeSugerencia` (`features/registrar-libro/camposFaltantes.js`, módulo puro) devuelve los valores del formulario y `camposFaltantes` (claves de `regForm`: lo listado en `campos_faltantes` más lo que llegó vacío, y siempre `categoriaId`; si `sugerencia` es null, todos los campos que se rellenan). `useRegistrarLibro` guarda `camposFaltantes` (se vacía en `handleAgregarManual` y `reiniciar`). Al prellenar (`aplicarPrellenado`, mismo módulo) cada consulta que llega a `noExiste` reinicia `categoriaId` a `''`, `cantidad` a 1 y `stockMinimo` a 5 (`REINICIO_CONSULTA`, constante que también usa `handleAgregarManual`) y conserva `bodegaId`; así la categoría de un libro anterior no queda seleccionada.
+2. **Vista (paso `noExiste`)**: `FormularioRegistro`. Con `camposFaltantes` no vacío (consulta, no registro manual) muestra el aviso "Falta completar: …" (`AvisoCamposFaltantes`, `role="status"`) con los obligatorios (Título, Autor, Categoría, Reseña) aún vacíos, resalta esos campos en ámbar mientras sigan vacíos y muestra la pista "No se encontró; es opcional." en editorial y portada vacías. El botón "Registrar Libro" se deshabilita también si faltan título o reseña y una línea bajo el botón dice qué falta (`pendientesParaGuardar`: los vacíos y, si el autor es el placeholder "Autor de Biblioteca Internacional", "Autor (nombre real)"). `validarRegistro` (`validacion.js`) revisa campos obligatorios antes de enviar.
    - `Administrador`: edita `precio`.
    - `Empleado`: ve "El administrador asignará el precio" y el hook no envía `precio`.
 3. **Cliente**: `registrarLibro` (`libros.api.js`, `apiFetch`) → `POST /api/libros/registrar`.
@@ -1150,9 +1167,9 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 
 ### 8.3 Ocultamiento de Precios al Empleado (Comportamiento Exacto)
 - **En Backend (`POST /api/libros/registrar`)**: `libroService.registrarLibro` (`services/libro/registro.service.js`) evalúa `esAdmin = (usuarioRol === 'Administrador')`. Si el usuario no es Administrador, ignora cualquier `precio` enviado, fuerza `precio = 0` y devuelve `"precio_pendiente": true`.
-- **En Backend (`POST /api/libros/consultar`)**: La sugerencia de un libro inexistente omite el precio recuperado de Google Books para evitar fijaciones no autorizadas.
+- **En Backend (`POST /api/libros/consultar`)**: La sugerencia de un libro inexistente omite el precio recuperado de Google Books para evitar fijaciones no autorizadas; su forma es `{ isbn, titulo, autor, editorial, resena, imagen_url, fuente, campos_faltantes }` (sin precio).
 - **En Frontend (`RegistrarLibro`)**:
-  - Paso `existe`: `FichaLibroExistente.jsx` muestra `Precio: Q12.50` (sin espacio) solo si `esAdmin`.
+  - Paso `existe`: `FichaLibroExistente.jsx` muestra `Precio: Q 12.50` o `Precio por confirmar` (`formatPrecio`) solo si `esAdmin`, con un botón "Fijar precio" ("Cambiar precio" si el precio es > 0) que abre `ModalPrecioLibro`.
   - Paso `noExiste`: `FormularioRegistro.jsx` muestra el `<Input>` de precio al Administrador; al Empleado le muestra "El administrador asignará el precio", y `useRegistrarLibro` solo incluye `precio` en el cuerpo si `esAdmin`.
 - **En Catálogo Público y Detalle**: el precio no se oculta a nadie. `formatPrecio` (`utils/formatters.js`) muestra `Q 12.50` (con espacio) si es mayor que 0, o "Precio por confirmar" si es 0.
 
@@ -1167,6 +1184,7 @@ Cada ítem cita su archivo como evidencia. Resueltos y retirados de esta secció
 | **Cliente `pg` en pruebas** | `backend/src/config/db.js`; 7 pruebas (`api.e2e`, `escanear.integration`, `inventarioRepository`, `inventarioService`, `libroRepository`, `libroServiceSequelize`, `movimientoRepository`) | La app ya no usa `pg` directo; solo estas pruebas importan `config/db`. Se retira en fase 2 junto con esas pruebas (el archivo lo indica en su cabecera). |
 | **Chequeo muerto de `connectionString`** | `backend/src/run-tests.js` | `env.js` fuerza `connectionString: undefined` si `NODE_ENV=test`, así que `env.db.connectionString` en la guardia nunca es verdadero. |
 | **Duplicación en el escaneo** | `backend/src/services/libro/escaneo.service.js` | `escanearLibro` valida bodega y usuario antes y dentro de la transacción, y repite el bloque de tipo `Ingreso` en lugar de reutilizar `_crearMovimientoIngreso` (`movimientoIngreso.service.js`). |
+| **`escanearLibro` guarda el relleno** | `backend/src/services/libro/escaneo.service.js`, `backend/src/services/googleBooks.service.js` | `POST /api/libros/escanear` persiste lo que devuelve `buscarPorIsbn`, incluidos los textos por defecto ("Título sin especificar", "Autor de Biblioteca Internacional", "Editorial Desconocida", reseña autogenerada); no usa `relleno`, solo `consultarLibro` lo aprovecha. |
 | **Marcador de autor triplicado** | `backend/src/middlewares/validators/libro.validators.js` (`AUTOR_PLACEHOLDER_VALIDATOR`), `backend/src/services/googleBooks.service.js` (`AUTOR_PLACEHOLDER`), `frontend/src/features/registrar-libro/validacion.js` | La misma cadena `'Autor de Biblioteca Internacional'` definida en tres lugares. |
 | **Bloques repetidos en los modales de Inventario** | `frontend/src/features/inventario/components/ModalSalidaInventario.jsx`, `ModalAjusteInventario.jsx` | Repiten el bloque de error y la ficha del libro. |
 | **Filtros duplicados en Catálogo** | `frontend/src/features/catalogo/components/PanelFiltros.jsx`, `DrawerFiltros.jsx` | Ambos repiten el cálculo de `ramasDerecho` y `otrasCateg`. |
@@ -1180,7 +1198,7 @@ Cada ítem cita su archivo como evidencia. Resueltos y retirados de esta secció
 | **`version` obsoleta en Compose** | `docker-compose.yml` | Declara `version: '3.8'`, campo obsoleto en Docker Compose v2. |
 | **Monorepo sin `workspaces`** | `package.json` | Usa scripts con `--prefix`; no declara `"workspaces"`. |
 | **Sin Dockerfile de frontend** | `frontend/` | Solo existe `backend/Dockerfile`; el frontend corre en el host con `npm run frontend:dev`. |
-| **Escáner de cámara (corrección pendiente de prueba manual)** | `frontend/src/components/BarcodeScanner.jsx` | Se corrigieron formatos, resolución, zona de escaneo y reinicios de cámara por dependencias inestables. Después, la geometría del visor: el marco ya no recorta el recuadro con video vertical, el recorte analizado se agranda con un ancho lógico de 800 px y el apagado usa `getState()`. Después, retroalimentación durante el escaneo: texto por fase (iniciando, buscando, ayuda tras 8 s), vibración corta al leer y diagnóstico técnico oculto tras un botón y solo en desarrollo. Se añadió un lector de respaldo (`barcode-detector` 3.2.3 con `zxing-wasm`) que se carga solo si el navegador no trae `BarcodeDetector`, para laptops con Chromium/Firefox; con `BarcodeDetector` nativo el comportamiento no cambia. La decodificación real con el lector de respaldo, la descarga del `.wasm` en el navegador y el celular tras el cambio están pendientes de prueba manual. |
+| **Escáner de cámara (visor 1:1 y mensaje debajo pendientes de prueba manual)** | `frontend/src/components/BarcodeScanner.jsx` | Se corrigieron formatos, resolución, zona de escaneo y reinicios de cámara por dependencias inestables. Después, la geometría del visor: el marco ya no recorta el recuadro con video vertical, el recorte analizado se agranda con un ancho lógico de 800 px y el apagado usa `getState()`. Después, retroalimentación durante el escaneo: texto por fase (iniciando, buscando, ayuda tras 8 s), vibración corta al leer y diagnóstico técnico oculto tras un botón y solo en desarrollo. Se añadió un lector de respaldo (`barcode-detector` 3.2.3 con `zxing-wasm`) que se carga solo si el navegador no trae `BarcodeDetector`, para laptops con Chromium/Firefox; con `BarcodeDetector` nativo el comportamiento no cambia. El comportamiento previo se verificó a mano el 2026-10-22 en un celular (Chrome, detector nativo) y en una laptop (lector de respaldo WASM). Después, `BarcodeScanner.jsx` se dividió sin cambiar comportamiento en tres hooks (`useCamaraEscaner`, `useGeometriaEscaner`, `useDiagnosticoEscaner`) y dos utilidades (`geometriaEscaner`, `errorCamara`); se eliminó la variable de módulo `lastQrbox`. El usuario verificó a mano el 2026-10-23 que, tras esa división en hooks, el escáner lee en un celular y en una laptop (dato aportado por el usuario, no verificado por el agente). Después, el alto visible máximo del visor pasó de 4:3 a 1:1 (`MAX_VISIBLE_RATIO` 0.75 → 1; el `qrbox` no cambia) y el texto de estado pasó de superponerse al visor a mostrarse debajo de él; ambos cambios están pendientes de prueba manual (aspecto real, tamaño en el celular, recuadro entero, que la cámara no se reinicie). |
 | **JSON mal formado devuelve 500** | `backend/src/middlewares/errorHandler.js` | El manejador no contempla el `SyntaxError` del parser JSON (no es `AppError` ni error de Sequelize/pg) y responde 500 en vez de 400. Verificado por lectura del código; no probado en ejecución. |
 | **Reintentos de correo solo en memoria** | `backend/src/services/mail/fabrica.service.js` | Los reintentos pendientes viven en memoria y se pierden si el proceso se apaga; no hay cola persistente. En Cloud Run podrían pausarse sin peticiones activas (no verificado). El envío SMTP real y el puerto 587 desde Cloud Run tampoco se han verificado. |
 | **Placeholder del modal de salida desactualizado** | `frontend/src/features/inventario/components/ModalSalidaInventario.jsx` | El placeholder del motivo sugiere "Venta en mostrador" aunque ahora existe el módulo de ventas (que registra sus propias salidas). |
