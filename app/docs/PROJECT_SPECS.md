@@ -69,6 +69,7 @@
 - **Versión**: `1.0.0`
 - **Tipo de módulo**: `module` (ESM nativo)
 - **Dependencias de producción (`dependencies`)**:
+  - `barcode-detector`: `3.2.3` (versión exacta; lector de respaldo para navegadores sin `BarcodeDetector`)
   - `html5-qrcode`: `^2.3.8`
   - `lucide-react`: `^0.475.0`
   - `react`: `^18.3.1`
@@ -273,7 +274,7 @@ app/
 │       ├── 003_categorias_adicionales.sql (22)
 │       └── 004_ventas.sql (58)
 ├── docs/
-│   ├── PROJECT_SPECS.md (1275)
+│   ├── PROJECT_SPECS.md (1280)
 │   └── roadmap/
 │       ├── auth-2fa/
 │       │   └── SKILL.md (16)
@@ -297,7 +298,8 @@ app/
         ├── assets/
         │   └── logo.jpg
         ├── components/
-        │   ├── BarcodeScanner.jsx (221)
+        │   ├── BarcodeScanner.jsx (422)
+        │   ├── EstadoEscaner.jsx (47)
         │   ├── Footer.jsx (23)
         │   ├── LoadingSpinner.jsx (30)
         │   ├── Navbar.jsx (125)
@@ -384,6 +386,7 @@ app/
         │       ├── libros.api.js (29)
         │       └── ventas.api.js (27)
         ├── utils/
+        │   ├── cargarDetectorDeCodigos.js (29)
         │   ├── dinero.js (24)
         │   ├── formatters.js (30)
         │   ├── parsers.js (10)
@@ -410,6 +413,7 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `app/backend/tests/validatorsCaracterizacion.test.js` | 642 | Pruebas de caracterización de los 8 validadores (fijan también comportamientos defectuosos, ver §9). |
 | `app/backend/tests/api.e2e.test.js` | 539 | Pruebas HTTP end-to-end contra un servidor Express temporal. |
 | `app/backend/tests/inventarioRepository.test.js` | 468 | Persistencia de inventario: bloqueo `FOR UPDATE`, stock obsoleto, alertas y KPIs de resumen. |
+| `app/frontend/src/components/BarcodeScanner.jsx` | 422 | Visor de cámara con `html5-qrcode`: lee EAN-13/EAN-8/UPC-A/UPC-E, evita lecturas repetidas, vibra al leer si el dispositivo lo permite, lleva la fase del escaneo (iniciando, buscando, ayuda), informa errores de cámara por causa, ajusta la geometría del visor y ofrece entrada manual de ISBN. |
 | `app/backend/tests/libroServiceSequelize.test.js` | 387 | Transacciones del servicio de libros: rollback, trigger, concurrencia de escaneo. |
 | `app/database/schema.sql` | 341 | DDL de 13 tablas, extensiones, secuencia de ventas, trigger PL/pgSQL, 18 índices y semillas (roles, tipos de movimiento, 20 categorías). |
 | `app/backend/src/services/googleBooks.service.js` | 288 | Cliente de Google Books con fallback a OpenLibrary, catálogo de contingencia y caché TTL. |
@@ -817,7 +821,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 src/
 ├── App.jsx, main.jsx, index.css
 ├── views/                  Orquestadores de ruta (Catalogo, LibroDetalle, RegistrarLibro, Inventario, Login, Nosotros, Ventas, NuevaVenta, VentaDetalle)
-├── components/             Compartidos: Navbar, Footer, Toast, LoadingSpinner, ProtectedRoute, BarcodeScanner
+├── components/             Compartidos: Navbar, Footer, Toast, LoadingSpinner, ProtectedRoute, BarcodeScanner, EstadoEscaner
 │   └── ui/                 Modal, ErrorBox, FieldLabel, Input, OpcionesSegmentadas, Select
 ├── context/                AuthContext.jsx
 ├── features/
@@ -827,7 +831,7 @@ src/
 │   └── ventas/             components/ + hooks/ (useNuevaVenta, useVentas, useVentaDetalle)
 ├── hooks/                  useDebouncedValue.js
 ├── services/api/           client.js, auth.api.js, catalogo.api.js, bodegas.api.js, categorias.api.js, inventario.api.js, libros.api.js, ventas.api.js
-└── utils/                  tokenStorage.js, roles.js, formatters.js, parsers.js, dinero.js
+└── utils/                  tokenStorage.js, roles.js, formatters.js, parsers.js, dinero.js, cargarDetectorDeCodigos.js
 ```
 
 Reglas de la estructura: las llamadas HTTP salen solo de `services/api/`; las vistas son orquestadoras delgadas (leen sesión, invocan el hook de su feature y componen componentes); los roles se consultan con `utils/roles.js` (`ROLES`, `ROLES_OPERATIVOS`, `esAdministrador`) y el token con `utils/tokenStorage.js`.
@@ -864,7 +868,7 @@ Reglas de la estructura: las llamadas HTTP salen solo de `services/api/`; las vi
 #### 3. `RegistrarLibro.jsx` (187 líneas)
 - **Responsabilidades**: Orquestador del asistente. Estado y acciones en `features/registrar-libro/hooks/useRegistrarLibro.js`. `paso` toma los valores `'consulta'` \| `'existe'` \| `'noExiste'` (inicial `'consulta'`).
 - **Endpoints consumidos** (vía `bodegas.api.js`, `categorias.api.js`, `libros.api.js`, todos con `apiFetch`): `GET /api/bodegas`, `GET /api/categorias`, `POST /api/libros/consultar`, `POST /api/libros/:id/ingreso`, `POST /api/libros/registrar`. **No llama a `POST /api/libros/escanear`** (sin coincidencias en `src/`).
-- **Componentes**: `PanelLateral` (aloja `BarcodeScanner` e `HistorialSesion`), `PanelConsulta`, `FichaLibroExistente`, `FormularioIngreso`, `ResultadoIngreso`, `FormularioRegistro`, `ResultadoRegistro`, `LoadingSpinner`, y `components/ui/*`.
+- **Componentes**: `PanelLateral` (aloja `BarcodeScanner`, que muestra `EstadoEscaner`, e `HistorialSesion`), `PanelConsulta`, `FichaLibroExistente`, `FormularioIngreso`, `ResultadoIngreso`, `FormularioRegistro`, `ResultadoRegistro`, `LoadingSpinner`, y `components/ui/*`.
 - **Validación en cliente**: `features/registrar-libro/validacion.js` (`validarRegistro`): autor obligatorio y distinto del marcador `AUTOR_PLACEHOLDER`, categoría, título, reseña, bodega y cantidad ≥ 1. **No hay validación de checksum de ISBN en el cliente**; el checksum se valida solo en el backend.
 - **Precio por rol**: `esAdmin = esAdministrador(user)`. Solo el Administrador ve el precio en `FichaLibroExistente` (`Precio: Q12.50`, sin espacio) y puede editarlo en `FormularioRegistro`; el hook solo envía `precio` si `esAdmin`.
 
@@ -905,7 +909,8 @@ Reglas de la estructura: las llamadas HTTP salen solo de `services/api/`; las vi
 | `Footer` | `components/Footer.jsx` | Ninguna | Pie de página. |
 | `LoadingSpinner` | `components/LoadingSpinner.jsx` | `message` (String, default: "Cargando...") | Spinner para llamadas asíncronas. |
 | `Toast` | `components/Toast.jsx` | `toast` (Objeto), `onClose` (Función) | Notificación flotante con temporizador. |
-| `BarcodeScanner` | `components/BarcodeScanner.jsx` | `onScanSuccess`, `isProcessing`, `onClose` (opcional) | Visor de cámara con `html5-qrcode`. Se usa desde `PanelLateral`. Problema reportado, no diagnosticado: no captura códigos (ver §9). |
+| `BarcodeScanner` | `components/BarcodeScanner.jsx` | `onScanSuccess`, `isProcessing`, `onClose` (opcional) | Visor de cámara con `html5-qrcode`. Se usa desde `PanelLateral`. Lee solo EAN-13, EAN-8, UPC-A y UPC-E (`formatsToSupport` en el constructor), pide 1280x720 ideal, usa un `qrbox` en función (90 % del ancho del video, alto limitado a la parte visible), maqueta el visor con ancho lógico de 800 px reducido con `transform: scale()` (el alto del marco sigue al del video, con tope 4:3; un video vertical se recorta arriba y abajo y el recuadro queda dentro de lo visible), apaga la instancia según `getState()` de la librería, arranca la cámara una vez (callback e `isProcessing` por `useRef`), ignora el mismo código 3 s y muestra errores distintos por causa. Antes de crear `Html5Qrcode` espera `cargarDetectorDeCodigos()` (`utils/cargarDetectorDeCodigos.js`): con `BarcodeDetector` nativo no importa nada; sin él carga en un chunk aparte el lector de respaldo `barcode-detector/polyfill` (WASM servido desde el propio sitio) y, si falla, sigue con el decodificador en JavaScript. Sobre el visor muestra el estado de la fase (`EstadoEscaner`): `iniciando` hasta que `start()` resuelve, `buscando` con la cámara activa y `ayuda` tras 8 s (`AYUDA_TRAS_MS`) sin lectura, con un botón que abre la entrada manual; un efecto que depende solo de la fase lleva el temporizador. Al leer llama `navigator.vibrate?.(80)` dentro de `try/catch`. En desarrollo hay un botón «Diag escáner» que despliega una línea de diagnóstico (incluye `motor: nativo | wasm | js`); no llega al build. Lectura real con cámara pendiente de prueba manual (ver §9). |
+| `EstadoEscaner` | `components/EstadoEscaner.jsx` | `fase` (`iniciando` \| `buscando` \| `ayuda`), `onEscribir` (opcional) | Presentacional, sin lógica de cámara. Muestra el texto de la fase en una región `role="status"` con `aria-live="polite"`, con una animación de espera en las fases `iniciando` y `buscando`; en `ayuda` añade el botón «Escribir el ISBN». Lo usa `BarcodeScanner`. |
 | `ProtectedRoute` | `components/ProtectedRoute.jsx` | `children`, `roles` (opcional) | Guardián de navegación: verifica sesión y rol. |
 | `Modal`, `ErrorBox`, `FieldLabel`, `Input`, `Select` | `components/ui/*.jsx` | Ver cada archivo | Primitivas de UI reutilizadas por los formularios y modales de las features. |
 | `OpcionesSegmentadas` | `components/ui/OpcionesSegmentadas.jsx` | `opciones` (`{ valor, etiqueta }`), `valor`, `onChange`, `ariaLabel`, `disabled` | Botones táctiles (`role="radiogroup"`/`radio`, mín. 44 px) en lugar de un `<select>`; hoy los usa la interfaz de ventas. |
@@ -1175,7 +1180,7 @@ Cada ítem cita su archivo como evidencia. Resueltos y retirados de esta secció
 | **`version` obsoleta en Compose** | `docker-compose.yml` | Declara `version: '3.8'`, campo obsoleto en Docker Compose v2. |
 | **Monorepo sin `workspaces`** | `package.json` | Usa scripts con `--prefix`; no declara `"workspaces"`. |
 | **Sin Dockerfile de frontend** | `frontend/` | Solo existe `backend/Dockerfile`; el frontend corre en el host con `npm run frontend:dev`. |
-| **Escáner de cámara (reportado, no diagnosticado)** | `frontend/src/components/BarcodeScanner.jsx` | El usuario reporta que no captura códigos. Sin diagnóstico: no verificado. |
+| **Escáner de cámara (corrección pendiente de prueba manual)** | `frontend/src/components/BarcodeScanner.jsx` | Se corrigieron formatos, resolución, zona de escaneo y reinicios de cámara por dependencias inestables. Después, la geometría del visor: el marco ya no recorta el recuadro con video vertical, el recorte analizado se agranda con un ancho lógico de 800 px y el apagado usa `getState()`. Después, retroalimentación durante el escaneo: texto por fase (iniciando, buscando, ayuda tras 8 s), vibración corta al leer y diagnóstico técnico oculto tras un botón y solo en desarrollo. Se añadió un lector de respaldo (`barcode-detector` 3.2.3 con `zxing-wasm`) que se carga solo si el navegador no trae `BarcodeDetector`, para laptops con Chromium/Firefox; con `BarcodeDetector` nativo el comportamiento no cambia. La decodificación real con el lector de respaldo, la descarga del `.wasm` en el navegador y el celular tras el cambio están pendientes de prueba manual. |
 | **JSON mal formado devuelve 500** | `backend/src/middlewares/errorHandler.js` | El manejador no contempla el `SyntaxError` del parser JSON (no es `AppError` ni error de Sequelize/pg) y responde 500 en vez de 400. Verificado por lectura del código; no probado en ejecución. |
 | **Reintentos de correo solo en memoria** | `backend/src/services/mail/fabrica.service.js` | Los reintentos pendientes viven en memoria y se pierden si el proceso se apaga; no hay cola persistente. En Cloud Run podrían pausarse sin peticiones activas (no verificado). El envío SMTP real y el puerto 587 desde Cloud Run tampoco se han verificado. |
 | **Placeholder del modal de salida desactualizado** | `frontend/src/features/inventario/components/ModalSalidaInventario.jsx` | El placeholder del motivo sugiere "Venta en mostrador" aunque ahora existe el módulo de ventas (que registra sus propias salidas). |

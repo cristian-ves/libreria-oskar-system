@@ -1,6 +1,60 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeScannerState, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { Camera, RefreshCw, Keyboard, Check, ShieldAlert } from 'lucide-react';
+import { cargarDetectorDeCodigos } from '../utils/cargarDetectorDeCodigos';
+import EstadoEscaner from './EstadoEscaner';
+
+const READER_ELEMENT_ID = 'reader-container';
+const AYUDA_TRAS_MS = 8000;
+const REPEAT_COOLDOWN_MS = 3000;
+
+// Solo códigos 1D de libros/retail; se excluye UPC_EAN_EXTENSION (precio de 5 dígitos).
+const SCANNER_FORMATS = [
+  Html5QrcodeSupportedFormats.EAN_13,
+  Html5QrcodeSupportedFormats.EAN_8,
+  Html5QrcodeSupportedFormats.UPC_A,
+  Html5QrcodeSupportedFormats.UPC_E,
+];
+
+// La librería dimensiona el <video> con el ancho de #reader-container y recorta el
+// análisis al tamaño EN PANTALLA del recuadro (canvas = qrbox). Por eso el contenedor
+// se maqueta con un ancho lógico fijo y se reduce con transform: scale(), de modo que
+// el recorte analizado sea grande aunque el visor se vea pequeño.
+const LAYOUT_WIDTH = 800;
+const DEFAULT_VIDEO_RATIO = 9 / 16;
+// Alto visible máximo (4:3). Un video vertical más alto se recorta por arriba y abajo,
+// y el recuadro se calcula para caber dentro de esa parte visible.
+const MAX_VISIBLE_RATIO = 0.75;
+const FRAME_BORDER_PX = 4;
+
+let lastQrbox = null;
+
+// Zona de escaneo ancha y baja para códigos 1D. Recibe el tamaño del VIDEO, no del marco.
+const getQrbox = (viewfinderWidth, viewfinderHeight) => {
+  const visibleHeight = Math.min(viewfinderHeight, Math.floor(viewfinderWidth * MAX_VISIBLE_RATIO));
+  lastQrbox = {
+    width: Math.min(viewfinderWidth, Math.max(50, Math.floor(viewfinderWidth * 0.9))),
+    height: Math.min(visibleHeight, Math.max(50, Math.floor(Math.min(visibleHeight * 0.45, viewfinderWidth * 0.3)))),
+  };
+  return lastQrbox;
+};
+
+const describeCameraError = (err) => {
+  if (typeof window !== 'undefined' && !window.isSecureContext) {
+    return 'La cámara solo funciona con HTTPS o en localhost. Ingresa el ISBN manualmente.';
+  }
+  const text = `${err?.name || ''} ${err?.message || ''} ${String(err)}`;
+  if (/NotAllowedError|PermissionDeniedError|Permission denied/i.test(text)) {
+    return 'Permiso de cámara denegado. Habilítalo en tu navegador o ingresa el ISBN manualmente.';
+  }
+  if (/NotFoundError|DevicesNotFoundError|Requested device not found/i.test(text)) {
+    return 'No se encontró ninguna cámara en este dispositivo.';
+  }
+  if (/NotReadableError|TrackStartError|Could not start video source/i.test(text)) {
+    return 'La cámara está en uso por otra aplicación o pestaña. Ciérrala e inténtalo de nuevo.';
+  }
+  return 'No se pudo iniciar la cámara. Reintenta o ingresa el ISBN manualmente.';
+};
 
 export default function BarcodeScanner({ onScanSuccess, isProcessing, onClose }) {
   const [cameras, setCameras] = useState([]);
@@ -10,71 +64,142 @@ export default function BarcodeScanner({ onScanSuccess, isProcessing, onClose })
   const [manualIsbn, setManualIsbn] = useState('');
   const [showManualInput, setShowManualInput] = useState(false);
 
-  const scannerRef = useRef(null);
-  const readerElementId = 'reader-container';
+  const [geometry, setGeometry] = useState({ scale: 0.5, videoHeight: Math.round(LAYOUT_WIDTH * DEFAULT_VIDEO_RATIO) });
+  const [diag, setDiag] = useState('');
+  const [showDiag, setShowDiag] = useState(false);
+  const [fase, setFase] = useState('iniciando'); // iniciando | buscando | ayuda
 
-  const stopScanner = useCallback(async () => {
-    if (scannerRef.current) {
-      try {
-        if (scannerRef.current.isScanning) {
-          await scannerRef.current.stop();
-        }
-        await scannerRef.current.clear();
-      } catch (err) {
-        console.warn('[SCANNER CLEANUP]:', err);
-      } finally {
-        setIsCameraActive(false);
-      }
-    }
+  const frameRef = useRef(null);
+  const readerRef = useRef(null);
+  const initIdRef = useRef(0);
+  const failCountRef = useRef(0);
+  const motorRef = useRef(null);
+  const scannerRef = useRef(null);
+  const mountedRef = useRef(false);
+  const queueRef = useRef(Promise.resolve());
+  const lastReadRef = useRef({ text: '', at: 0 });
+
+  // Siempre el valor del último render, sin entrar en las dependencias del efecto.
+  const onScanSuccessRef = useRef(onScanSuccess);
+  const isProcessingRef = useRef(isProcessing);
+  onScanSuccessRef.current = onScanSuccess;
+  isProcessingRef.current = isProcessing;
+
+  // Serializa arranques y paradas para no dejar dos instancias (StrictMode).
+  const enqueue = useCallback((task) => {
+    queueRef.current = queueRef.current.then(task, task);
+    return queueRef.current;
   }, []);
 
-  const startScanner = useCallback(async (cameraId) => {
+  const stopInstance = useCallback(async () => {
+    const instance = scannerRef.current;
+    scannerRef.current = null;
+    if (!instance) return;
+    // Se decide por el estado de la librería (state-manager.js), no por instance.isScanning:
+    // ese campo solo pasa a true en el evento "playing" del video, y entre el fin de start()
+    // y ese evento clear() lanzaría "Cannot clear while scan is ongoing".
+    try {
+      if (instance.getState() !== Html5QrcodeScannerState.NOT_STARTED) {
+        await instance.stop();
+      }
+    } catch (err) {
+      console.warn('[SCANNER CLEANUP]:', err);
+    }
+    try {
+      if (instance.getState() === Html5QrcodeScannerState.NOT_STARTED) {
+        instance.clear();
+      }
+    } catch (err) {
+      console.warn('[SCANNER CLEANUP]:', err);
+    }
+    if (mountedRef.current) setIsCameraActive(false);
+  }, []);
+
+  const handleDecoded = useCallback((decodedText) => {
+    if (isProcessingRef.current) return;
+    const now = Date.now();
+    const last = lastReadRef.current;
+    if (decodedText === last.text && now - last.at < REPEAT_COOLDOWN_MS) return;
+    lastReadRef.current = { text: decodedText, at: now };
+    if (import.meta.env.DEV) console.debug('[BARCODE DETECTED]:', decodedText);
+    try { navigator.vibrate?.(80); } catch (e) { /* sin vibración disponible */ }
+    onScanSuccessRef.current(decodedText);
+  }, []);
+
+  const startScanner = useCallback((cameraId) => enqueue(async () => {
+    if (!mountedRef.current) return;
     try {
       setCameraError(null);
-      await stopScanner();
+      setFase('iniciando');
+      await stopInstance();
+      if (!mountedRef.current) return;
 
-      const html5QrCode = new Html5Qrcode(readerElementId);
+      motorRef.current = await cargarDetectorDeCodigos();
+      if (!mountedRef.current) return;
+
+      const html5QrCode = new Html5Qrcode(READER_ELEMENT_ID, {
+        verbose: false,
+        formatsToSupport: SCANNER_FORMATS,
+      });
       scannerRef.current = html5QrCode;
 
-      const config = {
-        fps: 15,
-        qrbox: { width: 280, height: 160 },
-        aspectRatio: 1.777778,
+      // Con videoConstraints la librería ignora el primer argumento de start(),
+      // así que la cámara se incluye aquí. Resolución ideal, nunca exact.
+      const videoConstraints = {
+        ...(cameraId ? { deviceId: { exact: cameraId } } : { facingMode: 'environment' }),
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
       };
 
-      const cameraConfig = cameraId
-        ? { deviceId: { exact: cameraId } }
-        : { facingMode: 'environment' };
-
       await html5QrCode.start(
-        cameraConfig,
-        config,
-        (decodedText) => {
-          if (isProcessing) return;
-          console.log('[BARCODE DETECTED]:', decodedText);
-          onScanSuccess(decodedText);
+        videoConstraints,
+        {
+          fps: 15,
+          qrbox: getQrbox,
+          aspectRatio: 1.777778,
+          videoConstraints,
         },
-        (errorMessage) => {
-          // Ignorar cuadros sin código
-        }
+        handleDecoded,
+        () => { failCountRef.current += 1; }
       );
 
+      if (!mountedRef.current) {
+        await stopInstance();
+        return;
+      }
+      if (import.meta.env.DEV) {
+        try {
+          const { width, height, frameRate } = html5QrCode.getRunningTrackSettings();
+          console.debug('[SCANNER TRACK]:', { width, height, frameRate });
+        } catch (e) {
+          // sin detalles de pista disponibles
+        }
+      }
       setIsCameraActive(true);
+      setFase('buscando');
     } catch (err) {
       console.error('[CAMERA START ERROR]:', err);
-      setCameraError(
-        'No se pudo acceder a la cámara. Verifica que hayas concedido los permisos en tu navegador o ingresa el ISBN manualmente.'
-      );
+      await stopInstance();
+      if (!mountedRef.current) return;
+      setCameraError(describeCameraError(err));
+      setShowManualInput(true);
       setIsCameraActive(false);
     }
-  }, [isProcessing, onScanSuccess, stopScanner]);
+  }), [enqueue, stopInstance, handleDecoded]);
 
-  useEffect(() => {
-    let isMounted = true;
-
+  const initCameras = useCallback(() => {
+    setCameraError(null);
+    initIdRef.current += 1;
+    const initId = initIdRef.current;
+    if (!window.isSecureContext) {
+      setCameraError(describeCameraError(null));
+      setShowManualInput(true);
+      return;
+    }
     Html5Qrcode.getCameras()
       .then((devices) => {
-        if (!isMounted) return;
+        // initId descarta la enumeración de un montaje anterior (doble montaje de StrictMode).
+        if (!mountedRef.current || initId !== initIdRef.current) return;
         if (devices && devices.length > 0) {
           setCameras(devices);
           const backCamera = devices.find((d) =>
@@ -84,22 +209,90 @@ export default function BarcodeScanner({ onScanSuccess, isProcessing, onClose })
           setSelectedCameraId(initialId);
           startScanner(initialId);
         } else {
-          setCameraError('No se detectaron cámaras en este dispositivo.');
+          setCameraError('No se encontró ninguna cámara en este dispositivo.');
           setShowManualInput(true);
         }
       })
       .catch((err) => {
-        if (!isMounted) return;
+        if (!mountedRef.current) return;
         console.warn('[CAMERAS ENUMERATION ERROR]:', err);
-        setCameraError('Permiso de cámara denegado o no disponible en este entorno.');
+        setCameraError(describeCameraError(err));
         setShowManualInput(true);
       });
+  }, [startScanner]);
 
+  // Arranca una sola vez al abrir; no depende de onScanSuccess ni de isProcessing.
+  useEffect(() => {
+    mountedRef.current = true;
+    initCameras();
     return () => {
-      isMounted = false;
-      stopScanner();
+      mountedRef.current = false;
+      initIdRef.current += 1;
+      enqueue(stopInstance);
     };
-  }, [startScanner, stopScanner]);
+  }, [initCameras, enqueue, stopInstance]);
+
+  // Alto del marco = alto del video (con tope) y escala = ancho del marco / ancho lógico.
+  useEffect(() => {
+    const frame = frameRef.current;
+    const reader = readerRef.current;
+    if (!frame || !reader || typeof ResizeObserver === 'undefined') return undefined;
+    const update = () => {
+      const frameWidth = frame.clientWidth;
+      if (!frameWidth) return;
+      const scale = frameWidth / LAYOUT_WIDTH;
+      const videoHeight = reader.offsetHeight || Math.round(LAYOUT_WIDTH * DEFAULT_VIDEO_RATIO);
+      setGeometry((prev) => (
+        prev.scale === scale && prev.videoHeight === videoHeight ? prev : { scale, videoHeight }
+      ));
+    };
+    const observer = new ResizeObserver(update);
+    observer.observe(frame);
+    observer.observe(reader);
+    update();
+    return () => observer.disconnect();
+  }, []);
+
+  // Tras AYUDA_TRAS_MS buscando sin lectura pasa a "ayuda". Depende solo de la fase:
+  // se limpia al cambiar de fase o desmontar, y se reinicia al reintentar (vuelve a "iniciando").
+  useEffect(() => {
+    if (fase !== 'buscando') return undefined;
+    const timer = setTimeout(() => setFase('ayuda'), AYUDA_TRAS_MS);
+    return () => clearTimeout(timer);
+  }, [fase]);
+
+  // Diagnóstico solo en desarrollo (no llega al build): se actualiza cada segundo.
+  useEffect(() => {
+    if (!import.meta.env.DEV || !showDiag) return undefined;
+    const timer = setInterval(() => {
+      const video = readerRef.current?.querySelector('video');
+      const frame = frameRef.current;
+      const last = lastReadRef.current;
+      setDiag([
+        `Diag escáner · video ${video ? `${video.videoWidth}x${video.videoHeight}` : '-'}`,
+        `en pantalla ${video ? `${video.clientWidth}x${video.clientHeight}` : '-'} (lógico)`,
+        `marco ${frame ? `${frame.clientWidth}x${frame.clientHeight}` : '-'}`,
+        `recuadro ${lastQrbox ? `${lastQrbox.width}x${lastQrbox.height}` : '-'}`,
+        `BarcodeDetector: ${'BarcodeDetector' in window ? 'sí' : 'no'}`,
+        `motor: ${motorRef.current || '-'}`,
+        last.text ? `última lectura ${last.text} (hace ${Math.round((Date.now() - last.at) / 1000)} s)` : `sin lectura, ${failCountRef.current} cuadros sin código`,
+      ].join(' · '));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [showDiag]);
+
+  const visibleHeight = Math.min(geometry.videoHeight, Math.floor(LAYOUT_WIDTH * MAX_VISIBLE_RATIO));
+  const frameStyle = { height: Math.round(visibleHeight * geometry.scale) + FRAME_BORDER_PX };
+  const stageStyle = {
+    width: LAYOUT_WIDTH,
+    transformOrigin: 'top left',
+    transform: `translateY(${-((geometry.videoHeight - visibleHeight) / 2) * geometry.scale}px) scale(${geometry.scale})`,
+  };
+
+  const handleRetry = () => {
+    if (selectedCameraId) startScanner(selectedCameraId);
+    else initCameras();
+  };
 
   const handleCameraChange = (e) => {
     const newId = e.target.value;
@@ -162,26 +355,23 @@ export default function BarcodeScanner({ onScanSuccess, isProcessing, onClose })
       )}
 
       {/* Visor de Cámara */}
-      <div className="relative overflow-hidden rounded-xl bg-black aspect-video flex items-center justify-center border-2 border-gray-300 shadow-inner">
-        <div id={readerElementId} className="w-full h-full" />
+      <div
+        ref={frameRef}
+        style={frameStyle}
+        className="relative overflow-hidden rounded-xl bg-black border-2 border-gray-300 shadow-inner"
+      >
+        <div style={stageStyle} className="absolute top-0 left-0">
+          <div id={READER_ELEMENT_ID} ref={readerRef} className="w-full" />
+        </div>
 
-        {isCameraActive && !cameraError && (
-          <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center">
-            <div className="w-64 h-36 border-2 border-[#e8c85e] rounded-lg relative overflow-hidden shadow-[0_0_20px_rgba(232,200,94,0.4)]">
-              <div className="w-full h-1 bg-gradient-to-r from-transparent via-[#e8c85e] to-transparent shadow-[0_0_8px_#e8c85e] animate-scan-line" />
-            </div>
-            <p className="mt-3 text-[11px] font-mono font-bold text-[#252525] bg-[#e8c85e] px-2.5 py-0.5 rounded-md shadow-xs">
-              Apunta al código de barras o ISBN
-            </p>
-          </div>
-        )}
+        {!cameraError && <EstadoEscaner fase={fase} onEscribir={() => setShowManualInput(true)} />}
 
         {cameraError && (
           <div className="absolute inset-0 bg-white/95 p-5 flex flex-col items-center justify-center text-center">
             <ShieldAlert className="w-8 h-8 text-amber-600 mb-2" />
             <p className="text-xs text-gray-700 font-medium mb-3 max-w-xs">{cameraError}</p>
             <button
-              onClick={() => startScanner(selectedCameraId)}
+              onClick={handleRetry}
               className="flex items-center gap-1.5 text-xs font-bold bg-[#e19922] text-[#252525] hover:bg-[#b07c19] hover:text-white px-3 py-1.5 rounded-xl transition-colors shadow-xs"
             >
               <RefreshCw className="w-3.5 h-3.5" />
@@ -190,6 +380,17 @@ export default function BarcodeScanner({ onScanSuccess, isProcessing, onClose })
           </div>
         )}
       </div>
+
+      {import.meta.env.DEV && (
+        <div className="mt-2">
+          <button type="button" onClick={() => setShowDiag((v) => !v)} className="text-[10px] text-gray-400 underline">
+            Diag escáner
+          </button>
+          {showDiag && diag && (
+            <p className="mt-1 text-[10px] leading-tight font-mono text-gray-400 break-words">{diag}</p>
+          )}
+        </div>
+      )}
 
       {/* Entrada manual */}
       {showManualInput && (
