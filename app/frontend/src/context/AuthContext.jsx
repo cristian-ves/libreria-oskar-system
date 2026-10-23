@@ -56,13 +56,21 @@ export function AuthProvider({ children }) {
       throw new Error(result.message || 'Error al iniciar sesión');
     }
 
+    // Segundo paso del 2FA: no abre sesión; el token temporal queda en memoria del flujo de Login
+    if (result.data?.paso) {
+      const { paso, tokenTemporal, expiraEnSegundos } = result.data;
+      return { paso, tokenTemporal, expiraEnSegundos };
+    }
+
     const { token: nuevoToken, usuario } = result.data;
+    establecerSesion({ token: nuevoToken, usuario });
+    return { paso: 'sesion', usuario };
+  };
 
+  const establecerSesion = ({ token: nuevoToken, usuario }) => {
     saveToken(nuevoToken);
-
     setToken(nuevoToken);
     setUser(usuario);
-    return usuario;
   };
 
   const logout = () => {
@@ -72,7 +80,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, establecerSesion, logout }}>
       {children}
     </AuthContext.Provider>
   );

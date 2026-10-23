@@ -63,6 +63,19 @@ class Usuario extends Model {
           allowNull: false,
           defaultValue: DataTypes.NOW,
         },
+        dos_factores_intentos: {
+          type: DataTypes.INTEGER,
+          allowNull: false,
+          defaultValue: 0,
+        },
+        dos_factores_bloqueado_hasta: {
+          type: DataTypes.DATE,
+          allowNull: true,
+        },
+        dos_factores_ultimo_paso: {
+          type: DataTypes.BIGINT,
+          allowNull: true,
+        },
       },
       {
         sequelize,
@@ -87,6 +100,12 @@ class Usuario extends Model {
       foreignKey: 'usuario_id',
       as: 'movimientos',
       onDelete: 'RESTRICT',
+    });
+
+    Usuario.hasMany(models.CodigoRespaldo, {
+      foreignKey: 'usuario_id',
+      as: 'codigosRespaldo',
+      onDelete: 'CASCADE',
     });
   }
 }

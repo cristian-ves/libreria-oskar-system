@@ -55,11 +55,24 @@ CREATE TABLE IF NOT EXISTS usuarios (
     email VARCHAR(150) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL, -- Contraseñas cifradas con bcrypt/argon2
     dos_factores_activo BOOLEAN NOT NULL DEFAULT FALSE, -- Requisito 2FA
-    dos_factores_secreto VARCHAR(128), -- Clave secreta TOTP en base32 (para Speakeasy/Google Authenticator)
+    dos_factores_secreto VARCHAR(128), -- Secreto TOTP cifrado con AES-256-GCM (formato v1, máx. 86 caracteres); compatible con cualquier app TOTP estándar
     token_recuperacion VARCHAR(255),
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     creado_en TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    actualizado_en TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    actualizado_en TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    dos_factores_intentos INTEGER NOT NULL DEFAULT 0, -- Fallos 2FA consecutivos (TOTP y respaldo)
+    dos_factores_bloqueado_hasta TIMESTAMPTZ, -- Bloqueo temporal tras el máximo de fallos
+    dos_factores_ultimo_paso BIGINT -- Último paso TOTP aceptado (anti-reutilización)
+);
+
+-- Códigos de respaldo 2FA de un solo uso; solo se guarda su HMAC-SHA256.
+CREATE TABLE IF NOT EXISTS codigos_respaldo_2fa (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    codigo_hash VARCHAR(128) NOT NULL,
+    usado_en TIMESTAMPTZ,
+    creado_en TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_codigos_respaldo_2fa_usuario_hash UNIQUE (usuario_id, codigo_hash)
 );
 
 -- ============================================================================
@@ -281,6 +294,7 @@ CREATE INDEX IF NOT EXISTS idx_inventarios_libro ON inventarios(libro_id);
 
 -- Optimización de búsquedas de usuarios por correo (Auth y Login)
 CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email);
+CREATE INDEX IF NOT EXISTS idx_codigos_respaldo_2fa_usuario_id ON codigos_respaldo_2fa(usuario_id);
 
 -- Auditoría, trazabilidad y reportes de movimientos por fecha
 CREATE INDEX IF NOT EXISTS idx_movimientos_fecha ON movimientos_inventario(fecha_movimiento DESC);

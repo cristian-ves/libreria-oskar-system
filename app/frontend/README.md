@@ -17,14 +17,14 @@ npm run frontend:preview   # sirve el build
 ## Estructura de `src/`
 
 ```text
-views/                  Orquestadores de ruta: Catalogo, LibroDetalle, RegistrarLibro, Inventario, Ventas, NuevaVenta, VentaDetalle, Login, Nosotros
-components/             Navbar, Footer, Toast, LoadingSpinner, ProtectedRoute, BarcodeScanner
-components/ui/          Modal, ErrorBox, FieldLabel, Input, Select
+views/                  Orquestadores de ruta: Catalogo, LibroDetalle, RegistrarLibro, Inventario, Ventas, NuevaVenta, VentaDetalle, Usuarios, Categorias, GestionLibros, Reportes, Seguridad, Login, Nosotros
+components/             Navbar, Footer, Toast, LoadingSpinner, ProtectedRoute, BarcodeScanner, EstadoEscaner, ModalPrecioLibro
+components/ui/          Modal, ErrorBox, FieldLabel, Input, Select, ControlCantidad, OpcionesSegmentadas, Paginacion
 context/                AuthContext (sesión)
-features/<feature>/     components/ y hooks/ de catalogo, inventario y registrar-libro
-hooks/                  useDebouncedValue
+features/<feature>/     components/ y hooks/ de catalogo, categorias, inventario, libros, registrar-libro, reportes, seguridad, usuarios y ventas
+hooks/                  useDebouncedValue, useCamaraEscaner, useGeometriaEscaner, useDiagnosticoEscaner
 services/api/           client.js (apiFetch) y un módulo *.api.js por dominio
-utils/                  tokenStorage, roles, formatters, parsers
+utils/                  tokenStorage, roles, formatters, parsers, dinero, cargarDetectorDeCodigos, errorCamara, geometriaEscaner
 ```
 
 ## Reglas

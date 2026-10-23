@@ -50,8 +50,10 @@
   - `jsonwebtoken`: `^9.0.3`
   - `morgan`: `^1.10.0`
   - `nodemailer`: `^10.2.1`
+  - `otplib`: `13.5.0` (versión exacta; TOTP)
   - `pg`: `^8.13.3`
   - `pg-hstore`: `^2.3.4`
+  - `qrcode`: `1.5.4` (versión exacta; QR del alta 2FA)
   - `sequelize`: `^6.37.8`
 - **Dependencias de desarrollo (`devDependencies`)**:
   - `nodemon`: `^3.1.9`
@@ -61,6 +63,7 @@
   - `seed`: `node src/database/seed.js`
   - `migrate`: `node src/database/migrate.js`
   - `correo:probar`: `node src/scripts/probar-correo.js`
+  - `reset-2fa`: `node src/scripts/reset-2fa.js` (solo en `backend/`; no existe en `app/package.json`)
   - `test`: `node src/run-tests.js`
   - `test:sequelize`: `node src/test-sequelize.js`
 
@@ -102,8 +105,8 @@ Generado con `find`/`os.walk` + conteo de saltos de línea (equivalente a `wc -l
 
 ```text
 app/
-├── AGENTS.md (88)
-├── docker-compose.yml (77)
+├── AGENTS.md (89)
+├── docker-compose.yml (82)
 ├── package.json (18)
 ├── .agents/
 │   └── skills/
@@ -127,119 +130,176 @@ app/
 │       └── deploy.yml (150)
 ├── backend/
 │   ├── .dockerignore (10)
-│   ├── .env.example (35)
+│   ├── .env.example (51)
 │   ├── Dockerfile (53)
-│   ├── README.md (57)
-│   ├── package.json (41)
+│   ├── README.md (63)
+│   ├── package.json (46)
 │   ├── src/
-│   │   ├── app.js (42)
+│   │   ├── app.js (47)
 │   │   ├── run-tests.js (50)
 │   │   ├── server.js (46)
 │   │   ├── test-sequelize.js (91)
 │   │   ├── config/
+│   │   │   ├── cors.config.js (11)
 │   │   │   ├── db.js (87)
-│   │   │   ├── env.js (50)
+│   │   │   ├── env.js (61)
 │   │   │   ├── mail.config.js (55)
-│   │   │   └── sequelize.js (47)
+│   │   │   ├── security.config.js (39)
+│   │   │   ├── sequelize.js (47)
+│   │   │   └── twoFactor.config.js (58)
 │   │   ├── controllers/
 │   │   │   ├── auth.controller.js (38)
 │   │   │   ├── bodega.controller.js (19)
-│   │   │   ├── categoria.controller.js (22)
+│   │   │   ├── categoria.controller.js (50)
+│   │   │   ├── dosFactores.controller.js (69)
 │   │   │   ├── health.controller.js (36)
-│   │   │   ├── inventario.controller.js (111)
-│   │   │   ├── libro.controller.js (182)
-│   │   │   ├── usuario.controller.js (19)
+│   │   │   ├── inventario.controller.js (117)
+│   │   │   ├── libro.controller.js (236)
+│   │   │   ├── reportes.controller.js (67)
+│   │   │   ├── usuario.controller.js (34)
 │   │   │   └── venta.controller.js (70)
 │   │   ├── database/
 │   │   │   ├── migrate.js (74)
 │   │   │   └── seed.js (140)
 │   │   ├── middlewares/
-│   │   │   ├── auth.js (75)
-│   │   │   ├── errorHandler.js (73)
-│   │   │   ├── validator.js (35)
+│   │   │   ├── auth.js (80)
+│   │   │   ├── auth2fa.js (50)
+│   │   │   ├── errorHandler.js (82)
+│   │   │   ├── rateLimit.js (43)
+│   │   │   ├── validator.js (57)
 │   │   │   └── validators/
 │   │   │       ├── common.js (29)
+│   │   │       ├── exportacionReportes.validators.js (38)
 │   │   │       ├── inventario.validators.js (90)
-│   │   │       ├── libro.validators.js (201)
+│   │   │       ├── libro.validators.js (249)
 │   │   │       ├── movimiento.validators.js (48)
+│   │   │       ├── pagination.validators.js (24)
+│   │   │       ├── reportes.validators.js (54)
+│   │   │       ├── reportesVentas.validators.js (84)
 │   │   │       └── venta.validators.js (155)
 │   │   ├── models/
 │   │   │   ├── autor.model.js (49)
 │   │   │   ├── bodega.model.js (82)
 │   │   │   ├── categoria.model.js (45)
+│   │   │   ├── codigoRespaldo.model.js (56)
 │   │   │   ├── editorial.model.js (49)
-│   │   │   ├── index.js (51)
+│   │   │   ├── index.js (53)
 │   │   │   ├── inventario.model.js (93)
 │   │   │   ├── libro.model.js (126)
 │   │   │   ├── movimientoInventario.model.js (105)
 │   │   │   ├── rol.model.js (49)
 │   │   │   ├── sucursal.model.js (62)
 │   │   │   ├── tipoMovimiento.model.js (42)
-│   │   │   ├── usuario.model.js (94)
+│   │   │   ├── usuario.model.js (113)
 │   │   │   ├── venta.model.js (156)
 │   │   │   └── ventaDetalle.model.js (78)
 │   │   ├── repositories/
 │   │   │   ├── autor.repository.js (122)
 │   │   │   ├── bodega.repository.js (53)
-│   │   │   ├── categoria.repository.js (77)
+│   │   │   ├── categoria.repository.js (115)
+│   │   │   ├── dosFactores.repository.js (145)
 │   │   │   ├── editorial.repository.js (122)
 │   │   │   ├── inventario.repository.js (11)
-│   │   │   ├── libro.repository.js (276)
-│   │   │   ├── movimiento.repository.js (234)
-│   │   │   ├── usuario.repository.js (211)
+│   │   │   ├── libro.repository.js (382)
+│   │   │   ├── movimiento.repository.js (257)
+│   │   │   ├── usuario.repository.js (244)
 │   │   │   ├── venta.repository.js (152)
-│   │   │   └── inventario/
-│   │   │       ├── inventarioBasico.repository.js (240)
-│   │   │       ├── inventarioListado.repository.js (138)
-│   │   │       ├── inventarioResumen.repository.js (110)
-│   │   │       └── inventarioSubconsultas.helper.js (10)
+│   │   │   ├── inventario/
+│   │   │   │   ├── inventarioBasico.repository.js (240)
+│   │   │   │   ├── inventarioListado.repository.js (130)
+│   │   │   │   ├── inventarioResumen.repository.js (110)
+│   │   │   │   └── inventarioSubconsultas.helper.js (10)
+│   │   │   └── reportes/
+│   │   │       ├── inventarioValorizado.repository.js (113)
+│   │   │       ├── kardex.repository.js (9)
+│   │   │       └── ventas.repository.js (141)
 │   │   ├── routes/
-│   │   │   ├── auth.routes.js (13)
-│   │   │   ├── index.js (31)
-│   │   │   ├── inventario.routes.js (63)
-│   │   │   ├── libro.routes.js (97)
+│   │   │   ├── auth.routes.js (17)
+│   │   │   ├── dosFactores.routes.js (27)
+│   │   │   ├── index.js (39)
+│   │   │   ├── inventario.routes.js (65)
+│   │   │   ├── libro.routes.js (126)
 │   │   │   ├── movimiento.routes.js (21)
+│   │   │   ├── reportes.routes.js (22)
 │   │   │   └── venta.routes.js (65)
 │   │   ├── scripts/
-│   │   │   └── probar-correo.js (40)
+│   │   │   ├── probar-correo.js (40)
+│   │   │   └── reset-2fa.js (34)
 │   │   ├── services/
-│   │   │   ├── auth.service.js (54)
+│   │   │   ├── auth.service.js (71)
 │   │   │   ├── bodega.service.js (13)
-│   │   │   ├── catalogo.service.js (46)
-│   │   │   ├── categoria.service.js (14)
+│   │   │   ├── catalogo.service.js (52)
+│   │   │   ├── categoria.service.js (60)
+│   │   │   ├── dosFactores.service.js (154)
 │   │   │   ├── googleBooks.service.js (312)
-│   │   │   ├── inventario.service.js (187)
-│   │   │   ├── libro.service.js (14)
+│   │   │   ├── inventario.service.js (189)
+│   │   │   ├── libro.service.js (15)
 │   │   │   ├── mail.service.js (15)
-│   │   │   ├── usuario.service.js (14)
+│   │   │   ├── reportes.service.js (21)
+│   │   │   ├── usuario.service.js (115)
 │   │   │   ├── venta.service.js (11)
+│   │   │   ├── dosFactores/
+│   │   │   │   ├── cifrado.js (72)
+│   │   │   │   ├── intentos.js (52)
+│   │   │   │   ├── respaldo.js (43)
+│   │   │   │   ├── sesion.js (41)
+│   │   │   │   └── totp.js (65)
 │   │   │   ├── libro/
-│   │   │   │   ├── escaneo.service.js (220)
-│   │   │   │   ├── ingreso.service.js (74)
+│   │   │   │   ├── administracion.service.js (63)
+│   │   │   │   ├── escaneo.service.js (229)
+│   │   │   │   ├── ingreso.service.js (75)
 │   │   │   │   ├── maestros.service.js (47)
 │   │   │   │   ├── movimientoIngreso.service.js (36)
 │   │   │   │   ├── precio.service.js (17)
-│   │   │   │   └── registro.service.js (159)
+│   │   │   │   └── registro.service.js (160)
 │   │   │   ├── mail/
 │   │   │   │   ├── consola.provider.js (29)
 │   │   │   │   ├── fabrica.service.js (132)
 │   │   │   │   ├── seguridad.mail.js (16)
 │   │   │   │   ├── smtp.provider.js (46)
 │   │   │   │   └── validacion.mail.js (51)
+│   │   │   ├── reportes/
+│   │   │   │   ├── contrato.service.js (12)
+│   │   │   │   ├── corteCaja.service.js (29)
+│   │   │   │   ├── dinero.helper.js (15)
+│   │   │   │   ├── inventarioValorizado.service.js (21)
+│   │   │   │   ├── kardex.service.js (23)
+│   │   │   │   ├── librosMasVendidos.service.js (20)
+│   │   │   │   ├── reposicion.service.js (28)
+│   │   │   │   ├── resumenPeriodo.service.js (54)
+│   │   │   │   ├── ventas.service.js (21)
+│   │   │   │   └── exportadores/
+│   │   │   │       ├── excel.exporter.js (129)
+│   │   │   │       ├── exportacion.config.js (5)
+│   │   │   │       ├── exportacion.service.js (37)
+│   │   │   │       ├── pdf.exporter.js (151)
+│   │   │   │       └── reportes.export.service.js (169)
 │   │   │   └── venta/
 │   │   │       ├── anular.service.js (64)
 │   │   │       ├── bloqueo.helper.js (26)
 │   │   │       ├── consulta.service.js (101)
-│   │   │       └── crear.service.js (141)
+│   │   │       └── crear.service.js (146)
 │   │   └── utils/
 │   │       ├── errors.js (50)
 │   │       ├── isbn.js (71)
+│   │       ├── passwordPolicy.js (14)
 │   │       ├── slug.js (97)
 │   │       ├── uuid.js (20)
 │   │       └── ventas.js (129)
 │   └── tests/
 │       ├── api.e2e.test.js (539)
+│       ├── apiSecurity.test.js (135)
+│       ├── categoriasConteoAdmin.e2e.test.js (86)
+│       ├── categoriasCrud.e2e.test.js (130)
 │       ├── consultarSugerencia.test.js (130)
+│       ├── dosFactoresAlta.test.js (133)
+│       ├── dosFactoresBloqueo.test.js (141)
+│       ├── dosFactoresConcurrencia.test.js (142)
+│       ├── dosFactoresConfig.test.js (69)
+│       ├── dosFactoresCripto.test.js (114)
+│       ├── dosFactoresGestion.test.js (99)
+│       ├── dosFactoresLogin.test.js (151)
+│       ├── dosFactoresRestablecer.test.js (117)
 │       ├── errorHandler.test.js (123)
 │       ├── escanear.integration.test.js (151)
 │       ├── googleBooks.test.js (145)
@@ -249,14 +309,20 @@ app/
 │       ├── libroPrecio.test.js (149)
 │       ├── libroRepository.test.js (237)
 │       ├── libroServiceSequelize.test.js (387)
+│       ├── librosAdmin.e2e.test.js (230)
 │       ├── mailConfig.test.js (43)
 │       ├── mailProveedores.test.js (84)
 │       ├── mailReintentos.test.js (137)
 │       ├── movimientoRepository.test.js (245)
+│       ├── paginacionCatalogoInventario.e2e.test.js (160)
+│       ├── reportes.e2e.test.js (143)
+│       ├── reportesExportacion.e2e.test.js (150)
+│       ├── reportesVentas.e2e.test.js (153)
 │       ├── repositories.test.js (180)
 │       ├── sequelize.test.js (96)
 │       ├── sugerenciaRelleno.test.js (80)
 │       ├── usuarioRepository.test.js (103)
+│       ├── usuariosCrud.test.js (92)
 │       ├── utilsIsbnUuid.test.js (166)
 │       ├── validatorsCaracterizacion.test.js (642)
 │       ├── ventasApi.test.js (206)
@@ -266,20 +332,22 @@ app/
 │       ├── ventasServicio.test.js (227)
 │       ├── ventasUtils.test.js (84)
 │       └── helpers/
+│           ├── dosFactores.js (123)
 │           ├── httpMocks.js (50)
 │           ├── ventasFixtures.js (118)
 │           └── ventasHttp.js (43)
 ├── database/
-│   ├── schema.sql (341)
+│   ├── schema.sql (355)
 │   └── migrations/
 │       ├── 002_categorias.sql (25)
 │       ├── 003_categorias_adicionales.sql (22)
-│       └── 004_ventas.sql (58)
+│       ├── 004_ventas.sql (58)
+│       └── 010_dos_factores.sql (29)
 ├── docs/
-│   ├── PROJECT_SPECS.md (1298)
+│   ├── PROJECT_SPECS.md (1606)
 │   └── roadmap/
 │       ├── auth-2fa/
-│       │   └── SKILL.md (16)
+│       │   └── SKILL.md (20)
 │       ├── catalog-employee-crud/
 │       │   └── SKILL.md (36)
 │       ├── inventory-email-alerts/
@@ -289,13 +357,13 @@ app/
 └── frontend/
     ├── README.md (39)
     ├── index.html (16)
-    ├── package.json (26)
+    ├── package.json (27)
     ├── postcss.config.js (6)
     ├── tailwind.config.js (25)
     ├── vite.config.js (16)
     └── src/
-        ├── App.jsx (93)
-        ├── index.css (34)
+        ├── App.jsx (138)
+        ├── index.css (39)
         ├── main.jsx (16)
         ├── assets/
         │   └── logo.jpg
@@ -305,8 +373,8 @@ app/
         │   ├── Footer.jsx (23)
         │   ├── LoadingSpinner.jsx (30)
         │   ├── ModalPrecioLibro.jsx (100)
-        │   ├── Navbar.jsx (125)
-        │   ├── ProtectedRoute.jsx (47)
+        │   ├── Navbar.jsx (158)
+        │   ├── ProtectedRoute.jsx (48)
         │   ├── Toast.jsx (73)
         │   └── ui/
         │       ├── ControlCantidad.jsx (47)
@@ -315,9 +383,10 @@ app/
         │       ├── Input.jsx (8)
         │       ├── Modal.jsx (9)
         │       ├── OpcionesSegmentadas.jsx (23)
+        │       ├── Paginacion.jsx (73)
         │       └── Select.jsx (10)
         ├── context/
-        │   └── AuthContext.jsx (87)
+        │   └── AuthContext.jsx (95)
         ├── features/
         │   ├── catalogo/
         │   │   ├── components/
@@ -333,20 +402,33 @@ app/
         │   │   │   ├── PanelFiltros.jsx (106)
         │   │   │   └── SinResultados.jsx (50)
         │   │   └── hooks/
-        │   │       ├── useCatalogo.js (111)
+        │   │       ├── useCatalogo.js (155)
         │   │       └── useLibroDetalle.js (78)
+        │   ├── categorias/
+        │   │   ├── components/
+        │   │   │   ├── FormularioCategoria.jsx (76)
+        │   │   │   └── TablaCategorias.jsx (71)
+        │   │   └── hooks/
+        │   │       └── useCategorias.js (145)
         │   ├── inventario/
         │   │   ├── components/
         │   │   │   ├── EstadoBadge.jsx (23)
         │   │   │   ├── ModalAjusteInventario.jsx (161)
         │   │   │   ├── ModalSalidaInventario.jsx (149)
         │   │   │   ├── ResumenKpis.jsx (129)
-        │   │   │   ├── TablaExistencias.jsx (261)
-        │   │   │   ├── TablaKardex.jsx (223)
+        │   │   │   ├── TablaExistencias.jsx (295)
+        │   │   │   ├── TablaKardex.jsx (226)
         │   │   │   └── TipoBadge.jsx (16)
         │   │   └── hooks/
-        │   │       ├── useInventarioData.js (112)
+        │   │       ├── useInventarioData.js (155)
         │   │       └── useKardex.js (80)
+        │   ├── libros/
+        │   │   ├── components/
+        │   │   │   ├── FiltrosGestionLibros.jsx (15)
+        │   │   │   ├── FormularioEditarLibro.jsx (62)
+        │   │   │   └── TablaGestionLibros.jsx (38)
+        │   │   └── hooks/
+        │   │       └── useGestionLibros.js (119)
         │   ├── registrar-libro/
         │   │   ├── camposFaltantes.js (85)
         │   │   ├── validacion.js (33)
@@ -362,6 +444,42 @@ app/
         │   │   │   └── ResultadoRegistro.jsx (40)
         │   │   └── hooks/
         │   │       └── useRegistrarLibro.js (264)
+        │   ├── reportes/
+        │   │   ├── reportes.config.js (29)
+        │   │   ├── components/
+        │   │   │   ├── AccionesExportacion.jsx (14)
+        │   │   │   ├── FiltrosReporte.jsx (25)
+        │   │   │   ├── ResumenReporte.jsx (46)
+        │   │   │   ├── SelectorReporte.jsx (12)
+        │   │   │   └── TablaReporte.jsx (35)
+        │   │   └── hooks/
+        │   │       └── useReportes.js (197)
+        │   ├── seguridad/
+        │   │   ├── codigos.js (48)
+        │   │   ├── errores.js (20)
+        │   │   ├── navegador.js (41)
+        │   │   ├── components/
+        │   │   │   ├── AlertaError.jsx (29)
+        │   │   │   ├── BotonCopiar.jsx (33)
+        │   │   │   ├── BotonPrincipal.jsx (20)
+        │   │   │   ├── CampoCodigoTotp.jsx (26)
+        │   │   │   ├── CodigosRespaldo.jsx (69)
+        │   │   │   ├── FormularioCredenciales.jsx (73)
+        │   │   │   ├── FormularioRegenerar.jsx (50)
+        │   │   │   ├── PanelSeguridad.jsx (80)
+        │   │   │   ├── PasoConfigurar.jsx (104)
+        │   │   │   └── PasoVerificar.jsx (108)
+        │   │   └── hooks/
+        │   │       ├── useFocoCodigo.js (28)
+        │   │       ├── useLoginDosPasos.js (155)
+        │   │       └── useSeguridad.js (77)
+        │   ├── usuarios/
+        │   │   ├── components/
+        │   │   │   ├── FiltrosUsuarios.jsx (48)
+        │   │   │   ├── FormularioUsuario.jsx (110)
+        │   │   │   └── TablaUsuarios.jsx (110)
+        │   │   └── hooks/
+        │   │       └── useUsuarios.js (123)
         │   └── ventas/
         │       ├── components/
         │       │   ├── BuscadorLibrosVenta.jsx (62)
@@ -386,11 +504,15 @@ app/
         │   └── api/
         │       ├── auth.api.js (18)
         │       ├── bodegas.api.js (5)
-        │       ├── catalogo.api.js (12)
-        │       ├── categorias.api.js (5)
+        │       ├── catalogo.api.js (16)
+        │       ├── categorias.api.js (21)
         │       ├── client.js (34)
+        │       ├── dosFactores.api.js (41)
         │       ├── inventario.api.js (27)
         │       ├── libros.api.js (29)
+        │       ├── librosAdmin.api.js (21)
+        │       ├── reportes.api.js (30)
+        │       ├── usuarios.api.js (21)
         │       └── ventas.api.js (27)
         ├── utils/
         │   ├── cargarDetectorDeCodigos.js (29)
@@ -399,16 +521,21 @@ app/
         │   ├── formatters.js (30)
         │   ├── geometriaEscaner.js (33)
         │   ├── parsers.js (10)
-        │   ├── roles.js (9)
+        │   ├── roles.js (24)
         │   └── tokenStorage.js (26)
         └── views/
-            ├── Catalogo.jsx (171)
-            ├── Inventario.jsx (187)
+            ├── Catalogo.jsx (196)
+            ├── Categorias.jsx (126)
+            ├── GestionLibros.jsx (58)
+            ├── Inventario.jsx (197)
             ├── LibroDetalle.jsx (66)
-            ├── Login.jsx (119)
+            ├── Login.jsx (77)
             ├── Nosotros.jsx (88)
             ├── NuevaVenta.jsx (98)
             ├── RegistrarLibro.jsx (194)
+            ├── Reportes.jsx (71)
+            ├── Seguridad.jsx (25)
+            ├── Usuarios.jsx (141)
             ├── VentaDetalle.jsx (88)
             └── Ventas.jsx (55)
 ```
@@ -423,12 +550,13 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `app/backend/tests/api.e2e.test.js` | 539 | Pruebas HTTP end-to-end contra un servidor Express temporal. |
 | `app/backend/tests/inventarioRepository.test.js` | 468 | Persistencia de inventario: bloqueo `FOR UPDATE`, stock obsoleto, alertas y KPIs de resumen. |
 | `app/backend/tests/libroServiceSequelize.test.js` | 387 | Transacciones del servicio de libros: rollback, trigger, concurrencia de escaneo. |
-| `app/database/schema.sql` | 341 | DDL de 13 tablas, extensiones, secuencia de ventas, trigger PL/pgSQL, 18 índices y semillas (roles, tipos de movimiento, 20 categorías). |
+| `app/backend/src/repositories/libro.repository.js` | 382 | Búsqueda por ISBN/UUID (con variantes `ForUpdate`; `findByIds` para ventas), `upsert`/`create` con captura de `23505`, edición bibliográfica, baja (`updateActivo`), listado admin paginado (`findAdminPage`), catálogo paginado y detalle por `ref`. |
+| `app/database/schema.sql` | 355 | DDL de 14 tablas, extensiones, secuencia de ventas, trigger PL/pgSQL, 19 índices y semillas (roles, tipos de movimiento, 20 categorías). |
 | `app/backend/src/services/googleBooks.service.js` | 312 | Cliente de Google Books con fallback a OpenLibrary, catálogo de contingencia y caché TTL; cada resultado trae `relleno`. |
-| `app/backend/src/repositories/libro.repository.js` | 276 | Búsqueda por ISBN/UUID (`findByIds` para ventas), `upsert`/`create` con captura de `23505`, catálogo y detalle por `ref`. |
+| `app/frontend/src/features/inventario/components/TablaExistencias.jsx` | 295 | Tabla de existencias con `EstadoBadge` por fila y `Paginacion`. |
 | `app/backend/tests/ventasEsquema.test.js` | 266 | Esquema de ventas: correlativo, CHECK, UNIQUE, FK RESTRICT y movimiento con `venta_id` (trigger). |
 | `app/frontend/src/features/registrar-libro/hooks/useRegistrarLibro.js` | 264 | Estado y acciones del asistente de registro (`paso`, consulta, ingreso, registro; `camposFaltantes`). |
-| `app/frontend/src/features/inventario/components/TablaExistencias.jsx` | 261 | Tabla de existencias con `EstadoBadge` por fila. |
+| `app/backend/src/repositories/movimiento.repository.js` | 257 | Tipos de movimiento (`getTipoMovimientoByName`, `ensureTipoMovimiento`), `createMovimiento` y Kardex filtrado y paginado (`findAllWithFilters`). |
 
 ---
 
@@ -438,10 +566,11 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 - **Fuente de verdad**: `app/database/schema.sql` es la fuente de verdad declarada para nombres de tablas, columnas, restricciones, UUIDs y triggers.
 - **Mecanismo de migraciones**: Directorio `app/database/migrations/` ejecutado secuencialmente por `app/backend/src/database/migrate.js`, registrando ejecuciones en la tabla `schema_migrations`.
 - **Diferencias entre `schema.sql` y modelos Sequelize**:
-  - No hay divergencias estructurales: los 13 modelos definidos en `src/models/` mapean exactamente las 13 tablas del DDL.
+  - No hay divergencias estructurales: los 14 modelos definidos en `src/models/` mapean exactamente las 14 tablas del DDL.
   - La migración `002_categorias.sql` ya está integrada en el `schema.sql` principal.
   - `schema.sql` siembra las **20 categorías** (las 6 originales y las 14 de la migración `003_categorias_adicionales.sql`, con `ON CONFLICT (nombre) DO NOTHING`). Una BD creada desde cero con `schema.sql` ya equivale a aplicar `schema.sql + 002 + 003`. Las migraciones 002 y 003 permanecen como scripts idempotentes válidos para BDs ya existentes.
   - La migración `004_ventas.sql` (secuencia `ventas_numero_seq`, tablas `ventas` y `venta_detalles`, columna `movimientos_inventario.venta_id` e índices) es idempotente y su DDL es el mismo que `schema.sql`: una BD nueva equivale a la BD anterior + 004. La API de ventas (crear, listar, consultar y anular) existe desde el segundo commit de la serie y la interfaz (`/ventas`, `/ventas/nueva`, `/ventas/:id`) desde el tercero.
+  - La migración `010_dos_factores.sql` (columnas `dos_factores_intentos`, `dos_factores_bloqueado_hasta` y `dos_factores_ultimo_paso` al final de `usuarios`, tabla `codigos_respaldo_2fa` e índice `idx_codigos_respaldo_2fa_usuario_id`) es idempotente y su DDL es el mismo que `schema.sql`, con las columnas en el mismo orden. Aplicada dos veces a `libreria_oskar_test` sin errores (la segunda la omite `schema_migrations`; re-ejecutar su SQL dentro de una transacción revertida tampoco falla). La equivalencia por `pg_dump --schema-only` no está verificada. El rango 010-019 queda reservado para el 2FA.
   - La tabla `schema_migrations` es creada exclusivamente en runtime por `migrate.js` y no forma parte del `schema.sql` estático.
 
 ### 3.2 Catálogo de Tablas y Columnas Clave
@@ -468,9 +597,17 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `usuarios` | `email` | `VARCHAR(150)` | NOT NULL, UNIQUE |
 | `usuarios` | `password_hash` | `VARCHAR(255)` | NOT NULL (hash bcrypt) |
 | `usuarios` | `dos_factores_activo` | `BOOLEAN` | NOT NULL, DEFAULT FALSE |
-| `usuarios` | `dos_factores_secreto` | `VARCHAR(128)` | Nullable (Base32 para TOTP) |
+| `usuarios` | `dos_factores_secreto` | `VARCHAR(128)` | Nullable. Secreto TOTP cifrado (AES-256-GCM, formato `v1:<iv>:<etiqueta>:<cifrado>` en base64url, 86 caracteres). No nulo con `dos_factores_activo = false` = alta pendiente |
 | `usuarios` | `token_recuperacion` | `VARCHAR(255)` | Nullable |
 | `usuarios` | `activo` | `BOOLEAN` | NOT NULL, DEFAULT TRUE |
+| `usuarios` | `dos_factores_intentos` | `INTEGER` | NOT NULL, DEFAULT 0 (fallos 2FA consecutivos, TOTP y respaldo) |
+| `usuarios` | `dos_factores_bloqueado_hasta` | `TIMESTAMPTZ` | Nullable (bloqueo de 15 min al 5.º fallo, hora de la BD) |
+| `usuarios` | `dos_factores_ultimo_paso` | `BIGINT` | Nullable (último paso TOTP aceptado; anti-reutilización) |
+| `codigos_respaldo_2fa` | `id` | `UUID` | PK, `DEFAULT uuid_generate_v4()` |
+| `codigos_respaldo_2fa` | `usuario_id` | `UUID` | FK -> `usuarios(id)` ON DELETE CASCADE, NOT NULL; `uq_codigos_respaldo_2fa_usuario_hash` UNIQUE (`usuario_id`, `codigo_hash`) |
+| `codigos_respaldo_2fa` | `codigo_hash` | `VARCHAR(128)` | NOT NULL (HMAC-SHA256 en hex, 64 caracteres; el código en claro no se guarda) |
+| `codigos_respaldo_2fa` | `usado_en` | `TIMESTAMPTZ` | Nullable (NULL = disponible) |
+| `codigos_respaldo_2fa` | `creado_en` | `TIMESTAMPTZ` | NOT NULL, DEFAULT CURRENT_TIMESTAMP |
 | `autores` | `id` | `UUID` | PK, `DEFAULT uuid_generate_v4()` |
 | `autores` | `nombre` | `VARCHAR(150)` | NOT NULL, UNIQUE |
 | `autores` | `biografia` | `TEXT` | Nullable |
@@ -556,6 +693,7 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `idx_inventarios_bodega` | `inventarios` | `bodega_id` | B-Tree |
 | `idx_inventarios_libro` | `inventarios` | `libro_id` | B-Tree |
 | `idx_usuarios_email` | `usuarios` | `email` | B-Tree |
+| `idx_codigos_respaldo_2fa_usuario_id` | `codigos_respaldo_2fa` | `usuario_id` | B-Tree (redundante con el UNIQUE que empieza por `usuario_id`, ver §9) |
 | `idx_movimientos_fecha` | `movimientos_inventario` | `fecha_movimiento DESC` | B-Tree ordenado descendente |
 | `idx_movimientos_inventario_id` | `movimientos_inventario` | `inventario_id` | B-Tree |
 | `idx_movimientos_usuario_id` | `movimientos_inventario` | `usuario_id` | B-Tree |
@@ -598,15 +736,18 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `MAIL_FROM` | String | Remitente | `MAIL_USER` |
 | `JWT_SECRET` | String | Clave de firma simétrica HMAC SHA-256 | Obligatoria en prod; dev: `'secreto-solo-para-desarrollo-local'` |
 | `JWT_EXPIRES_IN` | String | Tiempo de validez del token JWT | `'8h'` |
+| `TWO_FACTOR_ENFORCED` | Booleano (`true`/`false`) | 2FA obligatorio para Administrador y Empleado (activación forzada en el login). Con `NODE_ENV=test` siempre `false`; otro valor lanza Error al cargar | `true` en producción; `false` en otros entornos (Compose: `false`) |
+| `TWO_FACTOR_ENCRYPTION_KEY` | String (64 hex = 32 bytes) | Clave maestra del 2FA; de ella se derivan con HKDF-SHA256 la clave AES-256-GCM del secreto y la clave HMAC de los códigos de respaldo. Formato inválido lanza Error sin mostrar el valor | Obligatoria en prod; fuera de prod, clave de desarrollo fija con `[WARN CONFIG]` (sin aviso en `test`) |
 | `GOOGLE_BOOKS_API_KEY` | String | API Key opcional de Google Books | `null` |
 | `DIAS_STOCK_OBSOLETO` | Número | Umbral de días sin salidas para clasificar stock muerto | `90` |
 | `SEQUELIZE_LOGGING` | Booleano | Si habilita salida de queries SQL a consola | `false` |
-| `CORS_ORIGINS` | Lista CSV de orígenes HTTP(S) | Orígenes autorizados por CORS; obligatoria en producción | Ausente: permisivo solo en desarrollo; producción falla al iniciar |
+| `CORS_ORIGINS` | Lista CSV de orígenes HTTP(S) | Orígenes autorizados por CORS; obligatoria en producción | Ausente: permisivo solo en desarrollo; producción falla al iniciar. Compose: `http://localhost:5173,http://localhost:4173` (sobreescribible) |
 | `TRUST_PROXY` | Entero no negativo | Número exacto de saltos proxy confiables para `req.ip` | `0` (no confiar en `X-Forwarded-For`) |
 | `LOGIN_RATE_LIMIT` | Entero positivo | Intentos por IP permitidos en login | `10` |
 | `LOGIN_RATE_WINDOW_MS` | Entero positivo en milisegundos | Ventana del limitador de login | `900000` (15 minutos) |
 
 - **Correo (`src/config/mail.config.js`)**: `leerConfigCorreo(entorno, nodeEnv)` es una función pura; `env.js` la invoca y expone el resultado como `env.mail` (`proveedor`, `host`, `port`, `user`, `password`, `from`, `faltantes`). Con `smtp` y `MAIL_USER`/`MAIL_PASSWORD` ausentes no lanza: `env.js` emite un `[WARN CONFIG]` que nombra las variables faltantes (nunca valores) y los envíos fallan registrados.
+- **2FA (`src/config/twoFactor.config.js`)**: `leerConfigDosFactores(entorno, nodeEnv)` es una función pura (estilo `mail.config.js`); `env.js` expone `env.twoFactor` con `enforced`, `encryptionKey` (Buffer), `claveDesarrollo` y las constantes: emisor `Librería Oskar`, 6 dígitos, periodo 30 s, SHA-1, tolerancia ±1 paso, token temporal de 600 s, 5 intentos, bloqueo de 15 min y 10 códigos de respaldo. `enforced` se lee en cada login (las pruebas lo cambian y lo restauran).
 - **Conexión Sequelize (`src/config/sequelize.js`)**: Instancia `Sequelize` configurada con `freezeTableName: true`, `underscored: true`, `timestamps: false`, y pool de conexiones (max: 20, min: 0, acquire: 30000ms, idle: 30000ms).
 - **Cliente `pg` nativo (`src/config/db.js`)**: Pool de `pg` de uso exclusivo de pruebas (lo importan 7 archivos de `tests/`; su cabecera lo indica). La app no lo importa: `server.js`, `health.controller.js`, `run-tests.js`, `database/migrate.js` y `database/seed.js` usan Sequelize. Se retira en una fase posterior junto con esas pruebas.
 - **Puerto en `.env.example`**: usa `DB_PORT=5434` para coincidir con el puerto que publica Compose; el valor por defecto de `config/env.js` sigue siendo `5432`.
@@ -626,7 +767,7 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 
 ### 4.3 Tabla Completa de Endpoints
 
-`src/routes/index.js` solo cablea rutas (sin lógica) y monta `auth.routes.js`, `libro.routes.js`, `inventario.routes.js`, `movimiento.routes.js` y `venta.routes.js`. Todos los handlers viven en controladores.
+`src/routes/index.js` solo cablea rutas (sin lógica) y monta `auth.routes.js`, `libro.routes.js`, `inventario.routes.js`, `movimiento.routes.js` y `venta.routes.js`. `auth.routes.js` monta `dosFactores.routes.js` en `/api/auth/2fa`. Todos los handlers viven en controladores.
 
 | Método | Ruta | Middlewares (Auth / Rol) | Controller.Función | Service.Función | Repository.Función | Descripción |
 |---|---|---|---|---|---|---|
@@ -641,8 +782,14 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `POST` | `/api/usuarios` | `authenticate`, `authorize('Administrador')` | `usuarioController.crear` | `usuarioService.crear` | `usuarioRepository.create`, `findRoleByName`, `emailExists` | Crea Administrador o Empleado activo; normaliza email y aplica política de contraseña y bcrypt. |
 | `PUT` | `/api/usuarios/:id` | `authenticate`, `authorize('Administrador')` | `usuarioController.actualizar` | `usuarioService.actualizar` | `usuarioRepository.findByIdForUpdate`, `update`, `findRoleByName` | Edita nombre, correo, rol y estado; protege rol propio y último Administrador activo. No cambia contraseña. |
 | `PATCH` | `/api/usuarios/:id/activo` | `authenticate`, `authorize('Administrador')` | `usuarioController.cambiarActivo` | `usuarioService.cambiarActivo` | `usuarioRepository.findByIdForUpdate`, `countActiveAdministrators` | Activa o desactiva la cuenta con protección de auto desactivación y último Administrador activo. |
-| `POST` | `/api/auth/login` | Ninguno (Público) | `authController.login` | `authService.login` | `usuarioRepository.findByEmail` | Autentica credenciales y genera token JWT. |
+| `POST` | `/api/auth/login` | Ninguno (Público) | `authController.login` | `authService.login` | `usuarioRepository.findByEmail` | Autentica credenciales. Sin segundo factor: 200 `{ token, usuario }` (igual que antes). Con 2FA activo (cualquier rol): 200 `{ paso: 'verificar', tokenTemporal, expiraEnSegundos }`. Con `TWO_FACTOR_ENFORCED` y rol Administrador/Empleado sin 2FA: 200 `{ paso: 'configurar', tokenTemporal, expiraEnSegundos }`. Errores sin cambios. |
 | `GET` | `/api/auth/me` | `authenticate` | `authController.me` | No aplica | No aplica (lee `req.user`) | Perfil del usuario autenticado en la sesión. |
+| `POST` | `/api/auth/2fa/configurar` | `exigirAlcance('2fa-setup')` | `dosFactoresController.configurar` | `dosFactoresService.configurar` | `dosFactoresRepository.obtenerEstado`, `guardarSecretoPendiente` | Genera un secreto nuevo (reemplaza uno pendiente), lo guarda cifrado con activo=false. 200 `{ qrDataUrl, secretoManual, otpauthUrl }` con `Cache-Control: no-store`; 409 si ya está activo. |
+| `POST` | `/api/auth/2fa/activar` | `exigirAlcance('2fa-setup')` | `dosFactoresController.activar` | `dosFactoresService.activar` | `obtenerEstado` (con `FOR UPDATE`), `reservarIntento`, `reclamarPaso`, `reemplazarRespaldos` | Body `{ codigo }`. 200 `{ token, usuario, codigosRespaldo }` (10, una sola vez; `no-store`). 400 formato, 401 código inválido, 409 sin alta pendiente o ya activo, 429 bloqueo. |
+| `POST` | `/api/auth/2fa/verificar` | `exigirAlcance('2fa-verify')` | `dosFactoresController.verificar` | `dosFactoresService.verificar` | `obtenerEstado`, `reservarIntento`, `reclamarPaso`, `consumirRespaldo`, `reiniciarIntentos` | Body `{ codigo }` o `{ codigoRespaldo }` (exactamente uno). 200 `{ token, usuario }` (`no-store`). 400, 401 "Código inválido o vencido." (igual para TOTP y respaldo), 429. |
+| `GET` | `/api/auth/2fa/estado` | `authenticate` | `dosFactoresController.estado` | `dosFactoresService.estado` | `obtenerEstado`, `contarRespaldosRestantes` | 200 `{ activo, obligatorio, codigosRespaldoRestantes }`. |
+| `POST` | `/api/auth/2fa/respaldo/regenerar` | `authenticate` | `dosFactoresController.regenerarRespaldo` | `dosFactoresService.regenerarRespaldo` | `obtenerEstado`, `reservarIntento`, `reclamarPaso`, `reemplazarRespaldos` | Body `{ codigo }` (TOTP vigente). 200 `{ codigosRespaldo }` (`no-store`). Código inválido → 400 (no 401, para que el cliente no cierre la sesión); 409 sin 2FA activo; 429. |
+| `POST` | `/api/auth/2fa/usuarios/:id/restablecer` | `authenticate`, `authorize('Administrador')` | `dosFactoresController.restablecer` | `dosFactoresService.restablecerPorAdministrador` | `obtenerEstado` (con `FOR UPDATE`), `restablecer` | Borra secreto y códigos y reinicia contador, bloqueo y último paso. 200 `{ restablecido: true }`; 400 id no UUID; 403 si es el propio administrador (usar `npm run reset-2fa`); 404 si no existe. |
 | `GET` | `/api/libros` | Ninguno (Público), `validatePaginacion` | `libroController.listar` | `catalogoService.listar` | `libroRepository.searchAndList` | Catálogo con filtros `q` y categoría, paginado con `limit` (50 por defecto) y `offset` (0). Devuelve `{ status, results, total, limit, offset, data }`; `results` es la cantidad de elementos de la página y `total` cuenta todos los libros que cumplen los filtros. |
 | `GET` | `/api/libros/admin` | `authenticate`, `authorize('Administrador')`, `validatePaginacion`, `validateAdminListarLibros` | `libroController.listarAdministracion` | `libroService.listarLibrosAdministracion` | `libroRepository.findAdminPage` | Lista libros activos e inactivos para administración; filtros `q` (título), `categoriaId`, `estado=todos|activo|inactivo`, `limit` (50 por defecto) y `offset` (0). Devuelve `{ status, results, total, limit, offset, data }` con campos bibliográficos, precio, estado y nombres de relaciones. |
 | `PUT` | `/api/libros/:id` | `authenticate`, `authorize('Administrador')`, `validateEditarLibro` | `libroController.actualizar` | `libroService.actualizarLibro` | `libroRepository.findByIdForUpdate`, `findByIsbn`, `updateBibliografia` | Edita título, autor, editorial, categoría, reseña e imagen; ISBN se valida si se envía (si se omite se conserva; vacío/null lo limpia). Normaliza cadenas, reutiliza upsert case-insensitive de maestros, rechaza autor marcador e ISBN duplicado (409). No cambia precio, stock ni movimientos. Transacción única. |
@@ -695,7 +842,7 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `Sucursal` | `sucursal.model.js` | `sucursales` | `hasMany(models.Bodega, { as: 'bodegas', foreignKey: 'sucursal_id', onDelete: 'CASCADE' })` | No existe |
 | `Bodega` | `bodega.model.js` | `bodegas` | `belongsTo(models.Sucursal, { as: 'sucursal', foreignKey: 'sucursal_id' })`, `hasMany(models.Inventario, { as: 'inventarios', foreignKey: 'bodega_id' })`, `belongsToMany(models.Libro, { through: models.Inventario, as: 'libros', foreignKey: 'bodega_id', otherKey: 'libro_id' })` | No existe |
 | `Rol` | `rol.model.js` | `roles` | `hasMany(models.Usuario, { as: 'usuarios', foreignKey: 'rol_id', onDelete: 'RESTRICT' })` | No existe |
-| `Usuario` | `usuario.model.js` | `usuarios` | `belongsTo(models.Rol, { as: 'rol', foreignKey: 'rol_id' })`, `hasMany(models.MovimientoInventario, { as: 'movimientos', foreignKey: 'usuario_id' })` | No existe |
+| `Usuario` | `usuario.model.js` | `usuarios` | `belongsTo(models.Rol, { as: 'rol', foreignKey: 'rol_id' })`, `hasMany(models.MovimientoInventario, { as: 'movimientos', foreignKey: 'usuario_id' })`, `hasMany(models.CodigoRespaldo, { as: 'codigosRespaldo', foreignKey: 'usuario_id', onDelete: 'CASCADE' })`. `dos_factores_ultimo_paso` es `BIGINT` (llega como string; el repositorio 2FA lo convierte a número). | No existe |
 | `Autor` | `autor.model.js` | `autores` | `hasMany(models.Libro, { as: 'libros', foreignKey: 'autor_id', onDelete: 'SET NULL' })` | No existe |
 | `Editorial` | `editorial.model.js` | `editoriales` | `hasMany(models.Libro, { as: 'libros', foreignKey: 'editorial_id', onDelete: 'SET NULL' })` | No existe |
 | `Categoria` | `categoria.model.js` | `categorias` | `hasMany(models.Libro, { as: 'libros', foreignKey: 'categoria_id', onDelete: 'SET NULL' })` | No existe |
@@ -705,11 +852,14 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `MovimientoInventario` | `movimientoInventario.model.js` | `movimientos_inventario` | `belongsTo(models.Inventario, { as: 'inventario', foreignKey: 'inventario_id' })`, `belongsTo(models.Usuario, { as: 'usuario', foreignKey: 'usuario_id' })`, `belongsTo(models.TipoMovimiento, { as: 'tipo_movimiento', foreignKey: 'tipo_movimiento_id' })`, `belongsTo(models.Venta, { as: 'venta', foreignKey: 'venta_id' })` | No existe |
 | `Venta` | `venta.model.js` | `ventas` | `belongsTo(models.Bodega, { as: 'bodega' })`, `belongsTo(models.Usuario, { as: 'vendedor', foreignKey: 'usuario_id' })`, `belongsTo(models.Usuario, { as: 'anulador', foreignKey: 'anulada_por' })`, `hasMany(models.VentaDetalle, { as: 'detalles', foreignKey: 'venta_id' })`, `hasMany(models.MovimientoInventario, { as: 'movimientos', foreignKey: 'venta_id' })`. `numero` usa `defaultValue: literal("nextval('ventas_numero_seq')")`; los importes DECIMAL llegan como string. | No existe |
 | `VentaDetalle` | `ventaDetalle.model.js` | `venta_detalles` | `belongsTo(models.Venta, { as: 'venta', foreignKey: 'venta_id' })`, `belongsTo(models.Libro, { as: 'libro', foreignKey: 'libro_id' })` | No existe |
+| `CodigoRespaldo` | `codigoRespaldo.model.js` | `codigos_respaldo_2fa` | `belongsTo(models.Usuario, { as: 'usuario', foreignKey: 'usuario_id', onDelete: 'CASCADE' })`. `timestamps: false`. | No existe |
+
+Son 14 modelos (`tests/ventasEsquema.test.js` comprueba `Object.keys(sequelize.models).length === 14`).
 
 ### 4.5 Firmas por Capa, Transacciones y Control de Concurrencia
 
 #### Capa de Rutas y Validadores
-- `routes/index.js` solo cablea: `/health`, `/bodegas`, `/usuarios`, `/categorias` y monta los routers de `/auth`, `/libros`, `/inventario`, `/movimientos` y `/ventas`.
+- `routes/index.js` solo cablea: `/health`, `/bodegas`, `/usuarios`, `/categorias` y monta los routers de `/auth`, `/libros`, `/inventario`, `/movimientos` y `/ventas`. `auth.routes.js` monta `dosFactores.routes.js` en `/auth/2fa` (`routes/index.js` no cambió).
 - `middlewares/validator.js` es una **fachada**: reexporta los validadores de dominio, incluidos `validateReporteInventario` y `validateReporteKardex`. Las rutas importan la fachada.
 - Implementación en `middlewares/validators/`: `common.js` (`validateIsbn`), `libro.validators.js` (escanear, consultar, registrar, ingreso, actualizar precio, `AUTOR_PLACEHOLDER_VALIDATOR`), `inventario.validators.js` (listar, salida, ajuste), `movimiento.validators.js` (`validateListarMovimientos`), `venta.validators.js` (crear, listar, id y anular) y `reportes.validators.js` (UUID, tipos de movimiento, fechas Guatemala y paginación de reportes).
 - Utilidades compartidas: `utils/isbn.js` (`normalizarIsbn`, `normalizarIsbnEstricto`, `hasValidIsbnChecksum`), `utils/uuid.js` (`UUID_REGEX`, `esUuid`) `utils/slug.js` (`slugify`, `shortId`, `buildRef`, `parseRef`) y `utils/ventas.js` (dinero en centavos enteros: `aCentavos`, `deCentavos`, `subtotalLinea`, `MAX_CENTAVOS`; `codigoVenta`; `rangoFechasNegocio` y `OFFSET_GUATEMALA`).
@@ -731,11 +881,18 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
   - `ingreso`: Extrae `id` de params, `bodegaId` y `cantidad` del body, inyecta `req.user.id`, llama a `libroService.ingresoLibro`.
   - `actualizarPrecio`: Extrae `id` de params y `precio` del body, llama a `libroService.actualizarPrecio` y responde 200 con el libro.
   - `detalle`: Extrae `ref` de params y llama a `catalogoService.detalle`.
+- `dosFactores.controller.js`: `configurar`, `activar`, `verificar`, `estado`, `regenerarRespaldo` y `restablecer` delegan en `dosFactoresService` con `req.user.id` (y `req.params.id` en `restablecer`); los que devuelven secretos, códigos o tokens ponen `Cache-Control: no-store`.
 - `venta.controller.js`: `crear` (201), `listar`, `obtener` y `anular` delegan en `ventaService`; `crear` y `anular` toman el actor de `req.user.id` (un `usuarioId` en el body se ignora).
 - `inventario.controller.js`: `listar`, `resumen`, `listarMovimientos`, `salida` y `ajuste`; todos delegan en `inventarioService` (`listarInventario`, `obtenerResumen`, `listarMovimientos`, `registrarSalida`, `registrarAjuste`). `salida` y `ajuste` toman el actor de `req.user.id`.
 
 #### Capa de Servicios (`src/services/`)
-- `auth.service.js`: `login({ email, password })`: valida presencia de campos, busca usuario por email, compara con `bcrypt.compare`, valida estado `activo` y firma el JWT con `jwt.sign`.
+- `auth.service.js`: `login({ email, password })`: valida presencia de campos, busca usuario por email, compara con `bcrypt.compare`, valida estado `activo` y luego llama a `resolverSegundoPaso` (`services/dosFactores/sesion.js`, importado directo para evitar un ciclo con la fachada): si corresponde devuelve `{ paso, tokenTemporal, expiraEnSegundos }`; si no, `emitirSesion(usuario)`, que firma el JWT de sesión completa y es la misma función que usa el segundo paso 2FA.
+- `dosFactores.service.js` es la **fachada** del 2FA (clase con métodos propios que usa los módulos de `services/dosFactores/`): `configurar(usuarioId)`, `activar(usuarioId, codigo)`, `verificar(usuarioId, { codigo, codigoRespaldo })`, `estado(usuarioId)`, `regenerarRespaldo(usuarioId, codigo)`, `restablecer(usuarioId)` (lógica única para el endpoint y el script), `restablecerPorAdministrador(actorId, objetivoId)` y `restablecerPorEmail(email)`. Módulos:
+  - `dosFactores/cifrado.js`: `cifrar(texto, usuarioId)` / `descifrar(valor, usuarioId)` con AES-256-GCM (`node:crypto`), IV aleatorio de 12 bytes, etiqueta de 16 bytes, el id del usuario como AAD y prefijo `v1`; `derivarClave(info)` (HKDF-SHA256, `info` distinto para cifrado y para HMAC). `descifrar` falla cerrada con `ErrorDescifrado`.
+  - `dosFactores/totp.js`: sobre `otplib` 13.5.0 (`generateSecret`, `generateURI`, `verifySync`, `generateSync`) y `qrcode` (`toDataURL`): `generarSecreto` (20 bytes, base32), `construirUri`, `generarQr`, `normalizarCodigo` y `verificarCodigo(secreto, codigo, epoch?)`, que devuelve el paso TOTP coincidente o `null` (tolerancia ±1 paso; recalcula el paso con `delta` y compara con `crypto.timingSafeEqual`).
+  - `dosFactores/respaldo.js`: `generarCodigos` (10 de 10 caracteres de un alfabeto de 31 símbolos sin 0/O/1/I/L, con `crypto.randomInt`, mostrados `XXXXX-XXXXX`), `normalizar` y `hashCodigo(usuarioId, codigo)` (HMAC-SHA256 con subclave HKDF y el `usuario_id` en el mensaje).
+  - `dosFactores/sesion.js`: `esObligatorio(rol)`, `firmarTokenTemporal(usuarioId, scope)` (payload `{ sub, scope }`, 600 s) y `resolverSegundoPaso(usuario)`.
+  - `dosFactores/intentos.js`: `cargarEstado`, `asegurarNoBloqueado` (429 antes de mirar el código), `reservarIntento` (reserva el intento fuera de transacción ANTES de verificar el código; sin cupo → 429; devuelve `bloqueadoAhora`), `rechazar(bloqueadoAhora, TipoError)` (código incorrecto: 429 si esa reserva fijó el bloqueo, si no 401/400; no registra nada más) y `abrirSecreto` (falla cerrada: registra `[2FA]` sin datos sensibles y responde 500 genérico).
 - `bodega.service.js` (`listarActivas`), `categoria.service.js` (`listar`, `listarAdministracion`, `crear`, `renombrar`, `eliminar`) y `usuario.service.js` (`listarActivosConRol`): delegan en sus repositorios. Categorías valida nombres (recorte, no vacío y unicidad case-insensitive) y UUID; impide borrar categorías con libros asociados.
 - `catalogo.service.js`: `listar({ q, categoriaId, categoria_id })` (agrega `ref`, excluye libros inactivos en datos y total) y `detalle(ref)` (`parseRef`; `ValidationError` si la ref es inválida, `NotFoundError` si no existe o está inactivo).
 - `googleBooks.service.js`: `normalizarIsbn`, `buscarPorIsbn(rawIsbn)` (caché de 1 h; cascada Google Books → OpenLibrary → `FALLBACK_CATALOG`), `_consultarGoogleBooks` y `_consultarFallbackOpenLibrary`.
@@ -765,6 +922,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 - `inventario.repository.js` es una **fachada** (misma técnica `Object.assign` sobre el prototipo) de `repositories/inventario/`: `inventarioBasico.repository.js` (`findByLibroAndBodega`, `findOrCreate`, `findById`, `findByLibrosAndBodega` (varios libros en una bodega, ordenados por `id`, sin bloqueo), `findByLibroId`, `setStockMinimo`, `findByIdForUpdate`), `inventarioListado.repository.js` (`findAllWithDetails`), `inventarioResumen.repository.js` (`getResumen`) y el helper `inventarioSubconsultas.helper.js` (`ULTIMA_SALIDA_SQL`).
 - `usuario.repository.js`: `findByEmail`, `findById`, `findAll`, `create`, `update`, `findActivosConRol`, `findConRol`, `findRoleByName`, `emailExists`, `findByIdForUpdate`, `lockRoles` y `countActiveAdministrators`. El listado predeterminado conserva la forma anterior y ordena en memoria con `localeCompare` y desempate por ID para igualar orden de forma determinista. `findAll` y `findActivosConRol` tienen contratos distintos.
 - `usuario.service.js` concentra las validaciones y reglas del CRUD. Cambios que afectan roles/estado y altas serializan al bloquear las filas de roles en orden de ID dentro de una transacción. `utils/passwordPolicy.js` exige 10 caracteres, letra, número y un máximo de 72 bytes UTF-8 antes de aplicar bcrypt.
+- `dosFactores.repository.js` (solo Sequelize): único repositorio que consulta y devuelve `dos_factores_secreto` (cifrado). `usuario.repository.js` no lo devuelve: `findByEmail`, `findById`, `findAll`, `findConRol` y `findActivosConRol` piden listas fijas de atributos y `create`/`update` devuelven solo `id`, `rol_id`, `nombre_completo`, `email` y `activo`; ninguno incluye el secreto ni `token_recuperacion`, y solo `findByEmail` incluye `password_hash` (login). `findByIdForUpdate` devuelve la instancia completa, que `usuario.service.js` usa dentro de la transacción sin devolverla. Fuera de la capa de datos, `dosFactores.service.js#activar` usa el valor CIFRADO (comprueba que exista y, dentro de la transacción, que no haya cambiado) y `dosFactores/intentos.js#abrirSecreto` lo descifra en memoria. `obtenerEstado(id, { transaction, lock })` (bandera `bloqueado` calculada con `CURRENT_TIMESTAMP` de la BD; con `lock` usa `FOR UPDATE OF "Usuario"`), `buscarIdPorEmail`, `guardarSecretoPendiente`, `reclamarPaso(id, paso, { transaction, where, extra })`, `reservarIntento(id, maxIntentos, bloqueoMinutos)` → `{ permitido, bloqueadoAhora }`, `reiniciarIntentos`, `consumirRespaldo`, `reemplazarRespaldos`, `contarRespaldosRestantes` y `restablecer`. El 2FA no modificó `usuario.repository.js`.
 - `venta.repository.js` (solo Sequelize, sin SQL crudo): `createVenta`, `createDetalles`, `findByIdForUpdate` (exige `{ transaction }`), `findLineasByVenta`, `marcarAnulada`, `findDetalleById`, `findPagina` y `contarLineasPorVentas` (COUNT/SUM agrupados).
 - `bodega.repository.js` (`findActivas`, `findActivaById`), `categoria.repository.js` (`findAll`, `findAllWithLibroCount`, `findById`, `findByNombre`, `create`, `updateNombre`, `countLibros`, `delete`), `autor.repository.js` y `editorial.repository.js` (`findByNombre`, `findById`, `findAll`, `create`, `upsert`), `libro.repository.js` (`findByIsbn`, `findByIsbnForUpdate`, `findById`, `findByIdForUpdate`, `findByIds`, `findByIdsForUpdate`, `findAdminPage`, `updateBibliografia`, `updateActivo`, `updatePrecio`, `upsert`, `create`, `searchAndList`, `findDetalleByRef`) y `movimiento.repository.js` (`getTipoMovimientoByName`, `ensureTipoMovimiento`, `createMovimiento` (acepta `ventaId` opcional, guardado como `venta_id`), `findAllWithFilters`). `repositories/reportes/` contiene consultas separadas por informe; inventario valorizado usa ORM para filas/paginación y SQL analítico con binds para agregados sin joins multiplicadores; Kardex adapta la consulta existente con filtros de fecha/categoría y `venta_id` opcional, manteniendo intacta la forma de `/api/movimientos`.
 
@@ -772,6 +930,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 - **Mecanismo transaccional**: `sequelize.transaction(async (transaction) => { ... })`. Todas las llamadas ORM dentro de la unidad de trabajo reciben `{ transaction }`.
 - **Bloqueo pesimista**: Se aplica en `inventarioRepository.findByIdForUpdate(id, { transaction })` mediante `lock: transaction.LOCK.UPDATE` (`SELECT ... FOR UPDATE`) para evitar *race conditions* en decrementos y ajustes simultáneos.
 - **Ventas**: crear y anular bloquean los `inventarios` de sus líneas en orden ascendente de `id` (`bloquearInventariosOrdenados`); la anulación bloquea además la fila de `ventas` antes de los inventarios. El stock se pre-valida bajo el bloqueo para responder 409 con el título (el trigger solo lanza un error genérico, mapeado a 400).
+- **2FA (sentencias atómicas, cada una un único UPDATE con comprobación de filas afectadas)**: `reclamarPaso` → `UPDATE usuarios SET dos_factores_ultimo_paso = :paso, intentos = 0, bloqueado_hasta = NULL WHERE id = :id AND (ultimo_paso IS NULL OR ultimo_paso < :paso)`; `consumirRespaldo` → `UPDATE codigos_respaldo_2fa SET usado_en = CURRENT_TIMESTAMP WHERE usuario_id = :id AND codigo_hash = :h AND usado_en IS NULL`; `reservarIntento` → `UPDATE usuarios SET intentos = CASE WHEN intentos + 1 >= 5 THEN 0 ELSE intentos + 1 END, bloqueado_hasta = CASE WHEN intentos + 1 >= 5 THEN CURRENT_TIMESTAMP + make_interval(mins => 15) ELSE bloqueado_hasta END WHERE id = :id AND (bloqueado_hasta IS NULL OR bloqueado_hasta <= CURRENT_TIMESTAMP) RETURNING intentos` (en el SET las columnas valen lo anterior; 0 filas → 429; `bloqueadoAhora` = el contador devuelto es 0), sin transacción para que se confirme aunque la operación termine en error. Se ejecuta ANTES de verificar el código, en `activar`, `verificar` (TOTP y respaldo) y `regenerarRespaldo`, después del 429 temprano y de validar el formato (el formato inválido no consume intento; el secreto se descifra antes de reservar, así que un secreto ilegible tampoco). Dos reservas simultáneas se serializan: la segunda espera el bloqueo de fila de la primera y, bajo READ COMMITTED, PostgreSQL reevalúa el WHERE sobre la versión ya confirmada; por eso por cada ventana de bloqueo a lo sumo 5 verificaciones llegan a ejecutarse (comprobado con 30 peticiones simultáneas en `tests/dosFactoresConcurrencia.test.js`, con una sola instancia del backend). El éxito reinicia contador y bloqueo (`reclamarPaso` o `reiniciarIntentos`). En `activar`, un 409 por alta cambiada a mitad deja el intento consumido (sí se verificó un código). `activar` corre en una transacción con la fila del usuario bloqueada (`FOR UPDATE`): reclama el paso, pone activo=true y crea los 10 códigos; `regenerarRespaldo` y `restablecer` reemplazan/borran los códigos en una transacción.
 - **Savepoints**: En `_upsertMasterRecord` (`services/libro/maestros.service.js`) y `MovimientoRepository.ensureTipoMovimiento` se usa una transacción anidada (savepoint) para aislar violaciones `UNIQUE` (`23505`) sin abortar la transacción principal.
 
 ### 4.6 Autenticación, 2FA y RBAC
@@ -779,16 +938,23 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 #### JWT
 - Firmado con `jsonwebtoken` usando `HS256` y clave `env.jwt.secret`.
 - Tiempo de vida: configurado en `env.jwt.expiresIn` (por defecto `8h`).
-- Payload del token: `{ sub: usuario.id, rol: usuario.rol_nombre, nombre: usuario.nombre_completo }`.
+- Payload del token de sesión: `{ sub: usuario.id, rol: usuario.rol_nombre, nombre: usuario.nombre_completo }` (lo firma `authService.emitirSesion`).
+- Tokens temporales del 2FA: mismo secreto, payload mínimo `{ sub, scope }` con `scope` `2fa-verify` o `2fa-setup` y `exp` de 600 s. `authenticate` los rechaza (401) y solo los acepta `exigirAlcance` (`middlewares/auth2fa.js`).
 
 #### 2FA (Segundo Factor)
-- **Estado real en backend**: No implementado.
-- Existen columnas en base de datos (`dos_factores_activo`, `dos_factores_secreto`) y atributos en el modelo `Usuario`, pero no existen rutas, controladores ni lógica para generación/verificación TOTP en `auth.service.js`.
+- **Estado real**: implementado en el backend (endpoints en §4.3, flujo en §6.2) y en la interfaz (`Login.jsx` con `useLoginDosPasos`, vista `/cuenta/seguridad`; §5.2). Sin interfaz: restablecer (`/usuarios/:id/restablecer`) y activar el 2FA con sesión completa (el backend no lo permite).
+- **Política**: obligatorio para Administrador y Empleado cuando `TWO_FACTOR_ENFORCED` es verdadero (por defecto en producción), con activación forzada en el login; el rol Usuario nunca debe configurarlo, aunque si lo tiene activo se le pide verificar.
+- **TOTP**: RFC 6238 vía `otplib` 13.5.0: secreto de 20 bytes en base32, SHA-1, 6 dígitos, 30 s, tolerancia ±1 paso, emisor `Librería Oskar` y etiqueta = email. `otplib` compara en tiempo constante (`constantTimeEqual` de `@otplib/core`) y devuelve `timeStep`; el backend recalcula el paso y compara además con `crypto.timingSafeEqual`. Compatibilidad con apps reales (Google Authenticator, Authy, Microsoft Authenticator, Aegis): no verificada.
+- **Secreto**: cifrado con AES-256-GCM (AAD = id del usuario, prefijo `v1`); solo existe en claro en memoria durante la verificación y en la respuesta de `configurar`. Cualquier fallo al descifrar niega el acceso.
+- **Anti-reutilización**: solo se acepta un paso TOTP estrictamente mayor que `dos_factores_ultimo_paso` (UPDATE condicional atómico); un código repetido cuenta como fallo.
+- **Intentos**: TOTP y respaldo comparten contador persistente; 5 fallos → bloqueo de 15 min (hora de la BD) y 429 en todo intento, aunque el código sea correcto. Un éxito pone el contador en 0 y borra el bloqueo.
+- **Códigos de respaldo**: 10, de un solo uso, guardados solo como HMAC; se muestran una vez al activar y al regenerar.
+- **Restablecimiento**: `POST /api/auth/2fa/usuarios/:id/restablecer` (Administrador, no a sí mismo) o `npm run reset-2fa -- correo` (dentro de `backend/`; sale con 1 sin argumento o con correo inexistente). Los JWT ya emitidos siguen válidos hasta expirar.
 
 #### RBAC (Control de Acceso Basado en Roles)
 - Middleware `authenticate` (`src/middlewares/auth.js`):
   1. Extrae cabecera `Authorization: Bearer <token>`.
-  2. Valida firma y expiración del JWT.
+  2. Valida firma y expiración del JWT y rechaza con 401 cualquier token que traiga el claim `scope` (tokens temporales del 2FA).
   3. Carga el registro del usuario mediante `usuarioRepository.findById(decoded.sub)`.
   4. Valida que `usuario.activo === true`.
   5. Asigna `req.user = { id, nombre_completo, email, rol }`.
@@ -842,8 +1008,9 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 | `tests/sequelize.test.js` | 5 | Integración | `libreria_oskar_test` | Conectividad ORM y definición de los 13 modelos. |
 | `tests/repositories.test.js` | 5 | Integración | `libreria_oskar_test` | `CategoriaRepository`, `AutorRepository`, `EditorialRepository`. |
 | `tests/usuarioRepository.test.js` | 5 | Integración | `libreria_oskar_test` | Búsqueda por email/UUID, exclusión de credenciales, transacciones. |
+| `tests/usuariosCrud.test.js` | 7 | End-to-End | `libreria_oskar_test` | CRUD administrativo de usuarios: contrato del GET (con opción de inactivos), auth y RBAC, alta con email normalizado sin datos sensibles, edición con protección de campos y del rol propio, activar/desactivar (tokens de cuentas desactivadas fallan, sin auto desactivación) y último Administrador protegido ante desactivaciones concurrentes. |
 | `tests/libroPrecio.test.js` | 7 | End-to-End | `libreria_oskar_test` | `PATCH /api/libros/:id/precio`: 401, 403, 400 (id y precios inválidos), 404, 200 con precio persistido, detalle público, KPI `libros_sin_precio` y stock/movimientos intactos. No importa `config/db`. |
-| `tests/librosAdmin.e2e.test.js` | 10 (9 grupos) | End-to-End | `libreria_oskar_test` | RBAC, edición bibliográfica/ISBN y rollback de maestros, conservación de precio/stock/movimientos, baja reversible, listado admin filtrado/paginado, catálogo/detalle, inventario/Kardex y rechazo 409 de escaneo, consulta, registro, ingreso y venta sin escrituras. |
+| `tests/librosAdmin.e2e.test.js` | 10 | End-to-End | `libreria_oskar_test` | RBAC, edición bibliográfica/ISBN y rollback de maestros, conservación de precio/stock/movimientos, baja reversible, listado admin filtrado/paginado, catálogo/detalle, inventario/Kardex y rechazo 409 de escaneo, consulta, registro, ingreso y venta sin escrituras. |
 | `tests/libroRepository.test.js` | 7 | Integración | `libreria_oskar_test` | Búsqueda por ISBN/UUID, inserción, concurrencia y agregaciones de stock. Importa `config/db`. |
 | `tests/movimientoRepository.test.js` | 7 | Integración | `libreria_oskar_test` | Tipos de movimiento, trigger y rollback. Importa `config/db`. |
 | `tests/inventarioRepository.test.js` | 14 | Integración | `libreria_oskar_test` | Bloqueo `FOR UPDATE`, stock obsoleto, alertas y KPIs. Importa `config/db`. |
@@ -856,8 +1023,8 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 | `tests/reportes.e2e.test.js` | 3 | End-to-End | `libreria_oskar_test` | Reportes de inventario/Kardex: RBAC, filtros inválidos, grupos y existencias en varias bodegas, inactivos, ausencia de costo, movimientos de venta/anulación/ajuste, fechas deterministas y paridad con `/api/movimientos`. Limpia fixtures temporales. |
 | `tests/reportesVentas.e2e.test.js` | 4 | End-to-End | `libreria_oskar_test` | Reportes de ventas y reposición: RBAC, filtros, corte/resumen, descuentos y anulaciones, ranking histórico, paginación y separación de inventario por bodega; usa fechas fijas y limpia fixtures temporales. |
 | `tests/reportesExportacion.e2e.test.js` | 4 | End-to-End | `libreria_oskar_test` | Exportaciones XLSX/PDF de los siete reportes, RBAC, validación, límites, apertura real de XLSX con ExcelJS, PDFs válidos multipágina, filtros/JSON, valores desconocidos e inventario vacío; fixtures fechados y limpieza. |
-| `tests/categoriasCrud.e2e.test.js` | 4 grupos | End-to-End | `libreria_oskar_test` | CRUD administrativo de categorías: validación, duplicados, roles, respuestas y GET público; limpia fixtures temporales. |
-| `tests/categoriasConteoAdmin.e2e.test.js` | 3 grupos | End-to-End | `libreria_oskar_test` | `GET /api/categorias/admin`: roles, conteos agrupados exactos y regresión del GET público; limpia fixtures temporales. |
+| `tests/categoriasCrud.e2e.test.js` | 5 | End-to-End | `libreria_oskar_test` | CRUD administrativo de categorías: validación, duplicados, roles, respuestas y GET público; limpia fixtures temporales. |
+| `tests/categoriasConteoAdmin.e2e.test.js` | 4 | End-to-End | `libreria_oskar_test` | `GET /api/categorias/admin`: roles, conteos agrupados exactos y regresión del GET público; limpia fixtures temporales. |
 | `tests/ventasEsquema.test.js` | 7 | Integración | `libreria_oskar_test` | Esquema de ventas: correlativo `numero`, valores por defecto, CHECK, `uq_venta_libro`, FK RESTRICT, Salida con `venta_id` (trigger) y asociaciones. No importa `config/db`. |
 | `tests/ventasUtils.test.js` | 9 | Unitaria | No requiere | `utils/ventas.js`: centavos, redondeo exacto, rechazos, código `V-xxxxxx`, desbordamiento y rango de fechas de Guatemala. |
 | `tests/ventasServicio.test.js` | 11 | Integración | `libreria_oskar_test` | Crear venta: importes, precio de BD, actor, defaults, rechazos sin persistir (precio 0, stock, 404, descuento, desborde NUMERIC) y rollback con fallo en la segunda línea. No importa `config/db`. |
@@ -867,12 +1034,21 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 | `tests/mailConfig.test.js` | 6 | Unitaria | No requiere | `leerConfigCorreo`: `test` fuerza consola, producción sin variables (aviso, sin lanzar), alias, `MAIL_FROM` y rechazo de proveedor/puerto inválidos. |
 | `tests/mailReintentos.test.js` | 8 | Unitaria / Mock | No requiere | `enviar` nunca rechaza; reintentos (2 fallos → 3 intentos, 4 intentos y descarte, error permanente → 1); tope de pendientes; validación sin llamar al proveedor; secretos fuera de logs. |
 | `tests/mailProveedores.test.js` | 3 | Unitaria / Mock | No requiere | SMTP con transporte inyectado (puertos 587 y 465, auth, timeouts, `MAIL_FROM`), configuración incompleta y consola (bandeja de 100, enmascarado, cuerpo solo en `development`). |
-| **Total** | **307** | | | `npm test`: 307 pasan, 0 fallan (ejecutado el 2026-10-24). |
+| `tests/dosFactoresConfig.test.js` | 6 | Unitaria | No requiere | `leerConfigDosFactores`: valores por defecto, `test` fuerza `enforced=false`, producción sin clave → Error, clave inválida → Error sin mostrar el valor, `TWO_FACTOR_ENFORCED` inválido. |
+| `tests/dosFactoresCripto.test.js` | 10 | Unitaria | No requiere | Cifrado (ida y vuelta, IV distinto, manipulación, clave equivocada, AAD de otro usuario, versión, longitud ≤ 128), TOTP (±1 paso con el paso devuelto, ±2 rechazado, URI y QR) y códigos de respaldo (formato, alfabeto, normalización, HMAC con subclave). |
+| `tests/dosFactoresLogin.test.js` | 9 | End-to-End | `libreria_oskar_test` | Login sin 2FA igual que antes, `configurar` para Administrador/Empleado con `enforced`, rol Usuario sin exigencia, `verificar` con 2FA activo, errores de hoy y alcance de tokens (temporales rechazados en `/auth/me` y negocio, scope exacto por paso, vencido → 401, sin scope sigue funcionando). |
+| `tests/dosFactoresAlta.test.js` | 5 | End-to-End | `libreria_oskar_test` | Alta por HTTP: login → configurar (QR PNG, clave, otpauth, secreto cifrado) → activar erróneo (401, fallo registrado) → activar correcto (token + 10 códigos) → 409 → login pide verificar → TOTP una sola vez → respaldo una sola vez. |
+| `tests/dosFactoresGestion.test.js` | 3 | End-to-End | `libreria_oskar_test` | `estado`, `regenerar` (400 con código erróneo, 409 sin 2FA, invalida los anteriores) y no exposición de secreto, hash ni códigos en `/auth/me`, `/usuarios`, login y estado. |
+| `tests/dosFactoresBloqueo.test.js` | 8 | End-to-End | `libreria_oskar_test` | 5 fallos → 429, código correcto con bloqueo → 429, bloqueo vencido vuelve a funcionar, éxito reinicia, contador compartido, fallo registrado aunque falle la operación, concurrencia (mismo TOTP, mismo respaldo, 5 fallos simultáneos) y falla cerrada del descifrado. |
+| `tests/dosFactoresConcurrencia.test.js` | 5 | End-to-End | `libreria_oskar_test` | 30 peticiones simultáneas con códigos erróneos distintos en `verificar` (TOTP y respaldo), `activar` y `regenerar`: exactamente 5 verificaciones (`totp.verificarCodigo` o `consumirRespaldo` reemplazados temporalmente y restaurados en `finally`), 4×401 (4×400 en regenerar) y 26×429, sin 500; con bloqueo un código correcto → 429 sin verificarse, y con el bloqueo vencido → 200; el formato inválido no consume intento. |
+| `tests/dosFactoresRestablecer.test.js` | 5 | End-to-End | `libreria_oskar_test` | Restablecer: 401/403/400/404/403 a sí mismo, éxito (luego el login pide `configurar` con `enforced`), `restablecerPorEmail` y el script `reset-2fa` (código 1 sin argumento o con email inexistente, 0 con éxito, sin secretos en la salida). |
+| **Total** | **358** | | | `npm test`: 358 pasan, 0 fallan (ejecutado el 2026-10-24). |
 
-- **Runner**: Node.js test runner nativo (`node --test --test-concurrency=1 tests/**/*.test.js`), lanzado por `src/run-tests.js`.
+- **Runner**: Node.js test runner nativo (`node --test --test-concurrency=1 tests/**/*.test.js`), lanzado por `src/run-tests.js`. La columna Tests usa el conteo del runner: una prueba con subpruebas `t.test` cuenta la prueba padre más cada subprueba.
 - **Aislamiento**: `src/run-tests.js` aborta si `NODE_ENV === 'production'` y comprueba con Sequelize (`SELECT current_database()`) que la conexión apunta a `libreria_oskar_test`. Requiere `db-test` levantado (puerto host 5435).
 - **Cliente `pg` en pruebas**: 7 archivos importan `src/config/db.js` (cliente `pg` nativo) (`db.pool.query` y `pool.end()`) para consultas directas, sembrado o limpieza; ver §9.
 - **Frontend**: no tiene pruebas automatizadas.
+- **Pruebas 2FA**: crean y borran sus propios usuarios (`tests/helpers/dosFactores.js`), nunca tocan el estado 2FA de los usuarios del seed, no usan red y restauran `env.twoFactor.enforced` en `finally`.
 
 ---
 
@@ -883,7 +1059,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 ```text
 src/
 ├── App.jsx, main.jsx, index.css
-├── views/                  Orquestadores de ruta (Catalogo, LibroDetalle, RegistrarLibro, Inventario, Usuarios, Categorias, GestionLibros, Login, Nosotros, Ventas, NuevaVenta, VentaDetalle)
+├── views/                  Orquestadores de ruta (Catalogo, LibroDetalle, RegistrarLibro, Inventario, Usuarios, Categorias, GestionLibros, Login, Nosotros, Ventas, NuevaVenta, VentaDetalle, Seguridad)
 ├── components/             Compartidos: Navbar, Footer, Toast, LoadingSpinner, ModalPrecioLibro, ProtectedRoute, BarcodeScanner, EstadoEscaner
 │   └── ui/                 Modal, ErrorBox, FieldLabel, Input, ControlCantidad, OpcionesSegmentadas, Select, Paginacion
 ├── context/                AuthContext.jsx
@@ -891,12 +1067,13 @@ src/
 │   ├── catalogo/           components/ + hooks/ (useCatalogo, useLibroDetalle)
 │   ├── inventario/         components/ + hooks/ (useInventarioData, useKardex)
 │   ├── registrar-libro/    components/ + hooks/ (useRegistrarLibro) + validacion.js + camposFaltantes.js
+│   ├── seguridad/          components/ + hooks/ (useLoginDosPasos, useSeguridad, useFocoCodigo) + codigos.js y errores.js (puros) + navegador.js (copiar/descargar)
 │   ├── ventas/             components/ + hooks/ (useNuevaVenta, useVentas, useVentaDetalle)
 │   ├── usuarios/           components/ + hooks/ (useUsuarios)
 │   ├── categorias/         components/ + hooks/ (useCategorias)
 │   └── libros/             components/ + hooks/ (useGestionLibros)
 ├── hooks/                  useDebouncedValue.js, useCamaraEscaner.js, useGeometriaEscaner.js, useDiagnosticoEscaner.js
-├── services/api/           client.js, auth.api.js, catalogo.api.js, bodegas.api.js, categorias.api.js, inventario.api.js, libros.api.js, librosAdmin.api.js, ventas.api.js, usuarios.api.js
+├── services/api/           client.js, auth.api.js, dosFactores.api.js, catalogo.api.js, bodegas.api.js, categorias.api.js, inventario.api.js, libros.api.js, librosAdmin.api.js, ventas.api.js, usuarios.api.js
 └── utils/                  tokenStorage.js, roles.js, formatters.js, parsers.js, dinero.js, cargarDetectorDeCodigos.js, errorCamara.js, geometriaEscaner.js
 ```
 
@@ -910,7 +1087,7 @@ Reglas de la estructura: las llamadas HTTP salen solo de `services/api/`; las vi
 | `/catalogo` | `Catalogo` | Público | Catálogo interactivo de libros con buscador y filtros |
 | `/catalogo/:ref` | `LibroDetalle` | Público | Ficha técnica y disponibilidad por sucursal |
 | `/nosotros` | `Nosotros` | Público | Información institucional de la empresa |
-| `/login` | `Login` | Público | Formulario de autenticación de operadores |
+| `/login` | `Login` | Público | Credenciales y, si el backend lo pide, segundo paso 2FA (verificar o alta) |
 | `/registrar` | `RegistrarLibro` | `ROLES_OPERATIVOS` (`Administrador`, `Empleado`) | Consulta por ISBN, ingreso de stock y registro de libros (`ProtectedRoute`) |
 | `/inventario` | `Inventario` | `ROLES_OPERATIVOS` | Resumen, existencias y kardex (`ProtectedRoute`) |
 | `/ventas` | `Ventas` | `ROLES_OPERATIVOS` | Listado de ventas con filtros y paginación (`ProtectedRoute`) |
@@ -920,6 +1097,7 @@ Reglas de la estructura: las llamadas HTTP salen solo de `services/api/`; las vi
 | `/categorias` | `Categorias` | `ROLES_POR_RUTA.categorias` (`Administrador`) | Gestión de categorías, búsqueda, conteo de libros, alta, renombrado y eliminación protegida (`ProtectedRoute`) |
 | `/libros/gestion` | `GestionLibros` | `ROLES_POR_RUTA.gestionLibros` (`Administrador`) | Listado paginado de libros activos e inactivos, edición bibliográfica y baja/reactivación lógica (`ProtectedRoute`) |
 | `/reportes` | `Reportes` | `ROLES_POR_RUTA.reportes` (`Administrador`) | Consulta de siete reportes, filtros, paginación backend y descargas XLSX/PDF (`ProtectedRoute`) |
+| `/cuenta/seguridad` | `Seguridad` | Cualquier sesión (`ProtectedRoute` sin `roles`) | Estado del 2FA, códigos de respaldo restantes y regeneración |
 | `*` | `Navigate` | Público | Redirige cualquier ruta desconocida a `/catalogo` |
 
 La navegación muestra Catálogo y Nosotros para público y cualquier rol; Registrar, Inventario y Ventas solo para Administrador y Empleado; Usuarios, Categorías, Gestión de libros y Reportes aparecen en Administración solo para Administrador. Mi cuenta / Seguridad sigue pendiente. Las capacidades y roles de las rutas se centralizan en `utils/roles.js`.
@@ -981,9 +1159,12 @@ La navegación muestra Catálogo y Nosotros para público y cualquier rol; Regis
 - **Endpoints consumidos** (vía `inventario.api.js` y `bodegas.api.js`, con `apiFetch`): `GET /api/bodegas`, `GET /api/inventario/resumen`, `GET /api/inventario?estado=...&q=...&bodegaId=...&limit=...&offset=...`, `GET /api/movimientos?...`, `POST /api/inventario/:id/salida`, `POST /api/inventario/:id/ajuste`. El listado conserva `{ status, total, limit, offset, data }`.
 - **Componentes**: `ResumenKpis`, `TablaExistencias` (tabla de escritorio y tarjetas móviles, con paginación compartida), `TablaKardex`, `ModalSalidaInventario`, `ModalAjusteInventario` (sobre `components/ui/Modal`), `Toast`; `EstadoBadge` y `TipoBadge` los usan las tablas.
 
-#### 5. `Login.jsx` (119 líneas)
-- **Responsabilidades**: Captura de credenciales, llamada a `login()` del `AuthContext` y redirección. Destino: la ruta previa guardada por `ProtectedRoute` (`location.state.from`) o, por defecto, **`/registrar`**. Si ya hay sesión, redirige con `<Navigate>`.
-- **Endpoints consumidos**: `POST /api/auth/login` (a través de `AuthContext` y `auth.api.js`).
+#### 5. `Login.jsx` (77 líneas)
+- **Responsabilidades**: Orquestador delgado del login; el estado está en `features/seguridad/hooks/useLoginDosPasos.js`. `paso`: `'credenciales'` → `'verificar'` (código de 6 dígitos o, con el enlace "Usar un código de respaldo", `XXXXX-XXXXX`) o `'configurar'` (QR, enlace `otpauth://` solo por debajo de `md`, clave agrupada en bloques de 4 con Copiar, primer código) → `'respaldo'` (10 códigos con Copiar, Descargar `.txt` y la casilla "Ya los guardé"). Destino: `location.state.from` o, por defecto, **`/registrar`**; redirige con `<Navigate>` en cuanto existe `user`, por eso tras el alta la sesión se abre solo al pulsar Continuar.
+- **Token temporal**: solo en estado de React (ni almacenamiento ni URL); al recargar se vuelve a las credenciales. Si se envía tras `expiraEnSegundos`, no llama al backend y vuelve a las credenciales con "La verificación venció. Inicia sesión de nuevo."; la respuesta se clasifica con `clasificarErrorCodigo` (`features/seguridad/errores.js`). Código inválido (401 con el mensaje exacto "Código inválido o vencido."): el campo y el botón principal quedan deshabilitados, el foco pasa a "Intentar de nuevo", que limpia el campo, lo rehabilita y le devuelve el foco (en el alta no vuelve a llamar a `/configurar` ni cambia el QR); el enlace "Volver" y el cambio app/respaldo siguen disponibles. Bloqueo (429): campo, botón principal y cambio app/respaldo deshabilitados, mensaje del backend con el foco en la alerta y solo "Volver a iniciar sesión". Cualquier otro 401 (token vencido, 2FA restablecido o mensaje desconocido) muestra el mensaje del backend y "Volver a iniciar sesión".
+- **`/configurar`**: se llama una sola vez por token temporal, desde el envío de credenciales (no en un efecto, por StrictMode) y con una guardia `useRef`; no hay botón para regenerar el QR.
+- **Endpoints consumidos**: `POST /api/auth/login` (vía `AuthContext` y `auth.api.js`) y `POST /api/auth/2fa/configurar`, `/activar`, `/verificar` (vía `dosFactores.api.js`, `fetch` directo).
+- **Componentes**: `FormularioCredenciales`, `PasoVerificar`, `PasoConfigurar`, `CodigosRespaldo` (en `features/seguridad/components/`).
 
 #### 6. `Nosotros.jsx` (88 líneas)
 - Vista estática institucional (sucursales, horarios, contacto). No consume endpoints.
@@ -1005,11 +1186,16 @@ La navegación muestra Catálogo y Nosotros para público y cualquier rol; Regis
 - **Componentes**: `FichaVenta`, `ModalAnularVenta` (sobre `components/ui/Modal`; motivo obligatorio de hasta 500 caracteres), `EstadoVentaBadge`. Con `location.state?.recienCreada` muestra el banner de éxito y limpia el estado. 404 → "Venta no encontrada" con enlace al listado; otro error → mensaje con botón "Reintentar".
 - **Rol**: el botón "Anular venta" solo aparece si `esAdministrador(user)` y la venta está `Completada`; el backend exige `Administrador` en la anulación.
 
+#### 10. `Seguridad.jsx` (25 líneas)
+- **Responsabilidades**: Orquestador de `/cuenta/seguridad`; datos en `features/seguridad/hooks/useSeguridad.js` y presentación en `PanelSeguridad`. Estados: cargando, error con "Reintentar", inactivo (texto neutro: "Se te pedirá configurarla al iniciar sesión" si `obligatorio`; sin botón de activar, el backend no lo permite con sesión completa) y activo (códigos restantes y `FormularioRegenerar`, que pide un TOTP vigente).
+- **Regenerar**: el éxito muestra los códigos nuevos con `CodigosRespaldo` (se descartan del estado al pulsar Listo); 400 (código inválido) muestra el mensaje con la pista de esperar al siguiente código, deshabilita campo y botón y ofrece "Intentar de nuevo" (limpia el campo y le devuelve el foco); 429 deshabilita el formulario con el mensaje del backend y sin reintento (hasta recargar la vista); 409 muestra su mensaje.
+- **Endpoints consumidos** (vía `dosFactores.api.js`, `apiFetch`): `GET /api/auth/2fa/estado` y `POST /api/auth/2fa/respaldo/regenerar`.
+
 ### 5.3 Catálogo de Componentes Compartidos (`src/components/`)
 
 | Componente | Archivo | Props Aceptadas | Descripción |
 |---|---|---|---|
-| `Navbar` | `components/Navbar.jsx` | Ninguna | Barra superior responsive. Con sesión muestra Registrar, Inventario y Ventas según rol, y Usuarios solo para Administrador; Catálogo y Nosotros son públicos. Sin sesión muestra Catálogo y Nosotros. |
+| `Navbar` | `components/Navbar.jsx` | Ninguna | Barra superior responsive. Con sesión muestra Registrar, Inventario y Ventas según rol, y Usuarios solo para Administrador; Catálogo y Nosotros son públicos. Sin sesión muestra Catálogo y Nosotros. La sección "Mi cuenta / Seguridad" tiene el enlace "Seguridad de la cuenta" (`soloSesion`: cualquier sesión, nunca visitantes). El chip del usuario (y el avatar en móvil) es un `NavLink` a `/cuenta/seguridad` con `aria-label` "`{nombre_completo}`, mi cuenta y seguridad" (empieza con el nombre visible, WCAG 2.5.3). |
 | `Footer` | `components/Footer.jsx` | Ninguna | Pie de página. |
 | `LoadingSpinner` | `components/LoadingSpinner.jsx` | `message` (String, default: "Cargando...") | Spinner para llamadas asíncronas. |
 | `Toast` | `components/Toast.jsx` | `toast` (Objeto), `onClose` (Función) | Notificación flotante con temporizador; capa `z-[60]`, por encima de Navbar, `Modal`, `LoadingSpinner` y `DrawerFiltros` (`z-50`). |
@@ -1026,7 +1212,7 @@ La navegación muestra Catálogo y Nosotros para público y cualquier rol; Regis
 | `Modal`, `ErrorBox`, `FieldLabel`, `Input`, `Select` | `components/ui/*.jsx` | Ver cada archivo | Primitivas de UI reutilizadas por los formularios y modales de las features. |
 | `OpcionesSegmentadas` | `components/ui/OpcionesSegmentadas.jsx` | `opciones` (`{ valor, etiqueta }`), `valor`, `onChange`, `ariaLabel`, `disabled` | Botones táctiles (`role="radiogroup"`/`radio`, mín. 44 px) en lugar de un `<select>`; hoy los usa la interfaz de ventas. |
 
-Los componentes específicos de cada vista viven en `features/<feature>/components/`. `BookCard.jsx` fue eliminado (nadie lo importaba).
+Los componentes específicos de cada vista viven en `features/<feature>/components/`. Los del 2FA (`features/seguridad/components/`): `FormularioCredenciales`, `PasoVerificar`, `PasoConfigurar`, `CodigosRespaldo`, `FormularioRegenerar`, `PanelSeguridad`, `CampoCodigoTotp` (`inputMode="numeric"`, `autoComplete="one-time-code"`, solo 6 dígitos), `BotonCopiar` (`navigator.clipboard` si existe y el contexto es seguro; si no, `execCommand('copy')` en un textarea temporal; si falla, "Selecciónalo y cópialo manualmente."), `BotonPrincipal` y `AlertaError` (`ErrorBox` dentro de `role="alert"`; con `onReintentar` añade el botón "Intentar de nuevo" y `refFoco` apunta a él o, sin reintento, a la región). `PasoVerificar`, `PasoConfigurar` y `FormularioRegenerar` reciben `estadoCodigo` (`'invalido'` | `'bloqueado'` | `null`) y comparten `hooks/useFocoCodigo.js` para el foco. `BookCard.jsx` fue eliminado (nadie lo importaba).
 
 ### 5.4 Hooks, Contextos y Cliente HTTP
 
@@ -1035,17 +1221,19 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 - Inyecta `Content-Type: application/json` si hay cuerpo que no es `FormData`.
 - Si la respuesta es 401 y había token, llama a `clearToken()` y redirige con `window.location.assign('/login')`.
 - Conserva las opciones de `fetch`, incluido `signal`, para cancelar solicitudes. La lista pública paginada de `catalogo.api.js` lo usa; categorías y detalle de catálogo mantienen `fetch` directo.
-- Módulos por dominio que lo usan: `bodegas.api.js`, `categorias.api.js`, `inventario.api.js`, `libros.api.js`, `ventas.api.js`, `usuarios.api.js` y el listado paginado de `catalogo.api.js`. `auth.api.js` conserva `fetch` directo.
+- Módulos por dominio que lo usan: `bodegas.api.js`, `categorias.api.js`, `inventario.api.js`, `libros.api.js`, `ventas.api.js`, `usuarios.api.js` y el listado paginado de `catalogo.api.js`. `auth.api.js` conserva `fetch` directo. `dosFactores.api.js` mezcla ambos: `configurarDosFactores`, `activarDosFactores` y `verificarDosFactores` usan `fetch` directo con `Authorization: Bearer <tokenTemporal>` (un 401 del token temporal no debe purgar la sesión ni redirigir); `getEstadoDosFactores` y `regenerarCodigosRespaldo` usan `apiFetch` (sesión completa; un código inválido al regenerar responde 400).
 
 #### Otros módulos
 - `utils/formatters.js` (`formatFecha`, `formatPrecio`, `formatFechaVenta`: fecha en `America/Guatemala`, "—" si es nula o inválida), `utils/dinero.js` (centavos enteros sin punto flotante: `aCentavos`, `deCentavos`, `formatQuetzales`, `formatMonto`), `services/api/ventas.api.js` (`crearVenta`, `getVentas`, `getVenta`, `anularVenta`, `buscarLibrosParaVenta`), `utils/parsers.js` (`orNull`, `toNum`), `hooks/useDebouncedValue.js`.
 - `components/ModalPrecioLibro.jsx`: modal (sobre `components/ui/Modal`) que muestra el título y el precio actual, pide el nuevo precio y llama a `actualizarPrecioLibro(libroId, precio)` (`libros.api.js`, `PATCH`); muestra `message` y `details` del backend con `ErrorBox`.
-- Hooks de feature: `useCatalogo`, `useLibroDetalle`, `useInventarioData`, `useKardex`, `useRegistrarLibro`, `useNuevaVenta`, `useVentas`, `useVentaDetalle`, `useUsuarios`.
+- Hooks de feature: `useCatalogo`, `useLibroDetalle`, `useInventarioData`, `useKardex`, `useRegistrarLibro`, `useNuevaVenta`, `useVentas`, `useVentaDetalle`, `useUsuarios`, `useLoginDosPasos`, `useSeguridad`, `useFocoCodigo`.
+- `features/seguridad/codigos.js` (puro, sin React): `limpiarCodigoTotp`, `formatearCodigoRespaldo`, `totpCompleto`, `respaldoCompleto`, `agruparClave` y `textoArchivoCodigos` (usa `formatFechaVenta`). `features/seguridad/errores.js` (puro): `MENSAJE_CODIGO_INVALIDO` (copia del texto del backend) y `clasificarErrorCodigo(contexto, status, message)` → `'invalido'` | `'bloqueado'` | `'sesionTerminada'` | `'otro'`. `features/seguridad/navegador.js`: `copiarTexto` (nunca lanza) y `descargarTexto` (`Blob` + enlace `download`, archivo `codigos-respaldo-libreria-oskar.txt`).
 
 #### `context/AuthContext.jsx` (`AuthProvider` y `useAuth`)
 - Estado: `user` (`{ id, nombre_completo, email, rol }`), `token`, `loading`.
 - Al montar, si hay token llama a `GET /api/auth/me` (`fetchSesion`); si falla, limpia el token.
-- `login(email, password)` (`loginRequest` → `POST /api/auth/login`, guarda el token) y `logout()` (limpia token y estado).
+- `login(email, password)` (`loginRequest` → `POST /api/auth/login`): con sesión completa guarda el token, fija `user` y resuelve `{ paso: 'sesion', usuario }`; con segundo paso resuelve `{ paso: 'verificar' | 'configurar', tokenTemporal, expiraEnSegundos }` sin guardar token ni fijar `user`. Su único consumidor es `useLoginDosPasos`.
+- `establecerSesion({ token, usuario })` guarda el token y fija `user` (tras `verificar` y tras el Continuar del alta) y `logout()` limpia token y estado.
 
 ### 5.5 Guardas de Rutas y Manejo de Sesión en Cliente
 - Implementadas en `ProtectedRoute.jsx`. Mientras `loading === true` muestra `LoadingSpinner`.
@@ -1083,11 +1271,17 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 3. **Servidor**: `src/app.js` procesa el JSON y enruta a `src/routes/auth.routes.js`.
 4. **Controlador**: `authController.login` invoca a `authService.login`.
 5. **Servicio**: `authService.login` invoca `usuarioRepository.findByEmail(email)` (Sequelize, con include de `Rol`).
-6. **Servicio**: Valida con `bcrypt.compare(password, usuario.password_hash)` y que el usuario esté activo. Si es válido, genera el JWT con `jwt.sign`.
-7. **Cliente**: `AuthContext.jsx` guarda el token con `setToken` (`utils/tokenStorage.js`, clave `oskar_token`) y establece `user`. `Login.jsx` redirige a la ruta previa (`location.state.from`) o, por defecto, a **`/registrar`**.
+6. **Servicio**: Valida con `bcrypt.compare(password, usuario.password_hash)` y que el usuario esté activo. Si no corresponde segundo factor, genera el JWT con `emitirSesion` (`jwt.sign`); si corresponde, responde `paso` y `tokenTemporal` (ver §6.2).
+7. **Cliente**: sin segundo paso, `AuthContext.jsx` guarda el token con `setToken` (`utils/tokenStorage.js`, clave `oskar_token`) y establece `user`; con `paso`, `useLoginDosPasos` sigue el flujo de §6.2. `Login.jsx` redirige a la ruta previa (`location.state.from`) o, por defecto, a **`/registrar`**.
 
 ### 6.2 Flujo 2: Autenticación de Dos Factores (2FA)
-- **Estado en código**: No existe flujo end-to-end implementado. El login solo valida email y password.
+- **Estado en código**: backend implementado y probado por HTTP; interfaz implementada en `Login.jsx` (`useLoginDosPasos`) y `/cuenta/seguridad`, compila con `npm run frontend:build`. El flujo de la interfaz contra el backend real y con una app de autenticación no está verificado (pendiente de prueba manual).
+1. **Login**: `POST /api/auth/login` valida credenciales como antes. Con 2FA activo responde `{ paso: 'verificar', tokenTemporal, expiraEnSegundos: 600 }` (scope `2fa-verify`); con `TWO_FACTOR_ENFORCED` y rol Administrador/Empleado sin 2FA responde `paso: 'configurar'` (scope `2fa-setup`). En ambos casos no hay `token` de sesión.
+2. **Alta** (scope `2fa-setup`): `POST /api/auth/2fa/configurar` devuelve `qrDataUrl`, `secretoManual` y `otpauthUrl` (en el celular se puede abrir el enlace o copiar la clave). `POST /api/auth/2fa/activar { codigo }` verifica el primer código y devuelve `{ token, usuario, codigosRespaldo }`.
+3. **Verificación** (scope `2fa-verify`): `POST /api/auth/2fa/verificar` con `{ codigo }` o `{ codigoRespaldo }` devuelve `{ token, usuario }` con el mismo JWT que el login normal.
+4. **Con sesión completa**: `GET /api/auth/2fa/estado` y `POST /api/auth/2fa/respaldo/regenerar { codigo }`.
+5. **Recuperación**: un Administrador restablece a otro usuario con `POST /api/auth/2fa/usuarios/:id/restablecer`; el administrador bloqueado usa `npm run reset-2fa -- correo` en el servidor. No hay recuperación por correo.
+6. **Interfaz**: credenciales → `verificar` → `establecerSesion` → redirección; o credenciales → `configurar` (una sola llamada por token) → `activar` → códigos de respaldo en estado del flujo → "Ya los guardé" + Continuar → `establecerSesion` → redirección. El token temporal vive solo en memoria; vencido (`venceEn`) vuelve a credenciales sin llamar al backend. `/cuenta/seguridad` (enlace desde el chip del `Navbar`) muestra el estado y regenera los códigos.
 
 ### 6.3 Flujo 3: Escaneo Directo por API (`POST /api/libros/escanear`)
 **El frontend no consume este endpoint** (sin coincidencias de `escanear` en `frontend/src/`); se usa solo por API y en pruebas (`tests/escanear.integration.test.js`, `tests/api.e2e.test.js`). La UI sigue el flujo consultar → ingreso o registrar (§6.4 y §6.5).
@@ -1213,7 +1407,7 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 - **Servicios declarados**:
   1. `db`: Imagen `postgres:15-alpine`. Expone puerto host `5434:5432`. Base `libreria_oskar`. Monta `./database/schema.sql` en `/docker-entrypoint-initdb.d/01_schema.sql` para inicialización automática. Volumen `pgdata`.
   2. `db-test`: Imagen `postgres:15-alpine`. Expone puerto host `5435:5432`. Perfil `["test"]`. Base `libreria_oskar_test`. Volumen `pgdata_test`.
-  3. `backend`: Construye desde `./backend/Dockerfile`. Expone puerto host `3000:8080`. Variables: `DB_HOST=db`, `DB_PORT=5432`, `PORT=8080`. Espera estado saludable de `db`.
+  3. `backend`: Construye desde `./backend/Dockerfile`. Expone puerto host `3000:8080`. Variables: `NODE_ENV=production`, `DB_HOST=db`, `DB_PORT=5432`, `PORT=8080`, `JWT_SECRET` (con valor por defecto de desarrollo), `TWO_FACTOR_ENFORCED` (por defecto `false`), `TWO_FACTOR_ENCRYPTION_KEY` (clave falsa de desarrollo por defecto) y `CORS_ORIGINS` (por defecto `http://localhost:5173,http://localhost:4173`; se sobreescribe desde la terminal). Como `NODE_ENV=production` exige `CORS_ORIGINS`, sin ella el backend no arranca (`security.config.js`). No define `TRUST_PROXY` ni `LOGIN_RATE_*`. Espera estado saludable de `db`.
 - **Servicio Frontend en Compose**: No existe declarado en `docker-compose.yml`; el frontend corre en el host con `npm run frontend:dev` (proxy de `/api` a `localhost:3000`).
 - **Arranque y cierre del backend**: `server.js` verifica la BD con `testSequelizeConnection()` antes de escuchar y, ante `SIGINT`/`SIGTERM`, cierra el servidor HTTP y luego `sequelize.close()` (ver §4.2).
 
@@ -1251,6 +1445,9 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 | Iniciar Sesión | `POST /api/auth/login` | Permitido | Permitido | Permitido | Permitido |
 | Consultar Perfil | `GET /api/auth/me` | Denegado (401) | Permitido | Permitido | Permitido |
 | Administrar Usuarios | `GET/POST/PUT/PATCH /api/usuarios...` | Denegado (401) | Denegado (403) | Permitido | Denegado (403) |
+| Alta y verificación 2FA | `POST /api/auth/2fa/configurar`, `/activar`, `/verificar` | Solo con el token temporal del scope correspondiente (401 sin él) | Permitido | Permitido | Permitido (solo `verificar` si lo tiene activo; nunca se le exige alta) |
+| Estado 2FA y regenerar respaldo | `GET /api/auth/2fa/estado`, `POST /api/auth/2fa/respaldo/regenerar` | Denegado (401) | Permitido | Permitido | Permitido |
+| Restablecer 2FA de otro usuario | `POST /api/auth/2fa/usuarios/:id/restablecer` | Denegado (401) | Denegado (403) | Permitido (no a sí mismo: 403) | Denegado (403) |
 | Escanear ISBN Directo | `POST /api/libros/escanear` | Denegado (401) | Permitido | Permitido | Denegado (403) |
 | Consultar ISBN Previo | `POST /api/libros/consultar` | Denegado (401) | Permitido | Permitido | Denegado (403) |
 | Ingreso Stock Existente | `POST /api/libros/:id/ingreso`| Denegado (401) | Permitido | Permitido | Denegado (403) |
@@ -1284,7 +1481,7 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 
 ## 9. Deuda Técnica Observada
 
-Cada ítem cita su archivo como evidencia. Resueltos y retirados de esta sección: duplicación de validación de ISBN/UUID (ahora `utils/isbn.js` y `utils/uuid.js`), componentes de vista monolíticos y handlers inline de `routes/index.js`.
+Cada ítem cita su archivo como evidencia. Resueltos y retirados de esta sección: duplicación de validación de ISBN/UUID (ahora `utils/isbn.js` y `utils/uuid.js`), componentes de vista monolíticos, handlers inline de `routes/index.js` y el JSON mal formado que respondía 500 (ahora 400 en `middlewares/errorHandler.js`, cubierto por `tests/apiSecurity.test.js`).
 
 | Ítem / Problema | Archivo afectado | Evidencia en código |
 |---|---|---|
@@ -1299,14 +1496,20 @@ Cada ítem cita su archivo como evidencia. Resueltos y retirados de esta secció
 | **`UUID_REGEX.test` convierte a string** | `backend/src/utils/uuid.js` | `esUuid(valor)` es `UUID_REGEX.test(valor)`, que convierte a string: por razonamiento sobre el código, un arreglo con un solo UUID pasaría. `tests/utilsIsbnUuid.test.js` cubre números y objetos, pero no ese caso de arreglo (no verificado por prueba). |
 | **`normalizarIsbn(0)` y `normalizarIsbnEstricto` con números** | `backend/src/utils/isbn.js` | `normalizarIsbn(0)` devuelve `''`; `normalizarIsbnEstricto` lanza `TypeError` con números. Fijado en `tests/utilsIsbnUuid.test.js`. |
 | **Ausencia de tests en Frontend** | `frontend/` | No hay pruebas ni Vitest/Jest/Testing Library en `frontend/package.json`. Se verifica con `npm run frontend:build` y prueba manual. |
-| **Bundle grande sin code splitting** | `frontend/vite.config.js` | El build reporta un bundle de ~670 kB (aviso de más de 500 kB de Vite); sin `manualChunks` ni carga diferida. |
-| **Rate limit local por proceso** | `backend/src/middlewares/rateLimit.js` | El login queda limitado por IP en cada proceso. Si el backend escala a varias réplicas, usar almacenamiento compartido para consolidar el contador. |
+| **Bundle grande sin code splitting** | `frontend/vite.config.js` | `npm run frontend:build` (2026-10-24) genera `index-*.js` de 801.99 kB (~802 kB; 220.41 kB gzip) con el aviso de más de 500 kB de Vite; sin `manualChunks` ni carga diferida de vistas. Aparte, `zxing_reader-*.wasm` (946.86 kB) es el lector de respaldo del escáner. |
+| **Limitador de login por IP, en memoria y para toda petición** | `backend/src/middlewares/rateLimit.js`, `backend/src/config/security.config.js`, `backend/src/routes/auth.routes.js` | Solo cubre `POST /api/auth/login`. Cuenta por `req.ip` en un `Map` del proceso y suma TODAS las peticiones antes de `next()`, también las exitosas (10 por 15 min por defecto: `LOGIN_RATE_LIMIT`, `LOGIN_RATE_WINDOW_MS`). `TRUST_PROXY` vale 0 por defecto, así que detrás de un proxy de la nube `req.ip` sería la del proxy y todos los usuarios compartirían el contador. Con varias réplicas cada una cuenta por separado. Las pruebas 2FA lo reinician antes de cada login con `loginRateLimit.reset()` (`tests/helpers/dosFactores.js`). |
 | **`version` obsoleta en Compose** | `docker-compose.yml` | Declara `version: '3.8'`, campo obsoleto en Docker Compose v2. |
 | **Monorepo sin `workspaces`** | `package.json` | Usa scripts con `--prefix`; no declara `"workspaces"`. |
 | **Sin Dockerfile de frontend** | `frontend/` | Solo existe `backend/Dockerfile`; el frontend corre en el host con `npm run frontend:dev`. |
 | **Escáner de cámara (visor 1:1 y mensaje debajo pendientes de prueba manual)** | `frontend/src/components/BarcodeScanner.jsx` | Se corrigieron formatos, resolución, zona de escaneo y reinicios de cámara por dependencias inestables. Después, la geometría del visor: el marco ya no recorta el recuadro con video vertical, el recorte analizado se agranda con un ancho lógico de 800 px y el apagado usa `getState()`. Después, retroalimentación durante el escaneo: texto por fase (iniciando, buscando, ayuda tras 8 s), vibración corta al leer y diagnóstico técnico oculto tras un botón y solo en desarrollo. Se añadió un lector de respaldo (`barcode-detector` 3.2.3 con `zxing-wasm`) que se carga solo si el navegador no trae `BarcodeDetector`, para laptops con Chromium/Firefox; con `BarcodeDetector` nativo el comportamiento no cambia. El comportamiento previo se verificó a mano el 2026-10-22 en un celular (Chrome, detector nativo) y en una laptop (lector de respaldo WASM). Después, `BarcodeScanner.jsx` se dividió sin cambiar comportamiento en tres hooks (`useCamaraEscaner`, `useGeometriaEscaner`, `useDiagnosticoEscaner`) y dos utilidades (`geometriaEscaner`, `errorCamara`); se eliminó la variable de módulo `lastQrbox`. El usuario verificó a mano el 2026-10-23 que, tras esa división en hooks, el escáner lee en un celular y en una laptop (dato aportado por el usuario, no verificado por el agente). Después, el alto visible máximo del visor pasó de 4:3 a 1:1 (`MAX_VISIBLE_RATIO` 0.75 → 1; el `qrbox` no cambia) y el texto de estado pasó de superponerse al visor a mostrarse debajo de él; ambos cambios están pendientes de prueba manual (aspecto real, tamaño en el celular, recuadro entero, que la cámara no se reinicie). |
-| **JSON mal formado devuelve 500** | `backend/src/middlewares/errorHandler.js` | El manejador no contempla el `SyntaxError` del parser JSON (no es `AppError` ni error de Sequelize/pg) y responde 500 en vez de 400. Verificado por lectura del código; no probado en ejecución. |
 | **Reintentos de correo solo en memoria** | `backend/src/services/mail/fabrica.service.js` | Los reintentos pendientes viven en memoria y se pierden si el proceso se apaga; no hay cola persistente. En Cloud Run podrían pausarse sin peticiones activas (no verificado). El envío SMTP real y el puerto 587 desde Cloud Run tampoco se han verificado. |
+| **2FA: JWT emitidos no se revocan** | `backend/src/middlewares/auth.js` | Tras un restablecimiento (o al activar el 2FA) los JWT de sesión ya emitidos siguen válidos hasta 8 h (`JWT_EXPIRES_IN`, `8h` por defecto en `config/env.js`); no hay lista de revocación. |
+| **2FA: restablecimiento sin confirmación** | `backend/src/services/dosFactores.service.js` | El Administrador no puede restablecerse a sí mismo (usa `npm run reset-2fa`) y el restablecimiento de otro usuario no le pide su propio código TOTP. |
+| **2FA: alta solo en el login** | `backend/src/config/twoFactor.config.js`, `frontend/src/features/seguridad/` | El alta solo ocurre en el login cuando `TWO_FACTOR_ENFORCED` está encendido (en producción por defecto; Compose lo fija en `false`); con la bandera apagada nadie puede activarla desde la interfaz. Quien conozca la contraseña de un usuario sin alta puede dar de alta su propio autenticador. Recargar la página durante el segundo paso vuelve a las credenciales (el token temporal solo vive en memoria). |
+| **2FA: sin gestión en la interfaz de usuarios** | `backend/src/repositories/usuario.repository.js` (`findActivosConRol`, `findConRol`), `frontend/src/features/usuarios/` | El listado de `GET /api/usuarios` no expone `dos_factores_activo` y la vista `/usuarios` no tiene botón de restablecer: el frontend no llama a `POST /api/auth/2fa/usuarios/:id/restablecer` (solo API o `npm run reset-2fa`). |
+| **2FA: sin límite por IP ni rotación de clave** | `backend/src/services/dosFactores/` | El contador es por usuario; `/2fa/*` no tiene límite por IP propio (el limitador por IP solo cubre `POST /api/auth/login`). Por ser por usuario, quien conozca la contraseña (obtiene el token temporal de `verificar`) puede bloquear a ese usuario 15 minutos enviando 5 códigos erróneos. La reserva atómica (`reservarIntento`) acota también los intentos concurrentes a 5 por ventana de bloqueo con una instancia; con varias instancias del backend debería valer igual porque la serialización la hace PostgreSQL, pero no está verificado. El prefijo `v1` permite rotar `TWO_FACTOR_ENCRYPTION_KEY`, pero no hay procedimiento de rotación: cambiar la clave invalida todos los secretos y códigos de respaldo. |
+| **2FA: índice redundante y alfabeto de 31 símbolos** | `database/migrations/010_dos_factores.sql`, `backend/src/services/dosFactores/respaldo.js` | `idx_codigos_respaldo_2fa_usuario_id` duplica el prefijo del UNIQUE (`usuario_id`, `codigo_hash`). El alfabeto sin 0/O/1/I/L tiene 31 símbolos (no 32): cada código tiene ≈49,5 bits. |
+| **2FA: no verificado** | — | Compatibilidad con apps TOTP reales, Node 22 en el contenedor (las pruebas corrieron con Node 24.18.0), varias instancias del backend, equivalencia `pg_dump` de `schema.sql` frente a BD anterior + 010 e interfaz: flujo contra el backend real, app de autenticación real, enlace `otpauth://` en un celular, copiado en HTTP por IP, descarga del `.txt`, aspecto y lectores de pantalla (solo se verificó que compila). |
 | **Placeholder del modal de salida desactualizado** | `frontend/src/features/inventario/components/ModalSalidaInventario.jsx` | El placeholder del motivo sugiere "Venta en mostrador" aunque ahora existe el módulo de ventas (que registra sus propias salidas). |
 
 ---
@@ -1314,18 +1517,17 @@ Cada ítem cita su archivo como evidencia. Resueltos y retirados de esta secció
 ## 10. Funcionalidad Incompleta o Ausente (respecto a AGENTS.md)
 
 1. **Autenticación de Dos Factores (2FA)**:
-   - AGENTS.md la lista en "Roadmap (NO implementado)"; spec en `app/docs/roadmap/auth-2fa/`.
-   - En la base de datos existen `dos_factores_activo` y `dos_factores_secreto`.
-   - **Estado real**: No hay enrolamiento, QR, validación TOTP ni desafío en el login.
+   - AGENTS.md la da por implementada en «Seguridad»; diseño de referencia en `app/docs/roadmap/auth-2fa/`.
+   - **Estado real**: backend implementado (alta con QR, verificación TOTP y de respaldo, anti-reutilización, bloqueo, restablecimiento y script `reset-2fa`; ver §4.6 y §6.2). Interfaz implementada (login en dos pasos, alta con QR y códigos de respaldo, `/cuenta/seguridad`), pendiente de prueba manual; sin botón de restablecer. No hay recuperación por correo ni revocación de JWT emitidos.
 2. **Notificaciones por Correo de Desabastecimiento y Libros Sin Precio**:
    - Roadmap; spec en `app/docs/roadmap/inventory-email-alerts/`.
    - **Estado real**: Existe el módulo de correo `services/mail/` (`mail.service.js`, dependencia `nodemailer`), pero ningún código lo consume; las alertas de inventario siguen sin implementar y no hay tareas programadas.
 3. **CRUD Administrativo de Catálogo y Empleados**:
-   - Roadmap; spec en `app/docs/roadmap/catalog-employee-crud/`. Los CRUD de usuarios/categorías están integrados; la gestión administrativa de libros también cuenta con backend y vista protegida.
+   - Diseño en `app/docs/roadmap/catalog-employee-crud/` (su cabecera aún dice "NO IMPLEMENTADO"). Los CRUD de usuarios/categorías están integrados; la gestión administrativa de libros también cuenta con backend y vista protegida.
    - **Estado real**: El CRUD administrativo de usuarios está disponible en `GET/POST/PUT/PATCH /api/usuarios` y la vista protegida `/usuarios`. La gestión de libros está disponible en `/libros/gestion`, respaldada por `GET /api/libros/admin`, `PUT /api/libros/:id` y `PATCH /api/libros/:id/activo`; el precio conserva su endpoint independiente `PATCH /api/libros/:id/precio`.
 4. **Ventas**:
    - Diseño en `app/docs/roadmap/ventas/SPEC.md`.
-   - **Estado real**: Esquema, API e interfaz implementados; los reportes de ventas no forman parte de este módulo (corresponden a reportes aparte). La venta de libros inactivos se rechaza con 409 antes de persistir. Ambos roles operativos siguen viendo todas las ventas.
+   - **Estado real**: Esquema, API e interfaz implementados; los reportes de ventas viven en el módulo de reportes (`/api/reportes`, solo Administrador). La venta de libros inactivos se rechaza con 409 antes de persistir. Ambos roles operativos siguen viendo todas las ventas.
 5. **Validación de Sesión en el Lector Móvil**:
    - `BarcodeScanner.jsx` no valida permisos de rol; depende de la vista contenedora y del guardián de ruta.
 
@@ -1382,8 +1584,8 @@ La prioridad de fuentes de información para agentes y desarrolladores se rige p
 > **Regla de oro**: Ante cualquier discrepancia entre documentación, agentes o especificaciones, **el código fuente y la base de datos mandan**.
 
 ### 12.2 Estado de Archivos y Configuración de Agentes
-- **`app/AGENTS.md`**: guía concisa que se carga en cada sesión. Describe la estructura real, los roles, las reglas de persistencia e inventario y lista 2FA, correos, CRUD admin y ventas como "Roadmap (NO implementado)" (de ventas existen el esquema, la API y la interfaz; los reportes de ventas corresponden a un módulo de reportes aparte) (`app/docs/roadmap/`).
-- **7 skills activas (`app/.agents/skills/`)**: `backend-engineer-nodejs`, `backend-testing`, `database-architect`, `devops-gcp-automation`, `frontend-engineer-react`, `inventory-transactions`, `sequelize-orm`. Las skills de funciones no implementadas viven como especificaciones en `app/docs/roadmap/`.
+- **`app/AGENTS.md`**: guía concisa que se carga en cada sesión. Describe la estructura real (14 modelos), los roles, las reglas de persistencia e inventario, el 2FA como implementado en «Seguridad» (política y puntero a §4.6), da por implementados el CRUD admin de usuarios y categorías, la edición/baja de libros, ventas y reportes, y deja solo las alertas de inventario por correo como "Roadmap (NO implementado)" (`app/docs/roadmap/`).
+- **7 skills activas (`app/.agents/skills/`)**: `backend-engineer-nodejs`, `backend-testing`, `database-architect`, `devops-gcp-automation`, `frontend-engineer-react`, `inventory-transactions`, `sequelize-orm`. Las skills de funciones no implementadas viven como especificaciones en `app/docs/roadmap/`; `auth-2fa` sigue allí como referencia de diseño ya implementada.
 - **Carga en Claude Code**: Claude Code lee `AGENTS.md` mediante un `CLAUDE.md` local que contiene `@AGENTS.md`, y las skills mediante un symlink `.claude/skills`. Esa configuración es local y no está versionada (`CLAUDE.md` y `.claude/` aparecen como no rastreados en `git status`).
 
 ### 12.3 Catálogo de Archivos de Documentación
@@ -1392,13 +1594,13 @@ La prioridad de fuentes de información para agentes y desarrolladores se rige p
 |---|---|---|
 | `README.md` (raíz del repo) | Qué es el sistema, cómo arrancarlo y roles. | Reescrito; remite a esta especificación. |
 | `documentacion/estructura-paqueteria.md` | Capas y carpetas del backend y del frontend. | Reescrito; sin conteos de líneas. |
-| `app/AGENTS.md` | Reglas de arquitectura y comportamiento para agentes. | Alineado con la estructura actual. |
-| `app/backend/README.md` | Puesta en marcha y mapa del backend. | Reescrito; remite a esta especificación. |
+| `app/AGENTS.md` | Reglas de arquitectura y comportamiento para agentes. | Alineado con la estructura actual (14 modelos; 2FA implementado). |
+| `app/backend/README.md` | Puesta en marcha y mapa del backend. | Reescrito; remite a esta especificación. `migrate`, `correo:probar` y `reset-2fa` se corren con `npm --prefix backend run ...` desde `app/`. |
 | `app/frontend/README.md` | Puesta en marcha y mapa del frontend. | Reescrito; remite a esta especificación. |
 | `app/.github/DEPLOYMENT_GUIDE.md` | Manual de despliegue en Google Cloud. | No revisado en esta actualización (fuera de alcance); el despliegue está planeado, no ejecutado. |
-| `app/docs/PROJECT_SPECS.md` | Fuente de verdad técnica. | Verificada contra el código el 2026-10-22. |
-| `app/docs/roadmap/auth-2fa/SKILL.md` | Spec de 2FA TOTP. | No implementado. |
-| `app/docs/roadmap/catalog-employee-crud/SKILL.md` | Spec de CRUD de catálogo y empleados. | No implementado. |
+| `app/docs/PROJECT_SPECS.md` | Fuente de verdad técnica. | Verificada contra el código el 2026-10-22; §2.1, §2.2, §4.9 y §9 reverificados por script el 2026-10-24. |
+| `app/docs/roadmap/auth-2fa/SKILL.md` | Spec de 2FA TOTP. | Implementado (cabecera verificada el 2026-10-24, remite a §4.6); el punto 6 recoge la política real y una sección anota las diferencias con lo planeado. |
+| `app/docs/roadmap/catalog-employee-crud/SKILL.md` | Spec de CRUD de catálogo y empleados. | Implementado (CRUD de usuarios y categorías; edición/baja de libros aparte, también implementada), pero el archivo aún se declara "NO IMPLEMENTADO" (pendiente de actualizar). |
 | `app/docs/roadmap/inventory-email-alerts/SKILL.md` | Spec de alertas de inventario por correo. | No implementado. |
 | `app/docs/roadmap/ventas/SPEC.md` | Documento de diseño del módulo de ventas. | Esquema, API e interfaz creados; reportes en un módulo aparte. Incluye las secciones "API implementada (backend)" e "Interfaz implementada". |
-| `app/.agents/skills/*/SKILL.md` (7) | Directrices por dominio de ingeniería. | Revisadas el 2026-10-22; correcciones puntuales donde contradecían la estructura real. |
+| `app/.agents/skills/*/SKILL.md` (7) | Directrices por dominio de ingeniería. | Revisadas el 2026-10-22; correcciones puntuales donde contradecían la estructura real (2FA implementado en `backend-engineer-nodejs` y `frontend-engineer-react`, 2026-10-24). |

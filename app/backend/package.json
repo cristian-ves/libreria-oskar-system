@@ -9,6 +9,7 @@
     "seed": "node src/database/seed.js",
     "migrate": "node src/database/migrate.js",
     "correo:probar": "node src/scripts/probar-correo.js",
+    "reset-2fa": "node src/scripts/reset-2fa.js",
     "test": "node src/run-tests.js",
     "test:sequelize": "node src/test-sequelize.js"
   },
@@ -32,9 +33,11 @@
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.10.0",
     "nodemailer": "^10.2.1",
+    "otplib": "13.5.0",
     "pdfkit": "0.20.2",
     "pg": "^8.13.3",
     "pg-hstore": "^2.3.4",
+    "qrcode": "1.5.4",
     "sequelize": "^6.37.8"
   },
   "devDependencies": {

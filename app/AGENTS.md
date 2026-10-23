@@ -4,9 +4,9 @@ Sistema web de inventario interno + catálogo informativo de libros. Sin carrito
 
 ## Stack y estructura
 - Frontend: React 18, Vite 5, Tailwind 3 (paleta `oskar`), lucide-react, html5-qrcode, react-router-dom 6. JSX, sin TypeScript. En `app/frontend/src/`:
-  `views/` (orquestadores delgados), `components/` y `components/ui/`, `context/`, `features/{inventario,registrar-libro,catalogo}/{components,hooks}`, `hooks/`, `services/api/`, `utils/`.
-- Frontend, reglas: todo HTTP sale de `services/api/` (`apiFetch` inyecta el JWT y ante 401 con token limpia la sesión y va a `/login`; `auth.api.js` y `catalogo.api.js` usan `fetch` directo a propósito). Roles solo vía `utils/roles.js`; token solo vía `utils/tokenStorage.js`. Las vistas no contienen lógica de datos: va en hooks de la feature.
-- Backend: Node 22, Express 4, CommonJS, en `app/backend/src/`: `routes → controllers → services → repositories → models` (más `config/`, `middlewares/`, `utils/`, `database/`). Sequelize 6.37 sobre PostgreSQL, 13 modelos.
+  `views/` (orquestadores delgados), `components/` y `components/ui/`, `context/`, `features/{catalogo,categorias,inventario,libros,registrar-libro,reportes,seguridad,usuarios,ventas}/{components,hooks}`, `hooks/`, `services/api/`, `utils/`.
+- Frontend, reglas: todo HTTP sale de `services/api/` (`apiFetch` inyecta el JWT y ante 401 con token limpia la sesión y va a `/login`; `auth.api.js`, `catalogo.api.js` y `dosFactores.api.js` usan `fetch` directo a propósito; este último en los pasos con token temporal, donde un 401 no debe cerrar la sesión). Roles solo vía `utils/roles.js`; token solo vía `utils/tokenStorage.js`. Las vistas no contienen lógica de datos: va en hooks de la feature.
+- Backend: Node 22, Express 4, CommonJS, en `app/backend/src/`: `routes → controllers → services → repositories → models` (más `config/`, `middlewares/`, `utils/`, `database/`). Sequelize 6.37 sobre PostgreSQL, 14 modelos.
 - Backend, fachadas: `services/libro.service.js` (sobre `services/libro/*`), `repositories/inventario.repository.js` (sobre `repositories/inventario/*`) y `middlewares/validator.js` (sobre `middlewares/validators/*`) son fachadas. Los consumidores importan la fachada, nunca los módulos internos. `routes/index.js` solo cablea; los handlers viven en controladores.
 - Utilidades compartidas: `utils/isbn.js`, `utils/uuid.js`, `utils/slug.js`, `utils/errors.js`. No reimplementes validación de ISBN/UUID.
 - BD: PostgreSQL con UUID. `app/database/schema.sql` es la fuente de verdad; migraciones en `app/database/migrations/`.
@@ -42,6 +42,7 @@ Sistema web de inventario interno + catálogo informativo de libros. Sin carrito
 - Nunca expongas ni versiones secretos, `.env` ni claves; comprueba su presencia sin mostrar valores.
 - `POST /api/libros/escanear` exige rol `Administrador` o `Empleado` (`authenticate` + `authorize`). Sin token → 401; rol `Usuario` → 403. El frontend no lo llama.
 - El actor (`usuarioId`) de todo movimiento sale siempre de `req.user.id` (inyectado por `authenticate`), nunca del body. Un `usuarioId` en el body se ignora.
+- 2FA (TOTP, endpoints en `/api/auth/2fa/`) implementado: obligatorio para Administrador y Empleado cuando `TWO_FACTOR_ENFORCED` está activo (por defecto solo en producción; siempre apagado con `NODE_ENV=test`); el rol Usuario queda fuera. Detalle en `docs/PROJECT_SPECS.md` §4.6.
 
 ## Pruebas
 - Las de integración modifican datos: apuntan a la BD aislada y limpian lo que crean.
@@ -68,13 +69,13 @@ Sistema web de inventario interno + catálogo informativo de libros. Sin carrito
 
 ## Trabajo en equipo
 - Ramas nuevas desde `develop`; se integran en `develop`. El workflow de despliegue está en `app/.github/workflows/deploy.yml`, pero GitHub no lo ejecuta desde esa ubicación (solo lee `.github/workflows` en la raíz del repo), sus rutas suponen que `app/` es la raíz, no está verificado y será rehecho. No fusionar ni empujar a `main` sin acuerdo.
-- Migraciones: la 004 es la de ventas (ya aplicada al repositorio); los cambios de esquema nuevos usan la 005 en adelante y se reflejan también en `database/schema.sql` y en los modelos, siempre con autorización explícita.
+- Migraciones: existen 002, 003, 004 (ventas) y 010 (2FA). Reparto de números nuevos: 005-009 para el otro desarrollador y 010-019 para seguridad. Todo cambio de esquema se refleja también en `database/schema.sql` y en los modelos, siempre con autorización explícita.
 - Archivos compartidos con riesgo de conflicto: `backend/src/routes/index.js`, `backend/src/models/index.js`, `frontend/src/App.jsx`, `frontend/src/components/Navbar.jsx`, `database/schema.sql`, `docs/PROJECT_SPECS.md`. Trae `develop` antes de editarlos y mantén el cambio mínimo.
 - Todo endpoint, servicio o repositorio nuevo trae pruebas en `backend/tests/` (con `db-test` arriba) y no debe romper las existentes.
-- Alcance del CRUD admin pendiente: usuarios y categorías. La edición/baja de libros y las ventas se desarrollan aparte.
+- Ya implementados: CRUD admin de usuarios y categorías, edición/baja de libros, ventas y reportes con exportación Excel/PDF.
 
 ## Roadmap (NO implementado)
-2FA, alertas de inventario por correo, CRUD admin de empleados y catálogo, y ventas (esquema, API e interfaz creados; los reportes de ventas corresponden a un módulo de reportes aparte). No los asumas existentes. Sus specs están en `app/docs/roadmap/` (auth-2fa, inventory-email-alerts, catalog-employee-crud, ventas).
+Alertas de inventario por correo (existe `services/mail/`, pero solo lo usa el script `probar-correo.js`). No las asumas existentes. Spec en `app/docs/roadmap/inventory-email-alerts`; catalog-employee-crud, ventas y auth-2fa quedan allí como referencia de diseño ya implementada.
 
 ## Skills activas (`app/.agents/skills/<nombre>/SKILL.md`)
 | Skill | Úsala para |

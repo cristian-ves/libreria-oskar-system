@@ -3,6 +3,8 @@ const jwt = require('jsonwebtoken');
 const usuarioRepository = require('../repositories/usuario.repository');
 const env = require('../config/env');
 const { ValidationError, UnauthorizedError } = require('../utils/errors');
+// Import directo del módulo de sesión (no de la fachada) para evitar un ciclo de require.
+const { resolverSegundoPaso } = require('./dosFactores/sesion');
 
 class AuthService {
   /**
@@ -29,6 +31,21 @@ class AuthService {
       throw new UnauthorizedError('El usuario se encuentra inactivo.');
     }
 
+    // Segundo factor: { paso, tokenTemporal, expiraEnSegundos } en lugar de la sesión.
+    const segundoPaso = resolverSegundoPaso(usuario);
+    if (segundoPaso) {
+      return segundoPaso;
+    }
+
+    return this.emitirSesion(usuario);
+  }
+
+  /**
+   * Emite el JWT de sesión completa (login normal y segundo paso 2FA).
+   * @param {{ id: string, rol_nombre: string, nombre_completo: string, email: string }} usuario
+   * @returns {{ token: string, usuario: { id: string, nombre_completo: string, email: string, rol: string } }}
+   */
+  emitirSesion(usuario) {
     const payload = {
       sub: usuario.id,
       rol: usuario.rol_nombre,

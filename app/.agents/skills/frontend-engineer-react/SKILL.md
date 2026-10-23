@@ -24,4 +24,4 @@ El perfil **frontend-engineer-react** lidera el desarrollo de la interfaz de usu
    - Debounce en inputs de búsqueda de catálogo para evitar sobrecarga de peticiones.
    - Estados de carga claros (skeletons y spinners) y notificaciones toast ante éxitos y errores.
    - Memoización de componentes y cálculos costosos con `React.memo`, `useMemo` y `useCallback`.
-   - 2FA en el login: roadmap, NO implementado (ver `app/docs/roadmap/`).
+   - 2FA en el login implementado (`features/seguridad/`, login en dos pasos y `/cuenta/seguridad`).

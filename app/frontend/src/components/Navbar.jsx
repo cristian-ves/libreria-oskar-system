@@ -26,12 +26,16 @@ const seccionesNavegacion = [
       { path: '/reportes', label: 'Reportes', icon: BarChart3, roles: [ROLES.ADMINISTRADOR] },
     ],
   },
-  { id: 'cuenta', label: 'Mi cuenta / Seguridad', enlaces: [] },
+  {
+    id: 'cuenta', label: 'Mi cuenta / Seguridad', enlaces: [
+      { path: '/cuenta/seguridad', label: 'Seguridad de la cuenta', icon: ShieldCheck, soloSesion: true },
+    ],
+  },
 ];
 
 function mostrarEnlace(enlace, user) {
   if (!user) return Boolean(enlace.publico);
-  return enlace.publico || puedeAcceder(user, enlace.roles);
+  return enlace.publico || enlace.soloSesion || puedeAcceder(user, enlace.roles);
 }
 
 function Enlaces({ enlaces, mobile = false, onNavigate }) {
@@ -110,14 +114,14 @@ export default function Navbar() {
           <div className="flex items-center gap-2 shrink-0">
             {user && (
               <>
-                <div className="sm:hidden flex items-center justify-center w-8 h-8 rounded-full bg-[#e8c85e] border border-[#b07c19] text-xs font-bold text-[#252525]" title={`${user.nombre_completo} (${user.rol})`}>
+                <NavLink to="/cuenta/seguridad" aria-label={`${user.nombre_completo}, mi cuenta y seguridad`} className="sm:hidden flex items-center justify-center w-8 h-8 rounded-full bg-[#e8c85e] border border-[#b07c19] text-xs font-bold text-[#252525] hover:ring-2 hover:ring-[#e19922] transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b07c19]" title={`${user.nombre_completo} (${user.rol})`}>
                   {user.nombre_completo ? user.nombre_completo.charAt(0).toUpperCase() : 'U'}
-                </div>
-                <div className="hidden sm:flex items-center gap-2 text-xs bg-[#f3f3f3] px-3 py-1.5 rounded-xl border border-gray-200 shadow-xs">
+                </NavLink>
+                <NavLink to="/cuenta/seguridad" aria-label={`${user.nombre_completo}, mi cuenta y seguridad`} className="hidden sm:flex items-center gap-2 text-xs bg-[#f3f3f3] px-3 py-1.5 rounded-xl border border-gray-200 shadow-xs hover:border-[#b07c19] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b07c19]">
                   <ShieldCheck aria-hidden="true" className="w-4 h-4 text-[#b07c19]" />
                   <span className="text-[#252525] font-semibold truncate max-w-[130px] sm:max-w-[180px]">{user.nombre_completo}</span>
                   <span className="text-gray-500 font-mono text-[11px]">({user.rol})</span>
-                </div>
+                </NavLink>
                 <button type="button" onClick={logout} title="Cerrar sesión" aria-label="Cerrar sesión" className="flex min-h-11 items-center gap-1.5 px-2.5 sm:px-3 text-xs text-gray-600 hover:text-white hover:bg-red-600 rounded-xl transition-colors border border-gray-200 hover:border-red-600">
                   <LogOut aria-hidden="true" className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Salir</span>

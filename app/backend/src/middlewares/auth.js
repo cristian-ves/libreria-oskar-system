@@ -29,6 +29,11 @@ const authenticate = async (req, res, next) => {
       throw new UnauthorizedError('Token de autenticación inválido');
     }
 
+    // Los tokens temporales del 2FA (con claim `scope`) no abren sesión completa.
+    if (decoded && Object.hasOwn(decoded, 'scope')) {
+      throw new UnauthorizedError('Token de autenticación inválido');
+    }
+
     const usuario = await usuarioRepository.findById(decoded.sub);
     if (!usuario) {
       throw new UnauthorizedError('Usuario no encontrado');

@@ -26,7 +26,7 @@ El perfil **backend-engineer-nodejs** se encarga de diseñar e implementar una A
      ```
 3. **Seguridad y Control de Acceso**:
    - Autenticación mediante JWT de acceso (no hay refresh tokens).
-   - 2FA: roadmap, NO implementado (ver `app/docs/roadmap/`).
+   - 2FA (TOTP) implementado en `/api/auth/2fa/` (ver §4.6 de `app/docs/PROJECT_SPECS.md`).
    - Roles definidos: Administrador, Empleado, Usuario.
    - Hashing con bcrypt y parámetros de seguridad (salt rounds >= 10).
 4. **Consumo Seguro de Google Books API**:

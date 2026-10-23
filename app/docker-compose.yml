@@ -69,6 +69,11 @@ services:
       GOOGLE_BOOKS_API_KEY: ""
       JWT_SECRET: ${JWT_SECRET:-secreto-solo-para-desarrollo-local}
       JWT_EXPIRES_IN: 8h
+      TWO_FACTOR_ENFORCED: ${TWO_FACTOR_ENFORCED:-false}
+      TWO_FACTOR_ENCRYPTION_KEY: ${TWO_FACTOR_ENCRYPTION_KEY:-00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff}
+      # Orígenes del navegador separados por coma (obligatoria con NODE_ENV=production). Se sobreescribe
+      # desde la terminal, p. ej. para probar desde otro dispositivo de la red local: añadir http://IP-DE-LA-PC:5173
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:4173}
     ports:
       - "3000:8080"
 

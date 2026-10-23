@@ -11,4 +11,7 @@ router.post('/login', loginRateLimit, (req, res, next) => authController.login(r
 // Endpoint para consultar el perfil del usuario autenticado
 router.get('/me', authenticate, (req, res, next) => authController.me(req, res, next));
 
+// Autenticación en dos pasos (TOTP)
+router.use('/2fa', require('./dosFactores.routes'));
+
 module.exports = router;

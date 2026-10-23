@@ -2,6 +2,7 @@ const dotenv = require('dotenv');
 const path = require('path');
 const { leerConfigCorreo } = require('./mail.config');
 const { parseSecurityConfig } = require('./security.config');
+const { leerConfigDosFactores } = require('./twoFactor.config');
 
 // Cargar variables de entorno desde .env
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
@@ -23,6 +24,12 @@ const mail = leerConfigCorreo(process.env, nodeEnv);
 const security = parseSecurityConfig(process.env);
 if (mail.faltantes.length > 0) {
   console.warn(`[WARN CONFIG]: MAIL_PROVIDER=smtp sin ${mail.faltantes.join(', ')}. Los envíos de correo fallarán hasta definirlas.`);
+}
+
+// `enforced` se lee en cada login (no se copia), así las pruebas pueden cambiarlo.
+const twoFactor = leerConfigDosFactores(process.env, nodeEnv);
+if (twoFactor.claveDesarrollo && !isTest) {
+  console.warn('[WARN CONFIG]: TWO_FACTOR_ENCRYPTION_KEY no está definida. Utilizando clave de desarrollo predeterminada.');
 }
 
 const env = {
@@ -47,6 +54,7 @@ const env = {
     timeoutMs: 5000,
   },
   mail,
+  twoFactor,
   diasStockObsoleto: parseInt(process.env.DIAS_STOCK_OBSOLETO || '90', 10),
 };
 
