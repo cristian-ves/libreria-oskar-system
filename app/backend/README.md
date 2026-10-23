@@ -10,13 +10,14 @@ API REST en Node 22 + Express 4 + Sequelize 6 sobre PostgreSQL. Los endpoints, l
 src/
 ├── app.js, server.js        # Express y arranque (verifica la BD con Sequelize; cierra con sequelize.close())
 ├── run-tests.js             # Runner de pruebas con guardia de BD aislada
-├── config/                  # env.js, sequelize.js (db.js: cliente pg, solo pruebas)
+├── config/                  # env.js, mail.config.js, sequelize.js (db.js: cliente pg, solo pruebas)
 ├── routes/                  # index.js solo cablea; auth, libro, inventario y movimiento
 ├── controllers/             # health, bodega, categoria, usuario, auth, libro, inventario
 ├── middlewares/             # auth.js, errorHandler.js, validator.js (fachada) + validators/
-├── services/                # un servicio por dominio; libro.service.js es fachada de services/libro/
+├── services/                # un servicio por dominio; libro.service.js es fachada de services/libro/; mail.service.js es fachada de services/mail/ (correo)
 ├── repositories/            # inventario.repository.js es fachada de repositories/inventario/
 ├── models/                  # 13 modelos Sequelize (atributos en snake_case)
+├── scripts/                 # probar-correo.js (prueba manual del correo)
 ├── utils/                   # errors.js, isbn.js, uuid.js, slug.js
 └── database/                # migrate.js y seed.js (usan Sequelize)
 ```
@@ -37,6 +38,7 @@ npm start         # node src/server.js
 npm run seed      # sucursal, bodega y usuarios Administrador y Empleado
 npm run migrate   # aplica database/migrations/*.sql pendientes (tabla schema_migrations)
 npm test          # pruebas; requiere db-test arriba
+npm run correo:probar -- destino@dominio.com   # prueba manual del correo (MAIL_PROVIDER=consola no envía nada real)
 ```
 
 Base de datos y backend con Docker: `docker compose up -d` (servicios `db` y `backend`).

@@ -1,5 +1,6 @@
 const dotenv = require('dotenv');
 const path = require('path');
+const { leerConfigCorreo } = require('./mail.config');
 
 // Cargar variables de entorno desde .env
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
@@ -15,6 +16,11 @@ if (!jwtSecret) {
   }
   console.warn('[WARN CONFIG]: JWT_SECRET no está definida. Utilizando clave de desarrollo predeterminada.');
   jwtSecret = 'secreto-solo-para-desarrollo-local';
+}
+
+const mail = leerConfigCorreo(process.env, nodeEnv);
+if (mail.faltantes.length > 0) {
+  console.warn(`[WARN CONFIG]: MAIL_PROVIDER=smtp sin ${mail.faltantes.join(', ')}. Los envíos de correo fallarán hasta definirlas.`);
 }
 
 const env = {
@@ -37,6 +43,7 @@ const env = {
     baseUrl: 'https://www.googleapis.com/books/v1/volumes',
     timeoutMs: 5000,
   },
+  mail,
   diasStockObsoleto: parseInt(process.env.DIAS_STOCK_OBSOLETO || '90', 10),
 };
 

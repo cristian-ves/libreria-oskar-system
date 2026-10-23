@@ -8,6 +8,7 @@
     "dev": "nodemon src/server.js",
     "seed": "node src/database/seed.js",
     "migrate": "node src/database/migrate.js",
+    "correo:probar": "node src/scripts/probar-correo.js",
     "test": "node src/run-tests.js",
     "test:sequelize": "node src/test-sequelize.js"
   },
@@ -29,6 +30,7 @@
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.10.0",
+    "nodemailer": "^10.2.1",
     "pg": "^8.13.3",
     "pg-hstore": "^2.3.4",
     "sequelize": "^6.37.8"

@@ -49,6 +49,7 @@
   - `helmet`: `^8.0.0`
   - `jsonwebtoken`: `^9.0.3`
   - `morgan`: `^1.10.0`
+  - `nodemailer`: `^10.2.1`
   - `pg`: `^8.13.3`
   - `pg-hstore`: `^2.3.4`
   - `sequelize`: `^6.37.8`
@@ -59,6 +60,7 @@
   - `dev`: `nodemon src/server.js`
   - `seed`: `node src/database/seed.js`
   - `migrate`: `node src/database/migrate.js`
+  - `correo:probar`: `node src/scripts/probar-correo.js`
   - `test`: `node src/run-tests.js`
   - `test:sequelize`: `node src/test-sequelize.js`
 
@@ -124,10 +126,10 @@ app/
 │       └── deploy.yml (150)
 ├── backend/
 │   ├── .dockerignore (10)
-│   ├── .env.example (24)
+│   ├── .env.example (35)
 │   ├── Dockerfile (53)
-│   ├── README.md (55)
-│   ├── package.json (39)
+│   ├── README.md (57)
+│   ├── package.json (41)
 │   ├── src/
 │   │   ├── app.js (42)
 │   │   ├── run-tests.js (50)
@@ -135,7 +137,8 @@ app/
 │   │   ├── test-sequelize.js (91)
 │   │   ├── config/
 │   │   │   ├── db.js (87)
-│   │   │   ├── env.js (43)
+│   │   │   ├── env.js (50)
+│   │   │   ├── mail.config.js (55)
 │   │   │   └── sequelize.js (47)
 │   │   ├── controllers/
 │   │   │   ├── auth.controller.js (38)
@@ -196,6 +199,8 @@ app/
 │   │   │   ├── libro.routes.js (97)
 │   │   │   ├── movimiento.routes.js (21)
 │   │   │   └── venta.routes.js (65)
+│   │   ├── scripts/
+│   │   │   └── probar-correo.js (40)
 │   │   ├── services/
 │   │   │   ├── auth.service.js (54)
 │   │   │   ├── bodega.service.js (13)
@@ -204,6 +209,7 @@ app/
 │   │   │   ├── googleBooks.service.js (288)
 │   │   │   ├── inventario.service.js (187)
 │   │   │   ├── libro.service.js (14)
+│   │   │   ├── mail.service.js (15)
 │   │   │   ├── usuario.service.js (14)
 │   │   │   ├── venta.service.js (11)
 │   │   │   ├── libro/
@@ -213,6 +219,12 @@ app/
 │   │   │   │   ├── movimientoIngreso.service.js (36)
 │   │   │   │   ├── precio.service.js (17)
 │   │   │   │   └── registro.service.js (159)
+│   │   │   ├── mail/
+│   │   │   │   ├── consola.provider.js (29)
+│   │   │   │   ├── fabrica.service.js (132)
+│   │   │   │   ├── seguridad.mail.js (16)
+│   │   │   │   ├── smtp.provider.js (46)
+│   │   │   │   └── validacion.mail.js (51)
 │   │   │   └── venta/
 │   │   │       ├── anular.service.js (64)
 │   │   │       ├── bloqueo.helper.js (26)
@@ -235,6 +247,9 @@ app/
 │       ├── libroPrecio.test.js (149)
 │       ├── libroRepository.test.js (237)
 │       ├── libroServiceSequelize.test.js (387)
+│       ├── mailConfig.test.js (43)
+│       ├── mailProveedores.test.js (84)
+│       ├── mailReintentos.test.js (137)
 │       ├── movimientoRepository.test.js (245)
 │       ├── repositories.test.js (180)
 │       ├── sequelize.test.js (96)
@@ -258,7 +273,7 @@ app/
 │       ├── 003_categorias_adicionales.sql (22)
 │       └── 004_ventas.sql (58)
 ├── docs/
-│   ├── PROJECT_SPECS.md (1248)
+│   ├── PROJECT_SPECS.md (1275)
 │   └── roadmap/
 │       ├── auth-2fa/
 │       │   └── SKILL.md (16)
@@ -563,12 +578,19 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `TEST_DB_PORT` | Número | Puerto de base de pruebas | `5435` |
 | `TEST_DB_USER` | String | Usuario de base de pruebas | `postgres` |
 | `TEST_DB_PASSWORD`| String | Contraseña de base de pruebas | `postgres` |
+| `MAIL_PROVIDER` | String | Proveedor de correo: `smtp` o `consola` (alias `console`). Con `NODE_ENV=test` siempre `consola`; valor inválido lanza Error al cargar | `smtp` en producción; `consola` en otros entornos |
+| `MAIL_HOST` | String | Servidor SMTP | `smtp.gmail.com` |
+| `MAIL_PORT` | Número | Puerto SMTP (465 → `secure: true`; otros → `requireTLS: true`); fuera de 1-65535 lanza Error | `587` |
+| `MAIL_USER` | String | Usuario SMTP | vacío |
+| `MAIL_PASSWORD` | String | Contraseña SMTP (contraseña de aplicación en Gmail); nunca se registra en logs | vacío |
+| `MAIL_FROM` | String | Remitente | `MAIL_USER` |
 | `JWT_SECRET` | String | Clave de firma simétrica HMAC SHA-256 | Obligatoria en prod; dev: `'secreto-solo-para-desarrollo-local'` |
 | `JWT_EXPIRES_IN` | String | Tiempo de validez del token JWT | `'8h'` |
 | `GOOGLE_BOOKS_API_KEY` | String | API Key opcional de Google Books | `null` |
 | `DIAS_STOCK_OBSOLETO` | Número | Umbral de días sin salidas para clasificar stock muerto | `90` |
 | `SEQUELIZE_LOGGING` | Booleano | Si habilita salida de queries SQL a consola | `false` |
 
+- **Correo (`src/config/mail.config.js`)**: `leerConfigCorreo(entorno, nodeEnv)` es una función pura; `env.js` la invoca y expone el resultado como `env.mail` (`proveedor`, `host`, `port`, `user`, `password`, `from`, `faltantes`). Con `smtp` y `MAIL_USER`/`MAIL_PASSWORD` ausentes no lanza: `env.js` emite un `[WARN CONFIG]` que nombra las variables faltantes (nunca valores) y los envíos fallan registrados.
 - **Conexión Sequelize (`src/config/sequelize.js`)**: Instancia `Sequelize` configurada con `freezeTableName: true`, `underscored: true`, `timestamps: false`, y pool de conexiones (max: 20, min: 0, acquire: 30000ms, idle: 30000ms).
 - **Cliente `pg` nativo (`src/config/db.js`)**: Pool de `pg` de uso exclusivo de pruebas (lo importan 7 archivos de `tests/`; su cabecera lo indica). La app no lo importa: `server.js`, `health.controller.js`, `run-tests.js`, `database/migrate.js` y `database/seed.js` usan Sequelize. Se retira en una fase posterior junto con esas pruebas.
 - **Puerto en `.env.example`**: usa `DB_PORT=5434` para coincidir con el puerto que publica Compose; el valor por defecto de `config/env.js` sigue siendo `5432`.
@@ -679,6 +701,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
   - `registrarSalida({ inventarioId, cantidad, motivo, usuarioId })`: transacción; bloqueo con `findByIdForUpdate`; valida stock suficiente; inserta movimiento `Salida`.
   - `registrarAjuste({ inventarioId, stockNuevo, motivo, usuarioId })`: transacción; bloqueo con `findByIdForUpdate`; valida cambio; inserta movimiento `Ajuste` con cantidad = `stockNuevo`.
 
+- `mail.service.js` es una **fachada** del correo (`services/mail/`); sin consumidores todavía. Exporta `enviar`, `verificar`, `esperarPendientes`, `crearServicioCorreo` y, solo con proveedor `consola`, `bandeja` y `vaciarBandeja()` (máx. 100 mensajes), construidos con `env.mail`. `enviar({ para, asunto, texto, html })` nunca lanza ni rechaza y resuelve `{ ok, intentos, reintentando, motivo? }`; entrada inválida (CR/LF, formato, más de 20 destinatarios, asunto vacío o de más de 200, cuerpo vacío o de más de 100 kB) → `motivo: 'invalido'` sin reintentar. Tras el primer intento hay 3 reintentos en segundo plano (esperas por defecto 5 s, 30 s, 120 s; temporizadores `unref()`; máx. 100 pendientes), salvo error permanente (`EAUTH`, `responseCode` 500-599 o configuración SMTP incompleta). Piezas: `fabrica.service.js` (`crearServicioCorreo`, reintentos), `smtp.provider.js` (Nodemailer, timeouts de 10 s/10 s/20 s), `consola.provider.js` (memoria + log con destinatario enmascarado; cuerpo solo en `development`; silencioso en `test`), `validacion.mail.js`, `seguridad.mail.js` (sanitizador de secretos y enmascarado). Prueba manual: `npm run correo:probar -- destino@dominio.com`.
 - `venta.service.js` es una **fachada** (11 líneas, `Object.assign` sobre el prototipo de `VentaService`) de `services/venta/`:
   - `venta/crear.service.js`: `crearVenta({ bodegaId, items, metodoPago, clienteNombre, clienteNit, descuento, notas, usuarioId })`. Una transacción; orden: bodega activa → libros y precios (`findByIds`; 404 si falta alguno, 409 si `precio <= 0`) → bloqueos de inventarios → validación de stock con lo leído bajo el bloqueo (409 con el título de cada libro afectado) → importes en centavos → cabecera (el `numero` lo asigna la BD) → líneas → movimientos `Salida` (uno por línea, mismo orden de bloqueo) con `ventaId` y `motivoDetalle` "Venta V-xxxxxx".
   - `venta/anular.service.js`: `anularVenta({ ventaId, motivo, usuarioId })`. Una transacción: `Venta` con `FOR UPDATE` (404/409), bloqueo de inventarios en el mismo orden por id, un `Ingreso` por línea con `ventaId` y "Anulación de venta V-xxxxxx: <motivo>", y un solo UPDATE de `estado`, `anulada_en`, `anulada_por`, `motivo_anulacion`.
@@ -774,7 +797,10 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 | `tests/ventasConcurrencia.test.js` | 6 | Integración | `libreria_oskar_test` | Última unidad vendida a la vez (409), 20 ventas simultáneas [A,B]/[B,A] sin deadlock, anulación (stock, doble anulación, anulaciones simultáneas, rollback). No importa `config/db`. |
 | `tests/ventasApi.test.js` | 7 | End-to-End | `libreria_oskar_test` | `POST /api/ventas` y `POST /api/ventas/:id/anular` por HTTP: 401/403, validaciones 400, errores 404/409 y anulación del Administrador. No importa `config/db`. |
 | `tests/ventasApiConsulta.test.js` | 5 | End-to-End | `libreria_oskar_test` | `GET /api/ventas` y `/:id`: roles, filtros por estado y fechas (venta a las 23:30 de Guatemala), paginación, `lineas`/`unidades`, parámetros inválidos y compatibilidad de `GET /api/movimientos`. No importa `config/db`. |
-| **Total** | **225** | | | `npm test`: 225 pasan, 0 fallan (ejecutado el 2026-10-22). |
+| `tests/mailConfig.test.js` | 6 | Unitaria | No requiere | `leerConfigCorreo`: `test` fuerza consola, producción sin variables (aviso, sin lanzar), alias, `MAIL_FROM` y rechazo de proveedor/puerto inválidos. |
+| `tests/mailReintentos.test.js` | 8 | Unitaria / Mock | No requiere | `enviar` nunca rechaza; reintentos (2 fallos → 3 intentos, 4 intentos y descarte, error permanente → 1); tope de pendientes; validación sin llamar al proveedor; secretos fuera de logs. |
+| `tests/mailProveedores.test.js` | 3 | Unitaria / Mock | No requiere | SMTP con transporte inyectado (puertos 587 y 465, auth, timeouts, `MAIL_FROM`), configuración incompleta y consola (bandeja de 100, enmascarado, cuerpo solo en `development`). |
+| **Total** | **242** | | | `npm test`: 242 pasan, 0 fallan (ejecutado el 2026-10-22). |
 
 - **Runner**: Node.js test runner nativo (`node --test --test-concurrency=1 tests/**/*.test.js`), lanzado por `src/run-tests.js`.
 - **Aislamiento**: `src/run-tests.js` aborta si `NODE_ENV === 'production'` y comprueba con Sequelize (`SELECT current_database()`) que la conexión apunta a `libreria_oskar_test`. Requiere `db-test` levantado (puerto host 5435).
@@ -1151,6 +1177,7 @@ Cada ítem cita su archivo como evidencia. Resueltos y retirados de esta secció
 | **Sin Dockerfile de frontend** | `frontend/` | Solo existe `backend/Dockerfile`; el frontend corre en el host con `npm run frontend:dev`. |
 | **Escáner de cámara (reportado, no diagnosticado)** | `frontend/src/components/BarcodeScanner.jsx` | El usuario reporta que no captura códigos. Sin diagnóstico: no verificado. |
 | **JSON mal formado devuelve 500** | `backend/src/middlewares/errorHandler.js` | El manejador no contempla el `SyntaxError` del parser JSON (no es `AppError` ni error de Sequelize/pg) y responde 500 en vez de 400. Verificado por lectura del código; no probado en ejecución. |
+| **Reintentos de correo solo en memoria** | `backend/src/services/mail/fabrica.service.js` | Los reintentos pendientes viven en memoria y se pierden si el proceso se apaga; no hay cola persistente. En Cloud Run podrían pausarse sin peticiones activas (no verificado). El envío SMTP real y el puerto 587 desde Cloud Run tampoco se han verificado. |
 | **Placeholder del modal de salida desactualizado** | `frontend/src/features/inventario/components/ModalSalidaInventario.jsx` | El placeholder del motivo sugiere "Venta en mostrador" aunque ahora existe el módulo de ventas (que registra sus propias salidas). |
 
 ---
@@ -1163,7 +1190,7 @@ Cada ítem cita su archivo como evidencia. Resueltos y retirados de esta secció
    - **Estado real**: No hay enrolamiento, QR, validación TOTP ni desafío en el login.
 2. **Notificaciones por Correo de Desabastecimiento y Libros Sin Precio**:
    - Roadmap; spec en `app/docs/roadmap/inventory-email-alerts/`.
-   - **Estado real**: No hay servicio de correo, dependencias SMTP en `package.json` ni tareas programadas.
+   - **Estado real**: Existe el módulo de correo `services/mail/` (`mail.service.js`, dependencia `nodemailer`), pero ningún código lo consume; las alertas de inventario siguen sin implementar y no hay tareas programadas.
 3. **CRUD Administrativo de Catálogo y Empleados**:
    - Roadmap; spec en `app/docs/roadmap/catalog-employee-crud/`. Alcance de la implementación en curso: usuarios y categorías; la edición/baja de libros y las ventas se desarrollan aparte (ver la sección "Alcance de esta implementación" de esa spec).
    - **Estado real**: En empleados solo existe `GET /api/usuarios`. No hay `POST`/`PUT`/`DELETE` de usuarios ni `PUT /api/libros/:id` (edición completa) ni baja de libros. Fijar solo el precio sí existe: `PATCH /api/libros/:id/precio`.
