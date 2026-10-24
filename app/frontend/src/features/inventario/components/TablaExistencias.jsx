@@ -1,11 +1,17 @@
 import { Search, X, Package, BookOpen } from 'lucide-react';
 import { formatFecha } from '../../../utils/formatters';
 import EstadoBadge from './EstadoBadge';
+import Paginacion from '../../../components/ui/Paginacion';
 
 export default function TablaExistencias({
   bodegas,
   existencias,
+  totalExistencias,
   loadingExistencias,
+  existenciasLimit,
+  paginaExistencias,
+  setPaginaExistencias,
+  setTamanoPaginaExistencias,
   estadoFilter,
   setEstadoFilter,
   searchInput,
@@ -87,12 +93,24 @@ export default function TablaExistencias({
           <p className="text-xs text-gray-500 font-medium">Cargando existencias...</p>
         </div>
       ) : existencias.length === 0 ? (
-        <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center shadow-sm">
-          <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <h3 className="text-base font-bold text-[#252525] mb-1">No se encontraron existencias</h3>
-          <p className="text-xs text-gray-500 max-w-sm mx-auto">
-            No hay registros que coincidan con los filtros aplicados.
-          </p>
+        <div className="space-y-5">
+          <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center shadow-sm">
+            <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <h3 className="text-base font-bold text-[#252525] mb-1">No se encontraron existencias</h3>
+            <p className="text-xs text-gray-500 max-w-sm mx-auto">
+              No hay registros que coincidan con los filtros aplicados.
+            </p>
+          </div>
+          <Paginacion
+            paginaActual={paginaExistencias}
+            totalResultados={totalExistencias}
+            tamanoPagina={existenciasLimit}
+            opcionesTamano={[20, 50, 100]}
+            onCambiarPagina={setPaginaExistencias}
+            onCambiarTamano={setTamanoPaginaExistencias}
+            cargando={loadingExistencias}
+            etiquetaResultados="existencias"
+          />
         </div>
       ) : (
         <>
@@ -254,6 +272,17 @@ export default function TablaExistencias({
               </div>
             ))}
           </div>
+
+          <Paginacion
+            paginaActual={paginaExistencias}
+            totalResultados={totalExistencias}
+            tamanoPagina={existenciasLimit}
+            opcionesTamano={[20, 50, 100]}
+            onCambiarPagina={setPaginaExistencias}
+            onCambiarTamano={setTamanoPaginaExistencias}
+            cargando={loadingExistencias}
+            etiquetaResultados="existencias"
+          />
         </>
       )}
     </div>

@@ -4,8 +4,8 @@ export function getResumenInventario() {
   return apiFetch('/api/inventario/resumen');
 }
 
-export function getExistencias(params) {
-  return apiFetch(`/api/inventario?${params.toString()}`);
+export function getExistencias(params, options = {}) {
+  return apiFetch(`/api/inventario?${params.toString()}`, options);
 }
 
 export function getMovimientos(params) {

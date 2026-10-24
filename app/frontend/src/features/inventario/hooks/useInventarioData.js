@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getResumenInventario, getExistencias } from '../../../services/api/inventario.api';
 import { getBodegas } from '../../../services/api/bodegas.api';
 import useDebouncedValue from '../../../hooks/useDebouncedValue';
@@ -19,7 +19,11 @@ export default function useInventarioData(activeTab) {
 
   // ── Pestaña Existencias ───────────────────────────────────────────────────
   const [existencias, setExistencias] = useState([]);
+  const [totalExistencias, setTotalExistencias] = useState(0);
   const [loadingExistencias, setLoadingExistencias] = useState(true);
+  const [existenciasLimit, setExistenciasLimit] = useState(20);
+  const [existenciasOffset, setExistenciasOffset] = useState(0);
+  const existenciasController = useRef(null);
   const [estadoFilter, setEstadoFilter] = useState('todos');
   const [searchInput, setSearchInput] = useState('');
   const debouncedQ = useDebouncedValue(searchInput, 300);
@@ -60,9 +64,14 @@ export default function useInventarioData(activeTab) {
 
   // ── Cargar Existencias ────────────────────────────────────────────────────
   const cargarExistencias = useCallback(async () => {
+    existenciasController.current?.abort();
+    const controller = new AbortController();
+    existenciasController.current = controller;
     try {
       setLoadingExistencias(true);
       const params = new URLSearchParams();
+      params.set('limit', String(existenciasLimit));
+      params.set('offset', String(existenciasOffset));
       if (estadoFilter && estadoFilter !== 'todos') {
         params.set('estado', estadoFilter);
       }
@@ -73,39 +82,73 @@ export default function useInventarioData(activeTab) {
         params.set('bodegaId', selectedBodega);
       }
 
-      const res = await getExistencias(params);
-      if (res.ok) {
-        const json = await res.json();
-        setExistencias(json.data || []);
-      } else {
-        setExistencias([]);
+      const res = await getExistencias(params, { signal: controller.signal });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message || 'No se pudieron cargar las existencias.');
+      if (!controller.signal.aborted) {
+        const uniqueItems = [...new Map((json.data || []).map((item) => [item.inventario_id, item])).values()];
+        const nextTotal = Number(json.total ?? uniqueItems.length) || 0;
+        const nextLimit = Number(json.limit) || existenciasLimit;
+        setExistencias(uniqueItems);
+        setTotalExistencias(nextTotal);
+        setExistenciasLimit(nextLimit);
+        const lastOffset = nextTotal === 0 ? 0 : Math.floor((nextTotal - 1) / nextLimit) * nextLimit;
+        if (existenciasOffset > lastOffset) setExistenciasOffset(lastOffset);
       }
     } catch (err) {
-      console.error('[EXISTENCIAS ERROR]:', err);
-      setExistencias([]);
+      if (err.name !== 'AbortError' && !controller.signal.aborted) {
+        console.error('[EXISTENCIAS ERROR]:', err);
+        setExistencias([]);
+        setTotalExistencias(0);
+      }
     } finally {
-      setLoadingExistencias(false);
+      if (existenciasController.current === controller && !controller.signal.aborted) {
+        setLoadingExistencias(false);
+      }
     }
-  }, [estadoFilter, debouncedQ, selectedBodega]);
+  }, [estadoFilter, debouncedQ, selectedBodega, existenciasLimit, existenciasOffset]);
 
   useEffect(() => {
+    if (searchInput.trim() !== debouncedQ.trim()) {
+      existenciasController.current?.abort();
+      setLoadingExistencias(true);
+      return () => existenciasController.current?.abort();
+    }
     if (activeTab === 'existencias') {
       cargarExistencias();
     }
-  }, [activeTab, cargarExistencias]);
+    return () => existenciasController.current?.abort();
+  }, [activeTab, cargarExistencias, searchInput, debouncedQ]);
+
+  const cambiarFiltro = (setter) => (value) => {
+    setter(value);
+    setExistenciasOffset(0);
+  };
+
+  const cambiarTamanoPagina = (value) => {
+    setExistenciasLimit(value);
+    setExistenciasOffset(0);
+  };
 
   return {
     bodegas,
     resumen,
     loadingResumen,
     existencias,
+    totalExistencias,
     loadingExistencias,
+    existenciasLimit,
+    existenciasOffset,
+    paginaExistencias: totalExistencias === 0 ? 0 : Math.floor(existenciasOffset / existenciasLimit) + 1,
+    totalPaginasExistencias: Math.ceil(totalExistencias / existenciasLimit),
+    setPaginaExistencias: (pagina) => setExistenciasOffset((Math.max(1, pagina) - 1) * existenciasLimit),
+    setTamanoPaginaExistencias: cambiarTamanoPagina,
     estadoFilter,
-    setEstadoFilter,
+    setEstadoFilter: cambiarFiltro(setEstadoFilter),
     searchInput,
-    setSearchInput,
+    setSearchInput: cambiarFiltro(setSearchInput),
     selectedBodega,
-    setSelectedBodega,
+    setSelectedBodega: cambiarFiltro(setSelectedBodega),
     cargarResumen,
     cargarExistencias,
   };

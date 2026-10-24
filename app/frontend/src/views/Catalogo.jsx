@@ -7,6 +7,7 @@ import DrawerFiltros from '../features/catalogo/components/DrawerFiltros';
 import EtiquetasFiltros from '../features/catalogo/components/EtiquetasFiltros';
 import BookGrid from '../features/catalogo/components/BookGrid';
 import SinResultados from '../features/catalogo/components/SinResultados';
+import Paginacion from '../components/ui/Paginacion';
 import { ROLES_OPERATIVOS, puedeAcceder } from '../utils/roles';
 
 export default function Catalogo({ onNavigateToScanner }) {
@@ -14,11 +15,17 @@ export default function Catalogo({ onNavigateToScanner }) {
   const puedeRegistrar = puedeAcceder(user, ROLES_OPERATIVOS);
   const {
     libros,
+    total,
+    limit,
+    paginaActual,
+    setPagina,
+    setTamanoPagina,
     categorias,
     searchTerm,
     setSearchTerm,
     categoriaId,
     loading,
+    error,
     sidebarOpen,
     setSidebarOpen,
     hayFiltros,
@@ -121,18 +128,18 @@ export default function Catalogo({ onNavigateToScanner }) {
           {/* Contador de resultados */}
           {!loading && (
             <p className="text-xs text-gray-500 mb-4 font-medium">
-              {libros.length === 0 ? (
+              {total === 0 ? (
                 'Sin resultados'
               ) : categoriaNombre ? (
                 <>
-                  <span className="text-[#252525] font-bold">{libros.length}</span>
-                  {libros.length === 1 ? ' libro' : ' libros'} en{' '}
+                  <span className="text-[#252525] font-bold">{total}</span>
+                  {total === 1 ? ' libro' : ' libros'} en{' '}
                   <span className="text-[#b07c19] font-bold">{categoriaNombre}</span>
                 </>
               ) : (
                 <>
-                  <span className="text-[#252525] font-bold">{libros.length}</span>
-                  {libros.length === 1 ? ' libro encontrado' : ' libros encontrados'}
+                  <span className="text-[#252525] font-bold">{total}</span>
+                  {total === 1 ? ' libro encontrado' : ' libros encontrados'}
                 </>
               )}
             </p>
@@ -148,6 +155,10 @@ export default function Catalogo({ onNavigateToScanner }) {
                 />
               ))}
             </div>
+          ) : error ? (
+            <div role="alert" className="bg-white border border-red-200 rounded-2xl p-8 text-center text-sm text-red-700">
+              {error}
+            </div>
           ) : libros.length === 0 ? (
             <SinResultados
               searchTerm={searchTerm}
@@ -159,7 +170,19 @@ export default function Catalogo({ onNavigateToScanner }) {
               onNavigateToScanner={onNavigateToScanner}
             />
           ) : (
-            <BookGrid libros={libros} />
+            <div className="space-y-5">
+              <BookGrid libros={libros} />
+              <Paginacion
+                paginaActual={paginaActual}
+                totalResultados={total}
+                tamanoPagina={limit}
+                opcionesTamano={[12, 24, 48]}
+                onCambiarPagina={setPagina}
+                onCambiarTamano={setTamanoPagina}
+                cargando={loading}
+                etiquetaResultados="libros"
+              />
+            </div>
           )}
 
           {/* Footer al final */}

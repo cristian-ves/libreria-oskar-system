@@ -18,7 +18,12 @@ export default function Inventario() {
     resumen,
     loadingResumen,
     existencias,
+    totalExistencias,
     loadingExistencias,
+    existenciasLimit,
+    paginaExistencias,
+    setPaginaExistencias,
+    setTamanoPaginaExistencias,
     estadoFilter,
     setEstadoFilter,
     searchInput,
@@ -133,7 +138,12 @@ export default function Inventario() {
         <TablaExistencias
           bodegas={bodegas}
           existencias={existencias}
+          totalExistencias={totalExistencias}
           loadingExistencias={loadingExistencias}
+          existenciasLimit={existenciasLimit}
+          paginaExistencias={paginaExistencias}
+          setPaginaExistencias={setPaginaExistencias}
+          setTamanoPaginaExistencias={setTamanoPaginaExistencias}
           estadoFilter={estadoFilter}
           setEstadoFilter={setEstadoFilter}
           searchInput={searchInput}
