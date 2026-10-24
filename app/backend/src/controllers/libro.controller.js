@@ -35,15 +35,20 @@ class LibroController {
    */
   async listar(req, res, next) {
     try {
-      const { q, categoriaId, categoria_id } = req.query;
-      const data = await catalogoService.listar({
+      const { q, categoriaId, categoria_id, limit = '50', offset = '0' } = req.query;
+      const resultado = await catalogoService.listar({
         q,
         categoriaId: categoriaId || categoria_id || null,
-      });
+        limit: Number(limit),
+        offset: Number(offset),
+      }, { includePagination: true });
       return res.status(200).json({
         status: 'success',
-        results: data.length,
-        data,
+        results: resultado.data.length,
+        total: resultado.total,
+        limit: resultado.limit,
+        offset: resultado.offset,
+        data: resultado.data,
       });
     } catch (error) {
       next(error);

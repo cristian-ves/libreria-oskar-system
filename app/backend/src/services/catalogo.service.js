@@ -10,13 +10,19 @@ class CatalogoService {
    * @param {{ q?: string, categoriaId?: string, categoria_id?: string }} [params]
    * @returns {Promise<Array<Object>>}
    */
-  async listar({ q, categoriaId, categoria_id } = {}) {
+  async listar({ q, categoriaId, categoria_id, limit = 50, offset = 0 } = {}, { includePagination = false } = {}) {
     const catId = categoriaId || categoria_id || null;
-    const libros = await libroRepository.searchAndList(q, catId);
-    return libros.map((l) => ({
+    const resultado = await libroRepository.searchAndList(q, catId, { limit, offset, includeTotal: includePagination });
+    if (!includePagination) {
+      return resultado.map((libro) => ({ ...libro, ref: buildRef(libro) }));
+    }
+    return {
+      ...resultado,
+      data: resultado.data.map((l) => ({
       ...l,
       ref: buildRef(l),
-    }));
+      })),
+    };
   }
 
   /**

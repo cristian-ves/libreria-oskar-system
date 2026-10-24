@@ -7,6 +7,7 @@ const {
   validateRegistrarLibro,
   validateIngresoLibro,
   validateActualizarPrecioLibro,
+  validatePaginacion,
 } = require('../middlewares/validator');
 
 const router = Router();
@@ -15,7 +16,7 @@ const router = Router();
  * @route   GET /api/libros
  * @desc    Lista libros del catálogo con búsqueda reactiva por título, autor o ISBN
  */
-router.get('/', libroController.listar.bind(libroController));
+router.get('/', validatePaginacion, libroController.listar.bind(libroController));
 
 /**
  * @route   POST /api/libros/escanear

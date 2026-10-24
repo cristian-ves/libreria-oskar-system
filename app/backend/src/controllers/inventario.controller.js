@@ -7,11 +7,17 @@ class InventarioController {
    */
   async listar(req, res, next) {
     try {
-      const { estado, q, bodegaId } = req.query;
-      const data = await inventarioService.listarInventario({ estado, q, bodegaId });
+      const { estado, q, bodegaId, limit = '200', offset = '0' } = req.query;
+      const resultado = await inventarioService.listarInventario(
+        { estado, q, bodegaId, limit: Number(limit), offset: Number(offset) },
+        { includePagination: true }
+      );
       return res.status(200).json({
         status: 'success',
-        data,
+        total: resultado.total,
+        limit: resultado.limit,
+        offset: resultado.offset,
+        data: resultado.data,
       });
     } catch (error) {
       next(error);

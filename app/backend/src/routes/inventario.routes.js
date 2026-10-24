@@ -5,6 +5,7 @@ const {
   validateListarInventario,
   validateSalidaInventario,
   validateAjusteInventario,
+  validatePaginacion,
 } = require('../middlewares/validator');
 
 const router = Router();
@@ -30,6 +31,7 @@ router.get(
   '/',
   authenticate,
   authorize('Administrador', 'Empleado'),
+  validatePaginacion,
   validateListarInventario,
   inventarioController.listar.bind(inventarioController)
 );

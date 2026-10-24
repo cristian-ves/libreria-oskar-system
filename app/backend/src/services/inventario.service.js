@@ -9,14 +9,16 @@ class InventarioService {
    * Lista el inventario detallado por libro y bodega aplicando filtros de estado, búsqueda y bodega.
    * @param {{ estado?: string, q?: string, bodegaId?: string }} params
    */
-  async listarInventario({ estado = 'todos', q = '', bodegaId = null }) {
+  async listarInventario({ estado = 'todos', q = '', bodegaId = null, limit = 200, offset = 0 }, { includePagination = false } = {}) {
     const diasStockObsoleto = env.diasStockObsoleto || 90;
     return await inventarioRepository.findAllWithDetails({
       estado,
       q,
       bodegaId,
       diasStockObsoleto,
-    });
+      limit,
+      offset,
+    }, { includeTotal: includePagination });
   }
 
   /**

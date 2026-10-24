@@ -135,6 +135,8 @@ class LibroRepository {
   }
 
   async searchAndList(queryStr = '', categoriaId = null, options = {}) {
+    const limit = options.limit ?? 50;
+    const offset = options.offset ?? 0;
     const catId = categoriaId;
     const where = {};
     if (catId && typeof catId === 'string' && catId.trim()) where.categoria_id = catId.trim();
@@ -154,8 +156,9 @@ class LibroRepository {
       ],
       include,
       group: ['Libro.id', 'autor.id', 'editorial.id', 'categoria.id'],
-      order: [['creado_en', 'DESC']],
-      limit: 50,
+      order: [['creado_en', 'DESC'], ['id', 'DESC']],
+      limit,
+      offset,
       raw: true,
       nest: true,
       subQuery: false,
@@ -172,8 +175,20 @@ class LibroRepository {
       };
     }
 
-    const rows = await Libro.findAll(queryOptions);
-    return rows.map((row) => {
+    const countOptions = {
+      where: queryOptions.where,
+      include: [{ model: Autor, as: 'autor', attributes: [], required: false }],
+      distinct: true,
+      col: 'id',
+      ...transactionOption(options),
+    };
+    const rowsPromise = Libro.findAll(queryOptions);
+    const totalPromise = options.includeTotal ? Libro.count(countOptions) : null;
+    const [rows, total] = await Promise.all([
+      rowsPromise,
+      totalPromise || Promise.resolve(null),
+    ]);
+    const data = rows.map((row) => {
       const { autor, editorial, categoria, ...fields } = row;
       return {
       ...fields,
@@ -183,6 +198,10 @@ class LibroRepository {
       stock_total: Number(row.stock_total) || 0,
       };
     });
+    if (options.includeTotal) {
+      return { data, total: Number(total), limit, offset };
+    }
+    return data;
   }
 
   async findDetalleByRef(parsed, options = {}) {

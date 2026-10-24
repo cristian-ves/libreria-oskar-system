@@ -18,7 +18,7 @@ module.exports = {
    * @param {{ estado?: string, q?: string, bodegaId?: string, diasStockObsoleto?: number }} params
    * @param {{ transaction?: import('sequelize').Transaction }} [options]
   */
-  async findAllWithDetails({ estado = 'todos', q = '', bodegaId = null, diasStockObsoleto = 90 }, options = {}) {
+  async findAllWithDetails({ estado = 'todos', q = '', bodegaId = null, diasStockObsoleto = 90, limit = 200, offset = 0 }, options = {}) {
     const txOption = options.transaction ? { transaction: options.transaction } : {};
 
     const ultSal = ULTIMA_SALIDA_SQL;
@@ -55,8 +55,29 @@ module.exports = {
       );
     }
 
-    const results = await Inventario.findAll({
-      where: whereConditions.length > 0 ? { [Op.and]: whereConditions } : undefined,
+    const where = whereConditions.length > 0 ? { [Op.and]: whereConditions } : undefined;
+    const include = [
+      {
+        model: Libro,
+        as: 'libro',
+        attributes: ['id', 'titulo', 'isbn', 'imagen_url'],
+        include: [
+          { model: Autor, as: 'autor', attributes: ['id', 'nombre'], required: false },
+          { model: Categoria, as: 'categoria', attributes: ['id', 'nombre'], required: false },
+        ],
+        required: true,
+      },
+      {
+        model: Bodega,
+        as: 'bodega',
+        attributes: ['id', 'nombre'],
+        include: [{ model: Sucursal, as: 'sucursal', attributes: ['id', 'nombre'], required: false }],
+        required: true,
+      },
+    ];
+    const [results, total] = await Promise.all([
+      Inventario.findAll({
+      where,
       attributes: [
         'id',
         'libro_id',
@@ -73,48 +94,16 @@ module.exports = {
           'obsoleto',
         ],
       ],
-      include: [
-        {
-          model: Libro,
-          as: 'libro',
-          attributes: ['id', 'titulo', 'isbn', 'imagen_url'],
-          include: [
-            {
-              model: Autor,
-              as: 'autor',
-              attributes: ['id', 'nombre'],
-              required: false,
-            },
-            {
-              model: Categoria,
-              as: 'categoria',
-              attributes: ['id', 'nombre'],
-              required: false,
-            },
-          ],
-          required: true,
-        },
-        {
-          model: Bodega,
-          as: 'bodega',
-          attributes: ['id', 'nombre'],
-          include: [
-            {
-              model: Sucursal,
-              as: 'sucursal',
-              attributes: ['id', 'nombre'],
-              required: false,
-            },
-          ],
-          required: true,
-        },
-      ],
-      order: [[{ model: Libro, as: 'libro' }, 'titulo', 'ASC']],
-      limit: 200,
+      include,
+      order: [[{ model: Libro, as: 'libro' }, 'titulo', 'ASC'], ['id', 'ASC']],
+      limit,
+      offset,
       ...txOption,
-    });
+      }),
+      Inventario.count({ where, include, distinct: true, col: 'id', ...txOption }),
+    ]);
 
-    return results.map((item) => {
+    const data = results.map((item) => {
       const r = item.get ? item.get({ plain: true }) : item;
       return {
         inventario_id: r.id,
@@ -134,5 +123,7 @@ module.exports = {
         obsoleto: Boolean(r.obsoleto),
       };
     });
+    if (options.includeTotal) return { data, total: Number(total), limit, offset };
+    return data;
   },
 };

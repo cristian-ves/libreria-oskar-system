@@ -17,6 +17,7 @@ const {
   validateAnularVenta,
 } = require('./validators/venta.validators');
 const { validateListarMovimientos } = require('./validators/movimiento.validators');
+const { validatePaginacion } = require('./validators/pagination.validators');
 
 module.exports = {
   validateEscanearLibro,
@@ -30,6 +31,7 @@ module.exports = {
   validateAjusteInventario,
   validateCrearVenta,
   validateListarVentas,
+  validatePaginacion,
   validateVentaId,
   validateAnularVenta,
 };
