@@ -27,7 +27,16 @@ const errorHandler = (err, req, res, next) => {
   let details = null;
   const databaseCode = getDatabaseCode(err);
 
-  if (err instanceof AppError && err.statusCode < 500) {
+  if (err?.code === 'CORS_ORIGIN_DENIED') {
+    statusCode = 403;
+    message = 'Origen no autorizado.';
+  } else if (err?.type === 'entity.too.large' || err?.status === 413) {
+    statusCode = 413;
+    message = 'El cuerpo de la solicitud supera el tamaño permitido.';
+  } else if (err instanceof SyntaxError && err?.status === 400 && Object.prototype.hasOwnProperty.call(err, 'body')) {
+    statusCode = 400;
+    message = 'El JSON enviado no es válido.';
+  } else if (err instanceof AppError && err.statusCode < 500) {
     statusCode = err.statusCode;
     message = err.message;
     // Los detalles de errores de aplicación provienen de validaciones propias.

@@ -601,6 +601,10 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `GOOGLE_BOOKS_API_KEY` | String | API Key opcional de Google Books | `null` |
 | `DIAS_STOCK_OBSOLETO` | Número | Umbral de días sin salidas para clasificar stock muerto | `90` |
 | `SEQUELIZE_LOGGING` | Booleano | Si habilita salida de queries SQL a consola | `false` |
+| `CORS_ORIGINS` | Lista CSV de orígenes HTTP(S) | Orígenes autorizados por CORS; obligatoria en producción | Ausente: permisivo solo en desarrollo; producción falla al iniciar |
+| `TRUST_PROXY` | Entero no negativo | Número exacto de saltos proxy confiables para `req.ip` | `0` (no confiar en `X-Forwarded-For`) |
+| `LOGIN_RATE_LIMIT` | Entero positivo | Intentos por IP permitidos en login | `10` |
+| `LOGIN_RATE_WINDOW_MS` | Entero positivo en milisegundos | Ventana del limitador de login | `900000` (15 minutos) |
 
 - **Correo (`src/config/mail.config.js`)**: `leerConfigCorreo(entorno, nodeEnv)` es una función pura; `env.js` la invoca y expone el resultado como `env.mail` (`proveedor`, `host`, `port`, `user`, `password`, `from`, `faltantes`). Con `smtp` y `MAIL_USER`/`MAIL_PASSWORD` ausentes no lanza: `env.js` emite un `[WARN CONFIG]` que nombra las variables faltantes (nunca valores) y los envíos fallan registrados.
 - **Conexión Sequelize (`src/config/sequelize.js`)**: Instancia `Sequelize` configurada con `freezeTableName: true`, `underscored: true`, `timestamps: false`, y pool de conexiones (max: 20, min: 0, acquire: 30000ms, idle: 30000ms).
@@ -612,13 +616,13 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 - `server.js`: Verifica conectividad con `testSequelizeConnection()` (de `config/sequelize.js`), inicia `app.listen(env.PORT)` y registra escuchadores de `SIGINT` y `SIGTERM` para un *graceful shutdown*: cierra el servidor HTTP y luego llama a `sequelize.close()`. Si la conexión inicial falla, termina el proceso con código 1.
 - Middlewares globales en `app.js` (en orden de ejecución):
   1. `helmet()`: Cabeceras de seguridad HTTP.
-  2. `cors({ origin: '*', methods: [...], allowedHeaders: [...] })`: Habilitación de CORS para el cliente frontend.
-  3. `express.json({ limit: '10mb' })`: Deserialización de cuerpos JSON.
-  4. `express.urlencoded({ extended: true, limit: '10mb' })`: Deserialización de payloads URL-encoded.
-  5. `morgan('dev')`: Registro de logs HTTP en consola (desactivado cuando `NODE_ENV === 'test'`).
-  6. Enrutador `/api`: Montaje de `src/routes/index.js`.
-  7. Manejador 404: Dispara `NotFoundError` para cualquier ruta o método no mapeado.
-  8. `errorHandler`: Middleware centralizado con 4 argumentos `(err, req, res, next)`.
+  2. Configura `trust proxy` con `TRUST_PROXY` (0 por defecto) y aplica la lista `CORS_ORIGINS`; incluye métodos GET/POST/PUT/PATCH/DELETE/OPTIONS y expone `Content-Disposition`. OPTIONS responde preflight con 204. Las solicitudes sin `Origin` no reciben permiso CORS.
+  3. `express.json` y `express.urlencoded` aceptan hasta 1 MB. JSON sintácticamente inválido responde 400; exceso de tamaño responde 413, ambos en formato `{ status: 'fail', message }` sin detalles internos.
+  4. `morgan('dev')`: Registro de logs HTTP en consola (desactivado cuando `NODE_ENV === 'test'`).
+  5. Enrutador `/api`: Montaje de `src/routes/index.js`. `POST /api/auth/login` usa un rate limiter por `req.ip` (10 por 15 minutos por defecto, configurable), con 429 `{ status: 'fail', message }`. Los registros vencidos se purgan periódicamente; el limitador en memoria se reinicia al reiniciar cada proceso. Despliegues con varias réplicas requieren un almacén compartido antes de escalar.
+  6. Manejador 404 y `errorHandler` centralizado con 4 argumentos `(err, req, res, next)`.
+
+`TRUST_PROXY` debe configurarse al número exacto de proxies confiables entre cliente y aplicación. La topología de despliegue aún no está definida; mantener `0` mientras no se conozca. Si Cloud Run/ingress queda como único salto directo, verificar la cadena real y configurar `1`; no usar `true` ni `*`.
 
 ### 4.3 Tabla Completa de Endpoints
 
@@ -785,7 +789,8 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
   - Mapea `UniqueConstraintError` o código PG `23505` a HTTP 409 con mensaje `"El recurso ya existe."`.
   - Mapea `ForeignKeyConstraintError` o código PG `23503` a HTTP 400 con mensaje `"La referencia indicada no es válida."`.
   - Mapea `SequelizeValidationError` o código PG `22P02` a HTTP 400 con mensaje `"Los datos enviados no son válidos."`.
-  - Mapea código PG `P0001` (excepciones de triggers PL/pgSQL) a HTTP 400 con mensaje `"La operación no puede completarse por una regla de negocio."`.
+- Mapea código PG `P0001` (excepciones de triggers PL/pgSQL) a HTTP 400 con mensaje `"La operación no puede completarse por una regla de negocio."`.
+- Mapea JSON mal formado a 400 y payload excedido a 413 con mensajes genéricos. Orígenes CORS no autorizados se rechazan con 403.
   - Enmascara errores 500 con `"Error interno del servidor."` y previene la fuga de sentencias SQL, parámetros o trazas internas.
 - **Contratos de Respuesta HTTP**:
   - Éxito: `{ "status": "success", "data": ... [, "results": N] }`.
@@ -814,6 +819,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 | `tests/libroServiceSequelize.test.js` | 12 | Integración | `libreria_oskar_test` | Escaneo, registro por rol, ingresos repetidos y atomicidad (mock de `googleBooksService`). Importa `config/db`. |
 | `tests/escanear.integration.test.js` | 8 | Integración | `libreria_oskar_test` | Escaneo con sembrado dinámico y rollback inducido. Importa `config/db`. |
 | `tests/api.e2e.test.js` | 22 | End-to-End | `libreria_oskar_test` | Endpoints HTTP reales vía servidor Express temporal. Importa `config/db`. |
+| `tests/apiSecurity.test.js` | 9 | Unidad / End-to-End HTTP | No requiere BD | CORS y preflight, origen configurado/rechazado, CORS obligatorio en producción, TRUST_PROXY, rate limit/expiración de login con reloj simulado, JSON inválido y payload excedido, regresión público/protegido. |
 | `tests/categoriasCrud.e2e.test.js` | 4 grupos | End-to-End | `libreria_oskar_test` | CRUD administrativo de categorías: validación, duplicados, roles, respuestas y GET público; limpia fixtures temporales. |
 | `tests/categoriasConteoAdmin.e2e.test.js` | 3 grupos | End-to-End | `libreria_oskar_test` | `GET /api/categorias/admin`: roles, conteos agrupados exactos y regresión del GET público; limpia fixtures temporales. |
 | `tests/ventasEsquema.test.js` | 7 | Integración | `libreria_oskar_test` | Esquema de ventas: correlativo `numero`, valores por defecto, CHECK, `uq_venta_libro`, FK RESTRICT, Salida con `venta_id` (trigger) y asociaciones. No importa `config/db`. |
@@ -1226,7 +1232,7 @@ Cada ítem cita su archivo como evidencia. Resueltos y retirados de esta secció
 | **Ausencia de tests en Frontend** | `frontend/` | No hay pruebas ni Vitest/Jest/Testing Library en `frontend/package.json`. Se verifica con `npm run frontend:build` y prueba manual. |
 | **Bundle grande sin code splitting** | `frontend/vite.config.js` | El build reporta un bundle de ~670 kB (aviso de más de 500 kB de Vite); sin `manualChunks` ni carga diferida. |
 | **Paginación pendiente** | `backend/src/repositories/inventario/inventarioListado.repository.js` (`limit: 200`), `backend/src/repositories/libro.repository.js` (`limit: 50`) | Límites fijos sin `offset` en existencias y catálogo. |
-| **CORS abierto** | `backend/src/app.js` | `cors({ origin: '*' })`. |
+| **Rate limit local por proceso** | `backend/src/middlewares/rateLimit.js` | El login queda limitado por IP en cada proceso. Si el backend escala a varias réplicas, usar almacenamiento compartido para consolidar el contador. |
 | **`version` obsoleta en Compose** | `docker-compose.yml` | Declara `version: '3.8'`, campo obsoleto en Docker Compose v2. |
 | **Monorepo sin `workspaces`** | `package.json` | Usa scripts con `--prefix`; no declara `"workspaces"`. |
 | **Sin Dockerfile de frontend** | `frontend/` | Solo existe `backend/Dockerfile`; el frontend corre en el host con `npm run frontend:dev`. |
