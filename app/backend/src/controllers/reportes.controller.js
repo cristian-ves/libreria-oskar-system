@@ -1,6 +1,31 @@
 const reportesService = require('../services/reportes.service');
 
 class ReportesController {
+  async corteCaja(req, res, next) {
+    try { return res.status(200).json({ status: 'success', data: await reportesService.generarCorteCaja(req.query) }); }
+    catch (error) { return next(error); }
+  }
+
+  async resumenPeriodo(req, res, next) {
+    try { return res.status(200).json({ status: 'success', data: await reportesService.generarResumenPeriodo(req.query) }); }
+    catch (error) { return next(error); }
+  }
+
+  async librosMasVendidos(req, res, next) {
+    try { return res.status(200).json({ status: 'success', data: await reportesService.generarLibrosMasVendidos(req.query) }); }
+    catch (error) { return next(error); }
+  }
+
+  async reposicion(req, res, next) {
+    try { return res.status(200).json({ status: 'success', data: await reportesService.generarReposicion(req.query) }); }
+    catch (error) { return next(error); }
+  }
+
+  async ventas(req, res, next) {
+    try { return res.status(200).json({ status: 'success', data: await reportesService.generarVentas(req.query) }); }
+    catch (error) { return next(error); }
+  }
+
   async inventarioValorizado(req, res, next) {
     try {
       const { libroId, categoriaId, bodegaId, limit = '50', offset = '0' } = req.query;

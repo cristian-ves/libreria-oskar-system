@@ -22,6 +22,10 @@ const {
 const { validateListarMovimientos } = require('./validators/movimiento.validators');
 const { validatePaginacion } = require('./validators/pagination.validators');
 const { validateReporteInventario, validateReporteKardex } = require('./validators/reportes.validators');
+const {
+  validateCorteCaja, validateResumenPeriodo, validateLibrosMasVendidos,
+  validateReposicion, validateVentasReporte,
+} = require('./validators/reportesVentas.validators');
 
 module.exports = {
   validateEscanearLibro,
@@ -43,4 +47,9 @@ module.exports = {
   validateAnularVenta,
   validateReporteInventario,
   validateReporteKardex,
+  validateCorteCaja,
+  validateResumenPeriodo,
+  validateLibrosMasVendidos,
+  validateReposicion,
+  validateVentasReporte,
 };
