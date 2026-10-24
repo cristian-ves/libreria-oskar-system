@@ -34,5 +34,6 @@ router.use('/libros', libroRoutes);
 router.use('/inventario', require('./inventario.routes'));
 router.use('/movimientos', require('./movimiento.routes'));
 router.use('/ventas', require('./venta.routes'));
+router.use('/reportes', require('./reportes.routes'));
 
 module.exports = router;

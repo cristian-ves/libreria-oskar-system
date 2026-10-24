@@ -21,6 +21,7 @@ const {
 } = require('./validators/venta.validators');
 const { validateListarMovimientos } = require('./validators/movimiento.validators');
 const { validatePaginacion } = require('./validators/pagination.validators');
+const { validateReporteInventario, validateReporteKardex } = require('./validators/reportes.validators');
 
 module.exports = {
   validateEscanearLibro,
@@ -40,4 +41,6 @@ module.exports = {
   validatePaginacion,
   validateVentaId,
   validateAnularVenta,
+  validateReporteInventario,
+  validateReporteKardex,
 };

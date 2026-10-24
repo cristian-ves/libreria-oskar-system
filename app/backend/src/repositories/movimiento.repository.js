@@ -2,11 +2,13 @@ const {
   TipoMovimiento,
   MovimientoInventario,
   Inventario,
+  Categoria,
   Libro,
   Bodega,
   Sucursal,
   Usuario,
   sequelize,
+  Sequelize,
 } = require('../models');
 
 class MovimientoRepository {
@@ -127,6 +129,10 @@ class MovimientoRepository {
    *   libroId?: string,
    *   bodegaId?: string,
    *   tipo?: string,
+   *   categoriaId?: string,
+   *   inicio?: Date | null,
+   *   finExclusivo?: Date | null,
+   *   incluirVentaId?: boolean,
    *   limit?: number,
    *   offset?: number
    * }} filters
@@ -138,7 +144,7 @@ class MovimientoRepository {
    *   movimientos: Array<Object>
    * }>}
    */
-  async findAllWithFilters({ libroId = null, bodegaId = null, tipo = null, limit = 50, offset = 0 }, options = {}) {
+  async findAllWithFilters({ libroId = null, bodegaId = null, categoriaId = null, tipo = null, inicio = null, finExclusivo = null, limit = 50, offset = 0, incluirVentaId = false }, options = {}) {
     const whereInventario = {};
     if (libroId && typeof libroId === 'string' && libroId.trim()) {
       whereInventario.libro_id = libroId.trim();
@@ -155,7 +161,16 @@ class MovimientoRepository {
       );
     }
 
+    const whereFecha = {};
+    if (inicio || finExclusivo) {
+      whereFecha.fecha_movimiento = {
+        ...(inicio ? { [Sequelize.Op.gte]: inicio } : {}),
+        ...(finExclusivo ? { [Sequelize.Op.lt]: finExclusivo } : {}),
+      };
+    }
+
     const queryOptions = {
+      where: Object.keys(whereFecha).length ? whereFecha : undefined,
       include: [
         {
           model: TipoMovimiento,
@@ -179,6 +194,13 @@ class MovimientoRepository {
               model: Libro,
               as: 'libro',
               attributes: ['id', 'titulo', 'isbn'],
+              include: [{
+                model: Categoria,
+                as: 'categoria',
+                attributes: [],
+                where: categoriaId ? { id: categoriaId } : undefined,
+                required: Boolean(categoriaId),
+              }],
             },
             {
               model: Bodega,
@@ -196,7 +218,7 @@ class MovimientoRepository {
           ],
         },
       ],
-      order: [['fecha_movimiento', 'DESC']],
+      order: [['fecha_movimiento', 'DESC'], ['id', 'DESC']],
       limit: Number(limit) || 50,
       offset: Number(offset) || 0,
       distinct: true,
@@ -219,6 +241,7 @@ class MovimientoRepository {
         bodega_nombre: row.inventario?.bodega?.nombre || null,
         sucursal_nombre: row.inventario?.bodega?.sucursal?.nombre || null,
         usuario_nombre: row.usuario?.nombre_completo || null,
+        ...(incluirVentaId ? { venta_id: row.venta_id || null } : {}),
       };
     });
 
