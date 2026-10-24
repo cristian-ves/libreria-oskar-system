@@ -1,11 +1,11 @@
 import { apiFetch } from './client';
 
-export function getCategorias() {
-  return apiFetch('/api/categorias');
+export function getCategorias(options = {}) {
+  return apiFetch('/api/categorias', options);
 }
 
-export function getCategoriasAdministracion() {
-  return apiFetch('/api/categorias/admin');
+export function getCategoriasAdministracion(options = {}) {
+  return apiFetch('/api/categorias/admin', options);
 }
 
 export function crearCategoria(payload) {

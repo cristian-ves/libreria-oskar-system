@@ -1,8 +1,8 @@
 import { apiFetch } from './client';
 
-export function getUsuarios({ incluirInactivos = true } = {}) {
+export function getUsuarios({ incluirInactivos = true, signal } = {}) {
   const query = incluirInactivos ? '?incluirInactivos=true' : '';
-  return apiFetch(`/api/usuarios${query}`);
+  return apiFetch(`/api/usuarios${query}`, { signal });
 }
 
 export function crearUsuario(payload) {

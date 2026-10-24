@@ -1,5 +1,5 @@
 import { apiFetch } from './client';
 
-export function getBodegas() {
-  return apiFetch('/api/bodegas');
+export function getBodegas(options = {}) {
+  return apiFetch('/api/bodegas', options);
 }
