@@ -8,9 +8,37 @@ const {
   validateIngresoLibro,
   validateActualizarPrecioLibro,
   validatePaginacion,
+  validateEditarLibro,
+  validateCambiarActivoLibro,
+  validateAdminListarLibros,
 } = require('../middlewares/validator');
 
 const router = Router();
+
+router.get(
+  '/admin',
+  authenticate,
+  authorize('Administrador'),
+  validatePaginacion,
+  validateAdminListarLibros,
+  libroController.listarAdministracion.bind(libroController)
+);
+
+router.put(
+  '/:id',
+  authenticate,
+  authorize('Administrador'),
+  validateEditarLibro,
+  libroController.actualizar.bind(libroController)
+);
+
+router.patch(
+  '/:id/activo',
+  authenticate,
+  authorize('Administrador'),
+  validateCambiarActivoLibro,
+  libroController.cambiarActivo.bind(libroController)
+);
 
 /**
  * @route   GET /api/libros

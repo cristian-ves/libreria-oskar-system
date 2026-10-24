@@ -60,7 +60,7 @@ module.exports = {
       {
         model: Libro,
         as: 'libro',
-        attributes: ['id', 'titulo', 'isbn', 'imagen_url'],
+        attributes: ['id', 'titulo', 'isbn', 'imagen_url', 'activo'],
         include: [
           { model: Autor, as: 'autor', attributes: ['id', 'nombre'], required: false },
           { model: Categoria, as: 'categoria', attributes: ['id', 'nombre'], required: false },
@@ -111,6 +111,7 @@ module.exports = {
         titulo: r.libro?.titulo || null,
         isbn: r.libro?.isbn || null,
         imagen_url: r.libro?.imagen_url || null,
+        libro_activo: Boolean(r.libro?.activo),
         autor: r.libro?.autor?.nombre || null,
         categoria: r.libro?.categoria?.nombre || null,
         bodega_id: r.bodega_id,

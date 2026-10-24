@@ -1,7 +1,7 @@
 const { sequelize, Bodega } = require('../../models');
 const libroRepository = require('../../repositories/libro.repository');
 const inventarioRepository = require('../../repositories/inventario.repository');
-const { ValidationError, NotFoundError } = require('../../utils/errors');
+const { ValidationError, NotFoundError, ConflictError } = require('../../utils/errors');
 
 // Los métodos usan `this` (fachada LibroService) para conservar la resolución dinámica
 // de _upsertAutor/_upsertEditorial/_crearMovimientoIngreso y su parcheo en pruebas.
@@ -26,10 +26,11 @@ module.exports = {
     return await sequelize.transaction(async (transaction) => {
       const txOptions = { transaction };
       // Validar libro
-      const libro = await libroRepository.findById(libroId, txOptions);
+      const libro = await libroRepository.findByIdForUpdate(libroId, txOptions);
       if (!libro) {
         throw new NotFoundError(`El libro con ID ${libroId} no existe.`);
       }
+      if (!libro.activo) throw new ConflictError('No se pueden ingresar existencias de un libro inactivo.');
 
       // Validar bodega
       const bodegaCheck = await Bodega.findByPk(bodegaId, { attributes: ['id'], transaction });

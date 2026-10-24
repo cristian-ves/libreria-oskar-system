@@ -191,11 +191,59 @@ const validateActualizarPrecioLibro = (req, res, next) => {
   next();
 };
 
+const validateEditarLibro = (req, res, next) => {
+  const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+  const { id } = req.params || {};
+  const { titulo, autor, editorial, categoriaId, resena, isbn } = body;
+  const imageProvided = Object.hasOwn(body, 'imagenUrl') || Object.hasOwn(body, 'imagen_url');
+  const image = Object.hasOwn(body, 'imagenUrl') ? body.imagenUrl : body.imagen_url;
+  const errors = [];
+
+  if (!id || !UUID_REGEX.test(id)) errors.push('El parámetro "id" del libro debe ser un UUID válido.');
+  if (typeof titulo !== 'string' || !titulo.trim()) errors.push('El campo "titulo" es obligatorio y debe ser una cadena no vacía.');
+  else if (titulo.trim().length > 255) errors.push('El campo "titulo" no puede superar los 255 caracteres.');
+  if (typeof autor !== 'string' || !autor.trim()) errors.push('El campo "autor" es obligatorio y debe ser una cadena no vacía.');
+  else if (autor.trim() === AUTOR_PLACEHOLDER_VALIDATOR) errors.push(`El campo "autor" no puede ser el valor de marcador de posición ("${AUTOR_PLACEHOLDER_VALIDATOR}"). Ingresa el nombre real del autor.`);
+  else if (autor.trim().length > 150) errors.push('El campo "autor" no puede superar los 150 caracteres.');
+  if (editorial !== undefined && editorial !== null && typeof editorial !== 'string') errors.push('El campo "editorial" debe ser una cadena de texto o null.');
+  else if (typeof editorial === 'string' && editorial.trim().length > 150) errors.push('El campo "editorial" no puede superar los 150 caracteres.');
+  if (typeof categoriaId !== 'string' || !UUID_REGEX.test(categoriaId)) errors.push('El campo "categoriaId" es obligatorio y debe ser un UUID válido.');
+  if (typeof resena !== 'string' || !resena.trim()) errors.push('El campo "resena" es obligatorio y debe ser una cadena no vacía.');
+  if (imageProvided && image !== null && typeof image !== 'string') errors.push('El campo "imagenUrl" debe ser una cadena de texto o null.');
+  validateIsbn(isbn, errors, { required: false });
+
+  if (errors.length) return next(new ValidationError('Datos de entrada inválidos para actualizar el libro.', errors));
+  next();
+};
+
+const validateCambiarActivoLibro = (req, res, next) => {
+  const { id } = req.params || {};
+  const { activo } = req.body && typeof req.body === 'object' ? req.body : {};
+  const errors = [];
+  if (!id || !UUID_REGEX.test(id)) errors.push('El parámetro "id" del libro debe ser un UUID válido.');
+  if (typeof activo !== 'boolean') errors.push('El campo "activo" es obligatorio y debe ser booleano.');
+  if (errors.length) return next(new ValidationError('Datos de entrada inválidos para cambiar el estado del libro.', errors));
+  next();
+};
+
+const validateAdminListarLibros = (req, res, next) => {
+  const { q, categoriaId, estado = 'todos' } = req.query || {};
+  const errors = [];
+  if (q !== undefined && typeof q !== 'string') errors.push('El parámetro "q" debe ser texto.');
+  if (categoriaId !== undefined && (typeof categoriaId !== 'string' || !UUID_REGEX.test(categoriaId))) errors.push('El parámetro "categoriaId" debe ser un UUID válido.');
+  if (!['todos', 'activo', 'inactivo'].includes(estado)) errors.push('El parámetro "estado" debe ser "todos", "activo" o "inactivo".');
+  if (errors.length) return next(new ValidationError('Parámetros inválidos para listar libros administrativamente.', errors));
+  next();
+};
+
 module.exports = {
   validateEscanearLibro,
   validateConsultarLibro,
   validateRegistrarLibro,
   validateIngresoLibro,
   validateActualizarPrecioLibro,
+  validateEditarLibro,
+  validateCambiarActivoLibro,
+  validateAdminListarLibros,
   AUTOR_PLACEHOLDER_VALIDATOR,
 };

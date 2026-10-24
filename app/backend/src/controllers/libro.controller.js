@@ -166,6 +166,55 @@ class LibroController {
     }
   }
 
+  async actualizar(req, res, next) {
+    try {
+      const body = req.body || {};
+      const imagenUrl = Object.hasOwn(body, 'imagenUrl') ? body.imagenUrl : body.imagen_url;
+      const libro = await libroService.actualizarLibro({
+        libroId: req.params.id,
+        titulo: body.titulo,
+        autor: body.autor,
+        editorial: body.editorial,
+        categoriaId: body.categoriaId,
+        resena: body.resena,
+        imagenUrl,
+        isbn: body.isbn,
+        isbnPresente: Object.hasOwn(body, 'isbn'),
+      });
+      return res.status(200).json({ status: 'success', data: libro });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async cambiarActivo(req, res, next) {
+    try {
+      const libro = await libroService.cambiarActivoLibro({ libroId: req.params.id, activo: req.body.activo });
+      return res.status(200).json({ status: 'success', data: libro });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async listarAdministracion(req, res, next) {
+    try {
+      const { q = '', categoriaId = null, estado = 'todos', limit = '50', offset = '0' } = req.query;
+      const resultado = await libroService.listarLibrosAdministracion({
+        q, categoriaId, estado, limit: Number(limit), offset: Number(offset),
+      });
+      return res.status(200).json({
+        status: 'success',
+        results: resultado.data.length,
+        total: resultado.total,
+        limit: resultado.limit,
+        offset: resultado.offset,
+        data: resultado.data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   /**
    * Endpoint: GET /api/libros/:ref
    * Obtiene el detalle público de un libro por su ref (slug-shortId) o UUID.

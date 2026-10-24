@@ -3,7 +3,7 @@ const libroRepository = require('../../repositories/libro.repository');
 const inventarioRepository = require('../../repositories/inventario.repository');
 const movimientoRepository = require('../../repositories/movimiento.repository');
 const googleBooksService = require('../googleBooks.service');
-const { ValidationError, NotFoundError } = require('../../utils/errors');
+const { ValidationError, NotFoundError, ConflictError } = require('../../utils/errors');
 
 // Campos que una fuente externa puede rellenar con texto genérico, en el orden de `campos_faltantes`.
 const CAMPOS_SUGERIBLES = ['titulo', 'autor', 'editorial', 'resena', 'imagen_url'];
@@ -51,6 +51,9 @@ module.exports = {
     if (!usuarioPrevio) {
       throw new NotFoundError(`El usuario indicado (ID: ${usuarioId}) no existe en el sistema.`);
     }
+    if (libroPrevio && !libroPrevio.activo) {
+      throw new ConflictError('No se pueden ingresar existencias de un libro inactivo.');
+    }
 
     // Evitar mantener una transacción abierta durante solicitudes de red.
     const bookData = libroPrevio ? null : await googleBooksService.buscarPorIsbn(cleanIsbn);
@@ -76,8 +79,11 @@ module.exports = {
 
       // Revalidar el ISBN dentro de la transacción para resolver carreras
       // ocurridas mientras se consultaban las fuentes bibliográficas.
-      let libro = await libroRepository.findByIsbn(cleanIsbn, txOptions);
+      let libro = await libroRepository.findByIsbnForUpdate(cleanIsbn, txOptions);
       const libroExistentePrevio = !!libro;
+      if (libro && !libro.activo) {
+        throw new ConflictError('No se pueden ingresar existencias de un libro inactivo.');
+      }
 
       // Registrar datos bibliográficos si sigue sin existir localmente.
       if (!libro) {
@@ -186,6 +192,9 @@ module.exports = {
     const libro = await libroRepository.findByIsbn(cleanIsbn);
 
     if (libro) {
+      if (!libro.activo) {
+        throw new ConflictError('El libro está inactivo y no admite operaciones de ingreso.');
+      }
       const inventarios = await inventarioRepository.findByLibroId(libro.id);
       return { existe: true, libro, inventarios };
     }

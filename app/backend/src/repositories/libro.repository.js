@@ -39,6 +39,24 @@ class LibroRepository {
     return libroPlano(libro);
   }
 
+  async findByIsbnForUpdate(isbn, options = {}) {
+    const transaction = options.transaction;
+    if (!transaction) throw new Error('findByIsbnForUpdate requiere una transacción activa.');
+    const cleanIsbn = typeof isbn === 'string' ? isbn.trim() : isbn;
+    const libro = await Libro.findOne({
+      where: { isbn: cleanIsbn },
+      attributes: LIBRO_ATTRIBUTES,
+      include: [
+        { model: Autor, as: 'autor', attributes: ['nombre'], required: false },
+        { model: Editorial, as: 'editorial', attributes: ['nombre'], required: false },
+        { model: Categoria, as: 'categoria', attributes: ['nombre'], required: false },
+      ],
+      transaction,
+      lock: { level: transaction.LOCK.UPDATE, of: Libro },
+    });
+    return libroPlano(libro);
+  }
+
   async findById(id, options = {}) {
     const libro = await Libro.findByPk(id, {
       attributes: LIBRO_ATTRIBUTES,
@@ -48,6 +66,22 @@ class LibroRepository {
         { model: Categoria, as: 'categoria', attributes: ['nombre'], required: false },
       ],
       ...transactionOption(options),
+    });
+    return libroPlano(libro);
+  }
+
+  async findByIdForUpdate(id, options = {}) {
+    const transaction = options.transaction;
+    if (!transaction) throw new Error('findByIdForUpdate requiere una transacción activa.');
+    const libro = await Libro.findByPk(id, {
+      attributes: LIBRO_ATTRIBUTES,
+      include: [
+        { model: Autor, as: 'autor', attributes: ['nombre'], required: false },
+        { model: Editorial, as: 'editorial', attributes: ['nombre'], required: false },
+        { model: Categoria, as: 'categoria', attributes: ['nombre'], required: false },
+      ],
+      transaction,
+      lock: { level: transaction.LOCK.UPDATE, of: Libro },
     });
     return libroPlano(libro);
   }
@@ -66,6 +100,59 @@ class LibroRepository {
       raw: true,
       ...transactionOption(options),
     });
+  }
+
+  async findByIdsForUpdate(ids, options = {}) {
+    const transaction = options.transaction;
+    if (!transaction) throw new Error('findByIdsForUpdate requiere una transacción activa.');
+    if (!Array.isArray(ids) || ids.length === 0) return [];
+    return Libro.findAll({
+      where: { id: { [Op.in]: ids } },
+      attributes: ['id', 'titulo', 'isbn', 'precio', 'activo'],
+      order: [['id', 'ASC']],
+      raw: true,
+      transaction,
+      lock: { level: transaction.LOCK.UPDATE, of: Libro },
+    });
+  }
+
+  async updateBibliografia(id, data, options = {}) {
+    const [filas] = await Libro.update(data, { where: { id }, ...transactionOption(options) });
+    if (!filas) return null;
+    return this.findById(id, options);
+  }
+
+  async updateActivo(id, activo, options = {}) {
+    const [filas] = await Libro.update({ activo }, { where: { id }, ...transactionOption(options) });
+    if (!filas) return null;
+    return this.findById(id, options);
+  }
+
+  async findAdminPage({ q = '', categoriaId = null, estado = 'todos', limit = 50, offset = 0 } = {}, options = {}) {
+    const where = {};
+    const term = typeof q === 'string' ? q.trim() : '';
+    if (term) where.titulo = { [Op.iLike]: `%${term}%` };
+    if (categoriaId) where.categoria_id = categoriaId;
+    if (estado === 'activo') where.activo = true;
+    if (estado === 'inactivo') where.activo = false;
+
+    const [rows, total] = await Promise.all([
+      Libro.findAll({
+        where,
+        attributes: LIBRO_ATTRIBUTES,
+        include: [
+          { model: Autor, as: 'autor', attributes: ['nombre'], required: false },
+          { model: Editorial, as: 'editorial', attributes: ['nombre'], required: false },
+          { model: Categoria, as: 'categoria', attributes: ['nombre'], required: false },
+        ],
+        order: [['titulo', 'ASC'], ['id', 'ASC']],
+        limit,
+        offset,
+        ...transactionOption(options),
+      }),
+      Libro.count({ where, distinct: true, col: 'id', ...transactionOption(options) }),
+    ]);
+    return { data: rows.map(libroPlano), total: Number(total), limit, offset };
   }
 
   async updatePrecio(id, precio, options = {}) {
@@ -138,7 +225,7 @@ class LibroRepository {
     const limit = options.limit ?? 50;
     const offset = options.offset ?? 0;
     const catId = categoriaId;
-    const where = {};
+    const where = { activo: true };
     if (catId && typeof catId === 'string' && catId.trim()) where.categoria_id = catId.trim();
     const term = typeof queryStr === 'string' ? queryStr.trim() : '';
     const include = [

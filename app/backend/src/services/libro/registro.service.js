@@ -67,8 +67,9 @@ module.exports = {
 
       // Verificar ISBN duplicado si viene
       if (cleanIsbn) {
-        const existente = await libroRepository.findByIsbn(cleanIsbn, txOptions);
+        const existente = await libroRepository.findByIsbnForUpdate(cleanIsbn, txOptions);
         if (existente) {
+          if (!existente.activo) throw new ConflictError(`El libro con ISBN ${cleanIsbn} está inactivo y no admite ingresos.`);
           throw new ConflictError(`Ya existe un libro registrado con el ISBN ${cleanIsbn}.`);
         }
       }

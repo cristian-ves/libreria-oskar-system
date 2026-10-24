@@ -4,6 +4,9 @@ const {
   validateRegistrarLibro,
   validateIngresoLibro,
   validateActualizarPrecioLibro,
+  validateEditarLibro,
+  validateCambiarActivoLibro,
+  validateAdminListarLibros,
 } = require('./validators/libro.validators');
 const {
   validateListarInventario,
@@ -25,6 +28,9 @@ module.exports = {
   validateRegistrarLibro,
   validateIngresoLibro,
   validateActualizarPrecioLibro,
+  validateEditarLibro,
+  validateCambiarActivoLibro,
+  validateAdminListarLibros,
   validateListarInventario,
   validateListarMovimientos,
   validateSalidaInventario,

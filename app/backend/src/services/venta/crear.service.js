@@ -21,6 +21,11 @@ function resolverLibros(items, libros) {
     throw new NotFoundError(`Libro(s) no encontrado(s): ${faltantes.map((i) => i.libroId).join(', ')}.`);
   }
 
+  const inactivos = items.map((i) => porId.get(i.libroId)).filter((libro) => !libro.activo);
+  if (inactivos.length > 0) {
+    throw new ConflictError(`No se pueden vender libros inactivos: ${inactivos.map((libro) => `«${libro.titulo}»`).join('; ')}.`);
+  }
+
   const sinPrecio = items.map((i) => porId.get(i.libroId)).filter((l) => aCentavos(l.precio) <= 0);
   if (sinPrecio.length > 0) {
     throw new ConflictError(
@@ -85,7 +90,7 @@ module.exports = {
 
       // 1. Libros y precios (snapshot leído dentro de la transacción)
       const libroIds = items.map((i) => i.libroId);
-      const libros = resolverLibros(items, await libroRepository.findByIds(libroIds, txOptions));
+      const libros = resolverLibros(items, await libroRepository.findByIdsForUpdate(libroIds, txOptions));
 
       // 2. Bloqueos en orden fijo por id y 3. validación de stock con lo leído bajo el bloqueo
       const inventarios = await bloquearInventariosOrdenados(libroIds, bodegaId, txOptions);
