@@ -4,6 +4,7 @@ const reportesController = require('../controllers/reportes.controller');
 const {
   validateReporteInventario, validateReporteKardex, validateCorteCaja,
   validateResumenPeriodo, validateLibrosMasVendidos, validateReposicion, validateVentasReporte,
+  validateReporteExportacion,
 } = require('../middlewares/validator');
 
 const router = Router();
@@ -16,5 +17,6 @@ router.get('/resumen-periodo', validateResumenPeriodo, reportesController.resume
 router.get('/libros-mas-vendidos', validateLibrosMasVendidos, reportesController.librosMasVendidos.bind(reportesController));
 router.get('/reposicion', validateReposicion, reportesController.reposicion.bind(reportesController));
 router.get('/ventas', validateVentasReporte, reportesController.ventas.bind(reportesController));
+router.get('/:tipo/exportar', validateReporteExportacion, reportesController.exportar.bind(reportesController));
 
 module.exports = router;

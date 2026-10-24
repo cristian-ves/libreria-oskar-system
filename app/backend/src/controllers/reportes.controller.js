@@ -1,6 +1,22 @@
 const reportesService = require('../services/reportes.service');
+const exportacionReportesService = require('../services/reportes/exportadores/exportacion.service');
 
 class ReportesController {
+  async exportar(req, res, next) {
+    try {
+      const archivo = await exportacionReportesService.generar({
+        tipo: req.params.tipo,
+        formato: req.query.formato,
+        query: req.query,
+      });
+      res.status(200);
+      res.setHeader('Content-Type', archivo.mime);
+      res.setHeader('Content-Disposition', `attachment; filename="${archivo.filename}"`);
+      res.setHeader('Content-Length', archivo.buffer.length);
+      return res.send(archivo.buffer);
+    } catch (error) { return next(error); }
+  }
+
   async corteCaja(req, res, next) {
     try { return res.status(200).json({ status: 'success', data: await reportesService.generarCorteCaja(req.query) }); }
     catch (error) { return next(error); }
