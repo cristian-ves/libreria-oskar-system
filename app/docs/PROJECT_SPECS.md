@@ -835,7 +835,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 ```text
 src/
 ├── App.jsx, main.jsx, index.css
-├── views/                  Orquestadores de ruta (Catalogo, LibroDetalle, RegistrarLibro, Inventario, Login, Nosotros, Ventas, NuevaVenta, VentaDetalle)
+├── views/                  Orquestadores de ruta (Catalogo, LibroDetalle, RegistrarLibro, Inventario, Usuarios, Login, Nosotros, Ventas, NuevaVenta, VentaDetalle)
 ├── components/             Compartidos: Navbar, Footer, Toast, LoadingSpinner, ModalPrecioLibro, ProtectedRoute, BarcodeScanner, EstadoEscaner
 │   └── ui/                 Modal, ErrorBox, FieldLabel, Input, ControlCantidad, OpcionesSegmentadas, Select
 ├── context/                AuthContext.jsx
@@ -843,9 +843,10 @@ src/
 │   ├── catalogo/           components/ + hooks/ (useCatalogo, useLibroDetalle)
 │   ├── inventario/         components/ + hooks/ (useInventarioData, useKardex)
 │   ├── registrar-libro/    components/ + hooks/ (useRegistrarLibro) + validacion.js + camposFaltantes.js
-│   └── ventas/             components/ + hooks/ (useNuevaVenta, useVentas, useVentaDetalle)
+│   ├── ventas/             components/ + hooks/ (useNuevaVenta, useVentas, useVentaDetalle)
+│   └── usuarios/           components/ + hooks/ (useUsuarios)
 ├── hooks/                  useDebouncedValue.js, useCamaraEscaner.js, useGeometriaEscaner.js, useDiagnosticoEscaner.js
-├── services/api/           client.js, auth.api.js, catalogo.api.js, bodegas.api.js, categorias.api.js, inventario.api.js, libros.api.js, ventas.api.js
+├── services/api/           client.js, auth.api.js, catalogo.api.js, bodegas.api.js, categorias.api.js, inventario.api.js, libros.api.js, ventas.api.js, usuarios.api.js
 └── utils/                  tokenStorage.js, roles.js, formatters.js, parsers.js, dinero.js, cargarDetectorDeCodigos.js, errorCamara.js, geometriaEscaner.js
 ```
 
@@ -865,11 +866,20 @@ Reglas de la estructura: las llamadas HTTP salen solo de `services/api/`; las vi
 | `/ventas` | `Ventas` | `ROLES_OPERATIVOS` | Listado de ventas con filtros y paginación (`ProtectedRoute`) |
 | `/ventas/nueva` | `NuevaVenta` | `ROLES_OPERATIVOS` | Registro de una venta (`ProtectedRoute`) |
 | `/ventas/:id` | `VentaDetalle` | `ROLES_OPERATIVOS` | Detalle de la venta; el Administrador puede anularla (`ProtectedRoute`) |
+| `/usuarios` | `Usuarios` | `ROLES_POR_RUTA.usuarios` (`Administrador`) | Gestión de cuentas, búsqueda, filtros, alta, edición y activación/desactivación (`ProtectedRoute`) |
 | `*` | `Navigate` | Público | Redirige cualquier ruta desconocida a `/catalogo` |
 
-La navegación muestra Catálogo y Nosotros para público y cualquier rol; Registrar, Inventario y Ventas solo para Administrador y Empleado. Las opciones de Usuarios, Categorías, Gestión de libros, Reportes y Mi cuenta / Seguridad se incorporarán al implementar sus vistas; no se enlazan módulos pendientes. Las capacidades y roles de las rutas existentes se centralizan en `utils/roles.js`.
+La navegación muestra Catálogo y Nosotros para público y cualquier rol; Registrar, Inventario y Ventas solo para Administrador y Empleado; Usuarios aparece en Administración solo para Administrador. Categorías, Gestión de libros, Reportes y Mi cuenta / Seguridad siguen pendientes. Las capacidades y roles de las rutas se centralizan en `utils/roles.js`.
 
 ### 5.2 Análisis Detallado por Vista
+
+#### Gestión de usuarios (`Usuarios.jsx`)
+- `views/Usuarios.jsx` orquesta la pantalla; `features/usuarios/hooks/useUsuarios.js` carga `GET /api/usuarios?incluirInactivos=true`, filtra por nombre/correo, rol y estado, calcula tarjetas de resumen y gestiona altas, ediciones y cambios de estado.
+- `features/usuarios/components/TablaUsuarios.jsx` presenta tabla en escritorio y tarjetas en móvil con rol, estado y acciones. La cuenta autenticada muestra que no se puede desactivar desde la lista.
+- `FormularioUsuario.jsx` reutiliza alta y edición; contraseña solo al crear, con sus requisitos (10 caracteres, letra, número y máximo 72 bytes UTF-8). En edición modifica nombre, correo, rol y estado; solicita confirmación antes de desactivar.
+- `FiltrosUsuarios.jsx` ofrece búsqueda y filtros por Administrador/Empleado y estado. La confirmación explica que el backend valida auto desactivación y último administrador; los errores HTTP muestran el `message` del backend.
+- `services/api/usuarios.api.js` usa exclusivamente `apiFetch` para GET, POST, PUT y PATCH `/api/usuarios/:id/activo`. Cada operación exitosa vuelve a cargar el listado.
+- **Prueba manual pendiente**: Administrador (CRUD, filtros, confirmación y rechazo de auto desactivación/último admin); Empleado y rol `Usuario` (acceso denegado); visitante sin sesión (redirige a login); revisar tabla de escritorio, tarjetas móviles y navegación móvil.
 
 #### 1. `Catalogo.jsx` (171 líneas)
 - **Responsabilidades**: Orquesta la vista; la lógica está en `features/catalogo/hooks/useCatalogo.js` (estado de libros, categorías, búsqueda con debounce propio por `setTimeout`, categoría seleccionada y drawer móvil; sincroniza `q` y `categoriaId` con los query params de la URL).
@@ -922,7 +932,7 @@ La navegación muestra Catálogo y Nosotros para público y cualquier rol; Regis
 
 | Componente | Archivo | Props Aceptadas | Descripción |
 |---|---|---|---|
-| `Navbar` | `components/Navbar.jsx` | Ninguna | Barra superior responsive. Con sesión muestra Registrar, Catálogo, Inventario, Ventas y Nosotros (a cualquier rol, incluido `Usuario`); sin sesión, Catálogo y Nosotros. |
+| `Navbar` | `components/Navbar.jsx` | Ninguna | Barra superior responsive. Con sesión muestra Registrar, Inventario y Ventas según rol, y Usuarios solo para Administrador; Catálogo y Nosotros son públicos. Sin sesión muestra Catálogo y Nosotros. |
 | `Footer` | `components/Footer.jsx` | Ninguna | Pie de página. |
 | `LoadingSpinner` | `components/LoadingSpinner.jsx` | `message` (String, default: "Cargando...") | Spinner para llamadas asíncronas. |
 | `Toast` | `components/Toast.jsx` | `toast` (Objeto), `onClose` (Función) | Notificación flotante con temporizador; capa `z-[60]`, por encima de Navbar, `Modal`, `LoadingSpinner` y `DrawerFiltros` (`z-50`). |
@@ -946,12 +956,12 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 - Envoltorio de `fetch`. Lee el token con `getToken()` (`utils/tokenStorage.js`, clave `oskar_token` en `localStorage`) e inyecta `Authorization: Bearer <token>`.
 - Inyecta `Content-Type: application/json` si hay cuerpo que no es `FormData`.
 - Si la respuesta es 401 y había token, llama a `clearToken()` y redirige con `window.location.assign('/login')`.
-- Módulos por dominio que lo usan: `bodegas.api.js`, `categorias.api.js`, `inventario.api.js`, `libros.api.js`, `ventas.api.js`. `auth.api.js` y `catalogo.api.js` usan `fetch` directo a propósito (endpoints públicos o sin redirección por 401).
+- Módulos por dominio que lo usan: `bodegas.api.js`, `categorias.api.js`, `inventario.api.js`, `libros.api.js`, `ventas.api.js`, `usuarios.api.js`. `auth.api.js` y `catalogo.api.js` usan `fetch` directo a propósito (endpoints públicos o sin redirección por 401).
 
 #### Otros módulos
 - `utils/formatters.js` (`formatFecha`, `formatPrecio`, `formatFechaVenta`: fecha en `America/Guatemala`, "—" si es nula o inválida), `utils/dinero.js` (centavos enteros sin punto flotante: `aCentavos`, `deCentavos`, `formatQuetzales`, `formatMonto`), `services/api/ventas.api.js` (`crearVenta`, `getVentas`, `getVenta`, `anularVenta`, `buscarLibrosParaVenta`), `utils/parsers.js` (`orNull`, `toNum`), `hooks/useDebouncedValue.js`.
 - `components/ModalPrecioLibro.jsx`: modal (sobre `components/ui/Modal`) que muestra el título y el precio actual, pide el nuevo precio y llama a `actualizarPrecioLibro(libroId, precio)` (`libros.api.js`, `PATCH`); muestra `message` y `details` del backend con `ErrorBox`.
-- Hooks de feature: `useCatalogo`, `useLibroDetalle`, `useInventarioData`, `useKardex`, `useRegistrarLibro`, `useNuevaVenta`, `useVentas`, `useVentaDetalle`.
+- Hooks de feature: `useCatalogo`, `useLibroDetalle`, `useInventarioData`, `useKardex`, `useRegistrarLibro`, `useNuevaVenta`, `useVentas`, `useVentaDetalle`, `useUsuarios`.
 
 #### `context/AuthContext.jsx` (`AuthProvider` y `useAuth`)
 - Estado: `user` (`{ id, nombre_completo, email, rol }`), `token`, `loading`.
@@ -1168,7 +1178,7 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 ### 8.2 Diferencias con lo Declarado en AGENTS.md
 1. **Rol Usuario**: `AGENTS.md` lo describe como existente en BD y sin acceso a nada protegido. Así es en el backend (403 en endpoints protegidos). En el frontend, el menú ofrece solo las rutas públicas a este rol y `ProtectedRoute` mantiene el 403 visual ante acceso directo. No existe endpoint de autorregistro.
 2. **Escaneo por ISBN (`POST /api/libros/escanear`)**: La ruta exige `authenticate` + `authorize('Administrador', 'Empleado')`; el rol `Usuario` recibe 403 y sin token se responde 401. El frontend no lo consume.
-3. **Gestión administrativa de usuarios**: implementada en `GET/POST/PUT/PATCH /api/usuarios`; solo Administrador. La gestión de categorías sigue en el roadmap separado.
+3. **Gestión administrativa de usuarios**: implementada en backend y en la ruta protegida `/usuarios`; solo Administrador. La gestión de categorías sigue en el roadmap separado.
 4. **"El Empleado ve precios"**: AGENTS.md dice que el Empleado ve precios pero no los fija. En el código, el Empleado ve el precio en el Catálogo y el Detalle públicos, pero NO en la ficha del libro existente de `RegistrarLibro` (`FichaLibroExistente.jsx` la condiciona a `esAdmin`). Inventario no muestra precios.
 5. **Fijar el precio de un libro ya registrado** (resuelto): `PATCH /api/libros/:id/precio` (solo Administrador) y botón "Fijar precio" / "Cambiar precio" en `LibroDetalle`. La edición completa con `PUT /api/libros/:id` sigue en el roadmap `catalog-employee-crud`.
 
@@ -1223,7 +1233,7 @@ Cada ítem cita su archivo como evidencia. Resueltos y retirados de esta secció
    - **Estado real**: Existe el módulo de correo `services/mail/` (`mail.service.js`, dependencia `nodemailer`), pero ningún código lo consume; las alertas de inventario siguen sin implementar y no hay tareas programadas.
 3. **CRUD Administrativo de Catálogo y Empleados**:
    - Roadmap; spec en `app/docs/roadmap/catalog-employee-crud/`. Alcance de la implementación en curso: usuarios y categorías; la edición/baja de libros y las ventas se desarrollan aparte (ver la sección "Alcance de esta implementación" de esa spec).
-   - **Estado real**: En empleados solo existe `GET /api/usuarios`. No hay `POST`/`PUT`/`DELETE` de usuarios ni `PUT /api/libros/:id` (edición completa) ni baja de libros. Fijar solo el precio sí existe: `PATCH /api/libros/:id/precio`.
+   - **Estado real**: El CRUD administrativo de usuarios está disponible en `GET/POST/PUT/PATCH /api/usuarios` y la vista protegida `/usuarios`. No hay `PUT /api/libros/:id` (edición completa) ni baja de libros. Fijar solo el precio sí existe: `PATCH /api/libros/:id/precio`.
 4. **Ventas**:
    - Diseño en `app/docs/roadmap/ventas/SPEC.md`.
    - **Estado real**: Esquema, API e interfaz implementados; los reportes de ventas no forman parte de este módulo (corresponden a un módulo de reportes aparte, solo Administrador, con exportación a Excel y PDF). El esquema, los modelos y la API existen: `POST /api/ventas`, `GET /api/ventas`, `GET /api/ventas/:id` y `POST /api/ventas/:id/anular` (ver §4.3, §6.10 y §6.11). La interfaz también existe (`/ventas`, `/ventas/nueva`, `/ventas/:id`; ver §5.1 y §5.2). NO hay reportes de ventas. Pendientes de decisión: venta de libros inactivos (hoy no se bloquea) y visibilidad de ventas por rol (hoy ambos roles ven todas).

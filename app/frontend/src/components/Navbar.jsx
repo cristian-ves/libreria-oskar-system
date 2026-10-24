@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
-  Barcode, Warehouse, ShieldCheck, LogOut, Info, BookOpen, Receipt, Menu, X,
+  Barcode, Warehouse, ShieldCheck, LogOut, Info, BookOpen, Receipt, Menu, X, Users,
 } from 'lucide-react';
-import { ROLES_OPERATIVOS, puedeAcceder } from '../utils/roles';
+import { ROLES, ROLES_OPERATIVOS, puedeAcceder } from '../utils/roles';
 import logo from '../assets/logo.jpg';
 
 const seccionesNavegacion = [
@@ -18,8 +18,11 @@ const seccionesNavegacion = [
       { path: '/ventas', label: 'Ventas', icon: Receipt, roles: ROLES_OPERATIVOS },
     ],
   },
-  // Espacios previstos para vistas futuras: se ocultan mientras estén vacíos.
-  { id: 'administracion', label: 'Administración', enlaces: [] },
+  {
+    id: 'administracion', label: 'Administración', enlaces: [
+      { path: '/usuarios', label: 'Usuarios', icon: Users, roles: [ROLES.ADMINISTRADOR] },
+    ],
+  },
   { id: 'cuenta', label: 'Mi cuenta / Seguridad', enlaces: [] },
 ];
 

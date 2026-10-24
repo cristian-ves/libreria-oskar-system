@@ -12,6 +12,7 @@ import Ventas from './views/Ventas';
 import NuevaVenta from './views/NuevaVenta';
 import VentaDetalle from './views/VentaDetalle';
 import Login from './views/Login';
+import Usuarios from './views/Usuarios';
 import { ROLES_POR_RUTA } from './utils/roles';
 
 export default function App() {
@@ -82,6 +83,14 @@ export default function App() {
             element={
               <ProtectedRoute roles={ROLES_POR_RUTA.ventas}>
                 <VentaDetalle />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/usuarios"
+            element={
+              <ProtectedRoute roles={ROLES_POR_RUTA.usuarios}>
+                <Usuarios />
               </ProtectedRoute>
             }
           />
