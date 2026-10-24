@@ -17,6 +17,7 @@ export const ROLES_POR_RUTA = {
   usuarios: [ROLES.ADMINISTRADOR],
   categorias: [ROLES.ADMINISTRADOR],
   gestionLibros: [ROLES.ADMINISTRADOR],
+  reportes: [ROLES.ADMINISTRADOR],
 };
 
 export const puedeAcceder = (user, rolesPermitidos) =>

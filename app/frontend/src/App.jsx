@@ -15,6 +15,7 @@ import Login from './views/Login';
 import Usuarios from './views/Usuarios';
 import Categorias from './views/Categorias';
 import GestionLibros from './views/GestionLibros';
+import Reportes from './views/Reportes';
 import { ROLES_POR_RUTA } from './utils/roles';
 
 export default function App() {
@@ -109,6 +110,14 @@ export default function App() {
             element={
               <ProtectedRoute roles={ROLES_POR_RUTA.gestionLibros}>
                 <GestionLibros />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reportes"
+            element={
+              <ProtectedRoute roles={ROLES_POR_RUTA.reportes}>
+                <Reportes />
               </ProtectedRoute>
             }
           />

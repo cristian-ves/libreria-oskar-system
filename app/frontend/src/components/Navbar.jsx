@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
-  Barcode, Warehouse, ShieldCheck, LogOut, Info, BookOpen, Receipt, Menu, X, Users, Tags,
+  Barcode, Warehouse, ShieldCheck, LogOut, Info, BookOpen, Receipt, Menu, X, Users, Tags, BarChart3,
 } from 'lucide-react';
 import { ROLES, ROLES_OPERATIVOS, puedeAcceder } from '../utils/roles';
 import logo from '../assets/logo.jpg';
@@ -23,6 +23,7 @@ const seccionesNavegacion = [
       { path: '/usuarios', label: 'Usuarios', icon: Users, roles: [ROLES.ADMINISTRADOR] },
       { path: '/categorias', label: 'Categorías', icon: Tags, roles: [ROLES.ADMINISTRADOR] },
       { path: '/libros/gestion', label: 'Gestión de libros', icon: BookOpen, roles: [ROLES.ADMINISTRADOR] },
+      { path: '/reportes', label: 'Reportes', icon: BarChart3, roles: [ROLES.ADMINISTRADOR] },
     ],
   },
   { id: 'cuenta', label: 'Mi cuenta / Seguridad', enlaces: [] },
