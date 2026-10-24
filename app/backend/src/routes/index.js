@@ -22,6 +22,7 @@ router.put('/usuarios/:id', authenticate, authorize('Administrador'), usuarioCon
 router.patch('/usuarios/:id/activo', authenticate, authorize('Administrador'), usuarioController.cambiarActivo.bind(usuarioController));
 
 // Listado de categorías temáticas para catálogo y filtros
+router.get('/categorias/admin', authenticate, authorize('Administrador'), categoriaController.listarAdministracion.bind(categoriaController));
 router.get('/categorias', categoriaController.listar.bind(categoriaController));
 router.post('/categorias', authenticate, authorize('Administrador'), categoriaController.crear.bind(categoriaController));
 router.put('/categorias/:id', authenticate, authorize('Administrador'), categoriaController.renombrar.bind(categoriaController));

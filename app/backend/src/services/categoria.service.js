@@ -24,6 +24,10 @@ class CategoriaService {
     return categoriaRepository.findAll();
   }
 
+  async listarAdministracion() {
+    return categoriaRepository.findAllWithLibroCount();
+  }
+
   async crear(data = {}) {
     const nombre = validarNombre(data.nombre);
     if (await categoriaRepository.findByNombre(nombre)) throw new ConflictError('Ya existe una categoría con ese nombre.');

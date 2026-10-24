@@ -18,6 +18,13 @@ class CategoriaController {
     }
   }
 
+  async listarAdministracion(req, res, next) {
+    try {
+      const data = await categoriaService.listarAdministracion();
+      res.status(200).json({ status: 'success', data });
+    } catch (err) { next(err); }
+  }
+
   async crear(req, res, next) {
     try {
       const data = await categoriaService.crear(req.body);

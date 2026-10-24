@@ -13,6 +13,7 @@ import NuevaVenta from './views/NuevaVenta';
 import VentaDetalle from './views/VentaDetalle';
 import Login from './views/Login';
 import Usuarios from './views/Usuarios';
+import Categorias from './views/Categorias';
 import { ROLES_POR_RUTA } from './utils/roles';
 
 export default function App() {
@@ -91,6 +92,14 @@ export default function App() {
             element={
               <ProtectedRoute roles={ROLES_POR_RUTA.usuarios}>
                 <Usuarios />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/categorias"
+            element={
+              <ProtectedRoute roles={ROLES_POR_RUTA.categorias}>
+                <Categorias />
               </ProtectedRoute>
             }
           />

@@ -629,6 +629,7 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `GET` | `/api/health` | Ninguno (Público) | `healthController.check` | No aplica | No aplica (usa `testSequelizeConnection()`) | Monitoreo de salud para Cloud Run / Docker. Responde 200 `healthy` o 503 `degraded` (formato propio, sin envoltorio `status: 'success'`). |
 | `GET` | `/api/bodegas` | Ninguno (Público) | `bodegaController.listar` | `bodegaService.listarActivas` | `bodegaRepository.findActivas` | Listado de bodegas activas con su sucursal. |
 | `GET` | `/api/categorias`| Ninguno (Público) | `categoriaController.listar` | `categoriaService.listar` | `categoriaRepository.findAll` | Catálogo de categorías temáticas ordenadas. |
+| `GET` | `/api/categorias/admin` | `authenticate`, `authorize('Administrador')` | `categoriaController.listarAdministracion` | `categoriaService.listarAdministracion` | `categoriaRepository.findAllWithLibroCount` | Listado administrativo ordenado con `id`, `nombre` y `libros_count` entero, obtenido en una consulta agrupada. No cambia el GET público. |
 | `POST` | `/api/categorias` | `authenticate`, `authorize('Administrador')` | `categoriaController.crear` | `categoriaService.crear` | `categoriaRepository.findByNombre`, `create` | Crea una categoría; recorta nombre, exige valor no vacío y rechaza duplicados sin distinguir mayúsculas (409). |
 | `PUT` | `/api/categorias/:id` | `authenticate`, `authorize('Administrador')` | `categoriaController.renombrar` | `categoriaService.renombrar` | `findById`, `findByNombre`, `updateNombre` | Renombra una categoría; valida UUID, existencia y duplicados (409), permite conservar el nombre y no altera libros asociados. |
 | `DELETE` | `/api/categorias/:id` | `authenticate`, `authorize('Administrador')` | `categoriaController.eliminar` | `categoriaService.eliminar` | `findById`, `countLibros`, `delete` | Elimina solo si no tiene libros; con asociaciones devuelve 409 e indica la cantidad. |
@@ -685,7 +686,7 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 Todos son instancias de clase exportadas (`module.exports = new XController()`).
 - `health.controller.js`: `check(req, res)`: llama a `testSequelizeConnection()`; responde 200 `healthy` o 503 `degraded`.
 - `bodega.controller.js`: `listar` → `bodegaService.listarActivas`.
-- `categoria.controller.js`: `listar`, `crear`, `renombrar` y `eliminar` delegan en `categoriaService`; el GET público conserva su respuesta `{ status: 'success', data }`.
+- `categoria.controller.js`: `listar`, `listarAdministracion`, `crear`, `renombrar` y `eliminar` delegan en `categoriaService`; el GET público conserva su respuesta `{ status: 'success', data }`.
 - `usuario.controller.js`: `listar` → `usuarioService.listarActivosConRol`.
 - `auth.controller.js`:
   - `login(req, res, next)`: Extrae `email` y `password`, llama a `authService.login`, responde con HTTP 200.
@@ -703,7 +704,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 
 #### Capa de Servicios (`src/services/`)
 - `auth.service.js`: `login({ email, password })`: valida presencia de campos, busca usuario por email, compara con `bcrypt.compare`, valida estado `activo` y firma el JWT con `jwt.sign`.
-- `bodega.service.js` (`listarActivas`), `categoria.service.js` (`listar`, `crear`, `renombrar`, `eliminar`) y `usuario.service.js` (`listarActivosConRol`): delegan en sus repositorios. Categorías valida nombres (recorte, no vacío y unicidad case-insensitive) y UUID; impide borrar categorías con libros asociados.
+- `bodega.service.js` (`listarActivas`), `categoria.service.js` (`listar`, `listarAdministracion`, `crear`, `renombrar`, `eliminar`) y `usuario.service.js` (`listarActivosConRol`): delegan en sus repositorios. Categorías valida nombres (recorte, no vacío y unicidad case-insensitive) y UUID; impide borrar categorías con libros asociados.
 - `catalogo.service.js`: `listar({ q, categoriaId, categoria_id })` (agrega `ref`) y `detalle(ref)` (`parseRef`; `ValidationError` si la ref es inválida, `NotFoundError` si no existe).
 - `googleBooks.service.js`: `normalizarIsbn`, `buscarPorIsbn(rawIsbn)` (caché de 1 h; cascada Google Books → OpenLibrary → `FALLBACK_CATALOG`), `_consultarGoogleBooks` y `_consultarFallbackOpenLibrary`.
 - `libro.service.js` es una **fachada**: una instancia de la clase `LibroService` vacía a cuyo prototipo se le aplica `Object.assign` con los módulos de `services/libro/`. Los consumidores (controlador, pruebas) importan la fachada, no los módulos internos:
@@ -731,7 +732,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 - `usuario.repository.js`: `findByEmail`, `findById`, `findAll`, `create`, `update`, `findActivosConRol`, `findConRol`, `findRoleByName`, `emailExists`, `findByIdForUpdate`, `lockRoles` y `countActiveAdministrators`. El listado predeterminado conserva la forma anterior y ordena en memoria con `localeCompare` y desempate por ID para igualar orden de forma determinista. `findAll` y `findActivosConRol` tienen contratos distintos.
 - `usuario.service.js` concentra las validaciones y reglas del CRUD. Cambios que afectan roles/estado y altas serializan al bloquear las filas de roles en orden de ID dentro de una transacción. `utils/passwordPolicy.js` exige 10 caracteres, letra, número y un máximo de 72 bytes UTF-8 antes de aplicar bcrypt.
 - `venta.repository.js` (solo Sequelize, sin SQL crudo): `createVenta`, `createDetalles`, `findByIdForUpdate` (exige `{ transaction }`), `findLineasByVenta`, `marcarAnulada`, `findDetalleById`, `findPagina` y `contarLineasPorVentas` (COUNT/SUM agrupados).
-- `bodega.repository.js` (`findActivas`, `findActivaById`), `categoria.repository.js` (`findAll`, `findById`, `findByNombre`, `create`, `updateNombre`, `countLibros`, `delete`), `autor.repository.js` y `editorial.repository.js` (`findByNombre`, `findById`, `findAll`, `create`, `upsert`), `libro.repository.js` (`findByIsbn`, `findById`, `findByIds`, `updatePrecio`, `upsert`, `create`, `searchAndList`, `findDetalleByRef`) y `movimiento.repository.js` (`getTipoMovimientoByName`, `ensureTipoMovimiento`, `createMovimiento` (acepta `ventaId` opcional, guardado como `venta_id`), `findAllWithFilters`).
+- `bodega.repository.js` (`findActivas`, `findActivaById`), `categoria.repository.js` (`findAll`, `findAllWithLibroCount`, `findById`, `findByNombre`, `create`, `updateNombre`, `countLibros`, `delete`), `autor.repository.js` y `editorial.repository.js` (`findByNombre`, `findById`, `findAll`, `create`, `upsert`), `libro.repository.js` (`findByIsbn`, `findById`, `findByIds`, `updatePrecio`, `upsert`, `create`, `searchAndList`, `findDetalleByRef`) y `movimiento.repository.js` (`getTipoMovimientoByName`, `ensureTipoMovimiento`, `createMovimiento` (acepta `ventaId` opcional, guardado como `venta_id`), `findAllWithFilters`).
 
 #### Manejo de Transacciones y Control de Concurrencia
 - **Mecanismo transaccional**: `sequelize.transaction(async (transaction) => { ... })`. Todas las llamadas ORM dentro de la unidad de trabajo reciben `{ transaction }`.
@@ -814,6 +815,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 | `tests/escanear.integration.test.js` | 8 | Integración | `libreria_oskar_test` | Escaneo con sembrado dinámico y rollback inducido. Importa `config/db`. |
 | `tests/api.e2e.test.js` | 22 | End-to-End | `libreria_oskar_test` | Endpoints HTTP reales vía servidor Express temporal. Importa `config/db`. |
 | `tests/categoriasCrud.e2e.test.js` | 4 grupos | End-to-End | `libreria_oskar_test` | CRUD administrativo de categorías: validación, duplicados, roles, respuestas y GET público; limpia fixtures temporales. |
+| `tests/categoriasConteoAdmin.e2e.test.js` | 3 grupos | End-to-End | `libreria_oskar_test` | `GET /api/categorias/admin`: roles, conteos agrupados exactos y regresión del GET público; limpia fixtures temporales. |
 | `tests/ventasEsquema.test.js` | 7 | Integración | `libreria_oskar_test` | Esquema de ventas: correlativo `numero`, valores por defecto, CHECK, `uq_venta_libro`, FK RESTRICT, Salida con `venta_id` (trigger) y asociaciones. No importa `config/db`. |
 | `tests/ventasUtils.test.js` | 9 | Unitaria | No requiere | `utils/ventas.js`: centavos, redondeo exacto, rechazos, código `V-xxxxxx`, desbordamiento y rango de fechas de Guatemala. |
 | `tests/ventasServicio.test.js` | 11 | Integración | `libreria_oskar_test` | Crear venta: importes, precio de BD, actor, defaults, rechazos sin persistir (precio 0, stock, 404, descuento, desborde NUMERIC) y rollback con fallo en la segunda línea. No importa `config/db`. |
@@ -839,7 +841,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 ```text
 src/
 ├── App.jsx, main.jsx, index.css
-├── views/                  Orquestadores de ruta (Catalogo, LibroDetalle, RegistrarLibro, Inventario, Usuarios, Login, Nosotros, Ventas, NuevaVenta, VentaDetalle)
+├── views/                  Orquestadores de ruta (Catalogo, LibroDetalle, RegistrarLibro, Inventario, Usuarios, Categorias, Login, Nosotros, Ventas, NuevaVenta, VentaDetalle)
 ├── components/             Compartidos: Navbar, Footer, Toast, LoadingSpinner, ModalPrecioLibro, ProtectedRoute, BarcodeScanner, EstadoEscaner
 │   └── ui/                 Modal, ErrorBox, FieldLabel, Input, ControlCantidad, OpcionesSegmentadas, Select
 ├── context/                AuthContext.jsx
@@ -848,7 +850,8 @@ src/
 │   ├── inventario/         components/ + hooks/ (useInventarioData, useKardex)
 │   ├── registrar-libro/    components/ + hooks/ (useRegistrarLibro) + validacion.js + camposFaltantes.js
 │   ├── ventas/             components/ + hooks/ (useNuevaVenta, useVentas, useVentaDetalle)
-│   └── usuarios/           components/ + hooks/ (useUsuarios)
+│   ├── usuarios/           components/ + hooks/ (useUsuarios)
+│   └── categorias/         components/ + hooks/ (useCategorias)
 ├── hooks/                  useDebouncedValue.js, useCamaraEscaner.js, useGeometriaEscaner.js, useDiagnosticoEscaner.js
 ├── services/api/           client.js, auth.api.js, catalogo.api.js, bodegas.api.js, categorias.api.js, inventario.api.js, libros.api.js, ventas.api.js, usuarios.api.js
 └── utils/                  tokenStorage.js, roles.js, formatters.js, parsers.js, dinero.js, cargarDetectorDeCodigos.js, errorCamara.js, geometriaEscaner.js
@@ -871,9 +874,10 @@ Reglas de la estructura: las llamadas HTTP salen solo de `services/api/`; las vi
 | `/ventas/nueva` | `NuevaVenta` | `ROLES_OPERATIVOS` | Registro de una venta (`ProtectedRoute`) |
 | `/ventas/:id` | `VentaDetalle` | `ROLES_OPERATIVOS` | Detalle de la venta; el Administrador puede anularla (`ProtectedRoute`) |
 | `/usuarios` | `Usuarios` | `ROLES_POR_RUTA.usuarios` (`Administrador`) | Gestión de cuentas, búsqueda, filtros, alta, edición y activación/desactivación (`ProtectedRoute`) |
+| `/categorias` | `Categorias` | `ROLES_POR_RUTA.categorias` (`Administrador`) | Gestión de categorías, búsqueda, conteo de libros, alta, renombrado y eliminación protegida (`ProtectedRoute`) |
 | `*` | `Navigate` | Público | Redirige cualquier ruta desconocida a `/catalogo` |
 
-La navegación muestra Catálogo y Nosotros para público y cualquier rol; Registrar, Inventario y Ventas solo para Administrador y Empleado; Usuarios aparece en Administración solo para Administrador. Categorías, Gestión de libros, Reportes y Mi cuenta / Seguridad siguen pendientes. Las capacidades y roles de las rutas se centralizan en `utils/roles.js`.
+La navegación muestra Catálogo y Nosotros para público y cualquier rol; Registrar, Inventario y Ventas solo para Administrador y Empleado; Usuarios y Categorías aparecen en Administración solo para Administrador. Gestión de libros, Reportes y Mi cuenta / Seguridad siguen pendientes. Las capacidades y roles de las rutas se centralizan en `utils/roles.js`.
 
 ### 5.2 Análisis Detallado por Vista
 
@@ -884,6 +888,12 @@ La navegación muestra Catálogo y Nosotros para público y cualquier rol; Regis
 - `FiltrosUsuarios.jsx` ofrece búsqueda y filtros por Administrador/Empleado y estado. La confirmación explica que el backend valida auto desactivación y último administrador; los errores HTTP muestran el `message` del backend.
 - `services/api/usuarios.api.js` usa exclusivamente `apiFetch` para GET, POST, PUT y PATCH `/api/usuarios/:id/activo`. Cada operación exitosa vuelve a cargar el listado.
 - **Prueba manual pendiente**: Administrador (CRUD, filtros, confirmación y rechazo de auto desactivación/último admin); Empleado y rol `Usuario` (acceso denegado); visitante sin sesión (redirige a login); revisar tabla de escritorio, tarjetas móviles y navegación móvil.
+
+#### Gestión de categorías (`Categorias.jsx`)
+- `views/Categorias.jsx` orquesta `features/categorias/hooks/useCategorias.js`, que carga categorías con conteos, busca por nombre y gestiona alta, renombrado y eliminación.
+- `TablaCategorias.jsx` muestra tabla en escritorio y tarjetas en móvil; `FormularioCategoria.jsx` reutiliza alta y renombrado, muestra errores del backend y explica la agrupación automática de «Derecho» en el catálogo.
+- `services/api/categorias.api.js` usa `apiFetch` para `GET /api/categorias/admin`, `POST /api/categorias`, `PUT /api/categorias/:id` y `DELETE /api/categorias/:id`. El GET público del catálogo sigue siendo `/api/categorias`.
+- **Prueba manual pendiente**: Administrador (búsqueda, crear, renombrar, duplicados, borrado vacío y conflicto con conteo de libros); Empleado y Usuario (acceso denegado); visitante (redirige a login); verificar teclado, móvil y escritorio.
 
 #### 1. `Catalogo.jsx` (171 líneas)
 - **Responsabilidades**: Orquesta la vista; la lógica está en `features/catalogo/hooks/useCatalogo.js` (estado de libros, categorías, búsqueda con debounce propio por `setTimeout`, categoría seleccionada y drawer móvil; sincroniza `q` y `categoriaId` con los query params de la URL).

@@ -20,6 +20,22 @@ class CategoriaRepository {
     return await Categoria.findAll(queryOptions);
   }
 
+  async findAllWithLibroCount() {
+    const rows = await Categoria.findAll({
+      attributes: [
+        'id',
+        'nombre',
+        [sequelize.fn('COUNT', sequelize.col('libros.id')), 'libros_count'],
+      ],
+      include: [{ model: Libro, as: 'libros', attributes: [], required: false }],
+      group: ['Categoria.id'],
+      order: [['nombre', 'ASC']],
+      raw: true,
+    });
+
+    return rows.map((row) => ({ ...row, libros_count: Number(row.libros_count) }));
+  }
+
   /**
    * Busca una categoría por su ID único (UUID).
    * @param {string} id
