@@ -17,6 +17,9 @@ router.get('/bodegas', bodegaController.listar.bind(bodegaController));
 
 // Listado de usuarios/empleados para asignación de operaciones (Solo Administrador)
 router.get('/usuarios', authenticate, authorize('Administrador'), usuarioController.listar.bind(usuarioController));
+router.post('/usuarios', authenticate, authorize('Administrador'), usuarioController.crear.bind(usuarioController));
+router.put('/usuarios/:id', authenticate, authorize('Administrador'), usuarioController.actualizar.bind(usuarioController));
+router.patch('/usuarios/:id/activo', authenticate, authorize('Administrador'), usuarioController.cambiarActivo.bind(usuarioController));
 
 // Listado de categorías temáticas para catálogo y filtros
 router.get('/categorias', categoriaController.listar.bind(categoriaController));

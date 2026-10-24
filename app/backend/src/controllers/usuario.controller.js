@@ -8,11 +8,26 @@ class UsuarioController {
    */
   async listar(req, res, next) {
     try {
-      const data = await usuarioService.listarActivosConRol();
+      const data = await usuarioService.listar({ incluirInactivos: req.query.incluirInactivos === 'true' });
       res.status(200).json({ status: 'success', data });
     } catch (err) {
       next(err);
     }
+  }
+
+  async crear(req, res, next) {
+    try { const data = await usuarioService.crear(req.body); res.status(201).json({ status: 'success', data }); }
+    catch (err) { next(err); }
+  }
+
+  async actualizar(req, res, next) {
+    try { const data = await usuarioService.actualizar(req.params.id, req.body, req.user.id); res.status(200).json({ status: 'success', data }); }
+    catch (err) { next(err); }
+  }
+
+  async cambiarActivo(req, res, next) {
+    try { const data = await usuarioService.cambiarActivo(req.params.id, req.body?.activo, req.user.id); res.status(200).json({ status: 'success', data }); }
+    catch (err) { next(err); }
   }
 }
 

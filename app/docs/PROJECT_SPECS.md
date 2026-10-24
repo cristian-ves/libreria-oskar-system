@@ -629,7 +629,10 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `GET` | `/api/health` | Ninguno (Público) | `healthController.check` | No aplica | No aplica (usa `testSequelizeConnection()`) | Monitoreo de salud para Cloud Run / Docker. Responde 200 `healthy` o 503 `degraded` (formato propio, sin envoltorio `status: 'success'`). |
 | `GET` | `/api/bodegas` | Ninguno (Público) | `bodegaController.listar` | `bodegaService.listarActivas` | `bodegaRepository.findActivas` | Listado de bodegas activas con su sucursal. |
 | `GET` | `/api/categorias`| Ninguno (Público) | `categoriaController.listar` | `categoriaService.listar` | `categoriaRepository.findAll` | Catálogo de categorías temáticas ordenadas. |
-| `GET` | `/api/usuarios` | `authenticate`, `authorize('Administrador')` | `usuarioController.listar` | `usuarioService.listarActivosConRol` | `usuarioRepository.findActivosConRol` | Lista de usuarios activos con su rol. |
+| `GET` | `/api/usuarios` | `authenticate`, `authorize('Administrador')` | `usuarioController.listar` | `usuarioService.listar` | `usuarioRepository.findActivosConRol` / `findConRol` | Sin parámetros conserva la lista de usuarios activos y su forma original; `?incluirInactivos=true` incluye activos e inactivos con `activo`. |
+| `POST` | `/api/usuarios` | `authenticate`, `authorize('Administrador')` | `usuarioController.crear` | `usuarioService.crear` | `usuarioRepository.create`, `findRoleByName`, `emailExists` | Crea Administrador o Empleado activo; normaliza email y aplica política de contraseña y bcrypt. |
+| `PUT` | `/api/usuarios/:id` | `authenticate`, `authorize('Administrador')` | `usuarioController.actualizar` | `usuarioService.actualizar` | `usuarioRepository.findByIdForUpdate`, `update`, `findRoleByName` | Edita nombre, correo, rol y estado; protege rol propio y último Administrador activo. No cambia contraseña. |
+| `PATCH` | `/api/usuarios/:id/activo` | `authenticate`, `authorize('Administrador')` | `usuarioController.cambiarActivo` | `usuarioService.cambiarActivo` | `usuarioRepository.findByIdForUpdate`, `countActiveAdministrators` | Activa o desactiva la cuenta con protección de auto desactivación y último Administrador activo. |
 | `POST` | `/api/auth/login` | Ninguno (Público) | `authController.login` | `authService.login` | `usuarioRepository.findByEmail` | Autentica credenciales y genera token JWT. |
 | `GET` | `/api/auth/me` | `authenticate` | `authController.me` | No aplica | No aplica (lee `req.user`) | Perfil del usuario autenticado en la sesión. |
 | `GET` | `/api/libros` | Ninguno (Público) | `libroController.listar` | `catalogoService.listar` | `libroRepository.searchAndList` | Catálogo de libros con filtros `q` y categoría. |
@@ -722,7 +725,8 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 
 #### Capa de Repositorios (`src/repositories/`)
 - `inventario.repository.js` es una **fachada** (misma técnica `Object.assign` sobre el prototipo) de `repositories/inventario/`: `inventarioBasico.repository.js` (`findByLibroAndBodega`, `findOrCreate`, `findById`, `findByLibrosAndBodega` (varios libros en una bodega, ordenados por `id`, sin bloqueo), `findByLibroId`, `setStockMinimo`, `findByIdForUpdate`), `inventarioListado.repository.js` (`findAllWithDetails`), `inventarioResumen.repository.js` (`getResumen`) y el helper `inventarioSubconsultas.helper.js` (`ULTIMA_SALIDA_SQL`).
-- `usuario.repository.js`: `findByEmail`, `findById`, `findAll`, `create`, `update` y `findActivosConRol`. `findAll` y `findActivosConRol` tienen contratos distintos y NO se unificaron.
+- `usuario.repository.js`: `findByEmail`, `findById`, `findAll`, `create`, `update`, `findActivosConRol`, `findConRol`, `findRoleByName`, `emailExists`, `findByIdForUpdate`, `lockRoles` y `countActiveAdministrators`. El listado predeterminado conserva la forma anterior y ordena en memoria con `localeCompare` y desempate por ID para igualar orden de forma determinista. `findAll` y `findActivosConRol` tienen contratos distintos.
+- `usuario.service.js` concentra las validaciones y reglas del CRUD. Cambios que afectan roles/estado y altas serializan al bloquear las filas de roles en orden de ID dentro de una transacción. `utils/passwordPolicy.js` exige 10 caracteres, letra, número y un máximo de 72 bytes UTF-8 antes de aplicar bcrypt.
 - `venta.repository.js` (solo Sequelize, sin SQL crudo): `createVenta`, `createDetalles`, `findByIdForUpdate` (exige `{ transaction }`), `findLineasByVenta`, `marcarAnulada`, `findDetalleById`, `findPagina` y `contarLineasPorVentas` (COUNT/SUM agrupados).
 - `bodega.repository.js` (`findActivas`, `findActivaById`), `categoria.repository.js` (`findAll`, `findById`, `findByNombre`, `create`), `autor.repository.js` y `editorial.repository.js` (`findByNombre`, `findById`, `findAll`, `create`, `upsert`), `libro.repository.js` (`findByIsbn`, `findById`, `findByIds`, `updatePrecio`, `upsert`, `create`, `searchAndList`, `findDetalleByRef`) y `movimiento.repository.js` (`getTipoMovimientoByName`, `ensureTipoMovimiento`, `createMovimiento` (acepta `ventaId` opcional, guardado como `venta_id`), `findAllWithFilters`).
 
@@ -1146,7 +1150,7 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 | Ver Sedes y Nosotros | Vista `/nosotros` | Permitido | Permitido | Permitido | Permitido |
 | Iniciar Sesión | `POST /api/auth/login` | Permitido | Permitido | Permitido | Permitido |
 | Consultar Perfil | `GET /api/auth/me` | Denegado (401) | Permitido | Permitido | Permitido |
-| Listar Usuarios Operadores | `GET /api/usuarios` | Denegado (401) | Denegado (403) | Permitido | Denegado (403) |
+| Administrar Usuarios | `GET/POST/PUT/PATCH /api/usuarios...` | Denegado (401) | Denegado (403) | Permitido | Denegado (403) |
 | Escanear ISBN Directo | `POST /api/libros/escanear` | Denegado (401) | Permitido | Permitido | Denegado (403) |
 | Consultar ISBN Previo | `POST /api/libros/consultar` | Denegado (401) | Permitido | Permitido | Denegado (403) |
 | Ingreso Stock Existente | `POST /api/libros/:id/ingreso`| Denegado (401) | Permitido | Permitido | Denegado (403) |
@@ -1164,7 +1168,7 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 ### 8.2 Diferencias con lo Declarado en AGENTS.md
 1. **Rol Usuario**: `AGENTS.md` lo describe como existente en BD y sin acceso a nada protegido. Así es en el backend (403 en endpoints protegidos). En el frontend, el menú ofrece solo las rutas públicas a este rol y `ProtectedRoute` mantiene el 403 visual ante acceso directo. No existe endpoint de autorregistro.
 2. **Escaneo por ISBN (`POST /api/libros/escanear`)**: La ruta exige `authenticate` + `authorize('Administrador', 'Empleado')`; el rol `Usuario` recibe 403 y sin token se responde 401. El frontend no lo consume.
-3. **Gestión de Empleados**: AGENTS.md la lista en "Roadmap (NO implementado)" y sus specs están en `app/docs/roadmap/`. En el código solo existe `GET /api/usuarios` (lectura).
+3. **Gestión administrativa de usuarios**: implementada en `GET/POST/PUT/PATCH /api/usuarios`; solo Administrador. La gestión de categorías sigue en el roadmap separado.
 4. **"El Empleado ve precios"**: AGENTS.md dice que el Empleado ve precios pero no los fija. En el código, el Empleado ve el precio en el Catálogo y el Detalle públicos, pero NO en la ficha del libro existente de `RegistrarLibro` (`FichaLibroExistente.jsx` la condiciona a `esAdmin`). Inventario no muestra precios.
 5. **Fijar el precio de un libro ya registrado** (resuelto): `PATCH /api/libros/:id/precio` (solo Administrador) y botón "Fijar precio" / "Cambiar precio" en `LibroDetalle`. La edición completa con `PUT /api/libros/:id` sigue en el roadmap `catalog-employee-crud`.
 

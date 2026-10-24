@@ -55,6 +55,13 @@ class UsuarioRepository {
     return plain;
   }
 
+  async emailExists(email, { excludeId, transaction } = {}) {
+    const where = sequelize.where(sequelize.fn('LOWER', sequelize.col('Usuario.email')), String(email).toLowerCase());
+    const query = { where, attributes: ['id'], ...(transaction ? { transaction } : {}) };
+    const found = await Usuario.findOne(query);
+    return Boolean(found && found.id !== excludeId);
+  }
+
   /**
    * Busca un usuario por su identificador único (UUID),
    * incluyendo su rol asociado y datos para verificación de estado y permisos.
@@ -102,6 +109,23 @@ class UsuarioRepository {
     return plain;
   }
 
+  async findRoleByName(nombre, options = {}) {
+    const rol = await Rol.findOne({ where: { nombre }, ...options });
+    return rol ? rol.get({ plain: true }) : null;
+  }
+
+  async lockRoles(transaction) {
+    return Rol.findAll({ order: [['id', 'ASC']], transaction, lock: transaction.LOCK.UPDATE });
+  }
+
+  async countActiveAdministrators(transaction) {
+    return Usuario.count({ where: { activo: true }, include: [{ model: Rol, as: 'rol', where: { nombre: 'Administrador' }, required: true }], transaction });
+  }
+
+  async findByIdForUpdate(id, transaction) {
+    return Usuario.findByPk(id, { transaction, lock: transaction.LOCK.UPDATE });
+  }
+
   /**
    * Obtiene todos los usuarios del sistema sin exponer credenciales sensibles.
    * @param {object} [options]
@@ -126,7 +150,7 @@ class UsuarioRepository {
         'creado_en',
         'actualizado_en',
       ],
-      order: [['nombre_completo', 'ASC']],
+      order: [['nombre_completo', 'ASC'], ['id', 'ASC']],
       ...(options && options.transaction ? { transaction: options.transaction } : {}),
     };
 
@@ -150,10 +174,7 @@ class UsuarioRepository {
       options && options.transaction ? { transaction: options.transaction } : {}
     );
     const plain = usuario.get({ plain: true });
-    delete plain.password_hash;
-    delete plain.dos_factores_secreto;
-    delete plain.token_recuperacion;
-    return plain;
+    return { id: plain.id, rol_id: plain.rol_id, nombre_completo: plain.nombre_completo, email: plain.email, activo: plain.activo };
   }
 
   /**
@@ -171,10 +192,7 @@ class UsuarioRepository {
     }
     await usuario.update(updateData, txOption);
     const plain = usuario.get({ plain: true });
-    delete plain.password_hash;
-    delete plain.dos_factores_secreto;
-    delete plain.token_recuperacion;
-    return plain;
+    return { id: plain.id, rol_id: plain.rol_id, nombre_completo: plain.nombre_completo, email: plain.email, activo: plain.activo };
   }
   /**
    * Obtiene todos los usuarios activos con su rol para el endpoint GET /api/usuarios.
@@ -204,7 +222,22 @@ class UsuarioRepository {
         email: plain.email,
         rol_nombre: plain.rol?.nombre ?? null,
       };
+    }).sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo) || a.id.localeCompare(b.id));
+  }
+
+  async findConRol({ incluirInactivos = false } = {}) {
+    const usuarios = await Usuario.findAll({
+      attributes: ['id', 'nombre_completo', 'email', 'activo'],
+      where: incluirInactivos ? {} : { activo: true },
+      include: [{ model: Rol, as: 'rol', attributes: ['nombre'], required: true }],
+      order: [['nombre_completo', 'ASC'], ['id', 'ASC']],
     });
+    return usuarios.map((u) => {
+      const p = u.get({ plain: true });
+      const item = { id: p.id, nombre_completo: p.nombre_completo, email: p.email, rol_nombre: p.rol?.nombre ?? null };
+      if (incluirInactivos) item.activo = p.activo;
+      return item;
+    }).sort((a, b) => a.nombre_completo.localeCompare(b.nombre_completo) || a.id.localeCompare(b.id));
   }
 }
 
