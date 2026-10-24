@@ -863,6 +863,8 @@ Reglas de la estructura: las llamadas HTTP salen solo de `services/api/`; las vi
 | `/ventas/:id` | `VentaDetalle` | `ROLES_OPERATIVOS` | Detalle de la venta; el Administrador puede anularla (`ProtectedRoute`) |
 | `*` | `Navigate` | Público | Redirige cualquier ruta desconocida a `/catalogo` |
 
+La navegación muestra Catálogo y Nosotros para público y cualquier rol; Registrar, Inventario y Ventas solo para Administrador y Empleado. Las opciones de Usuarios, Categorías, Gestión de libros, Reportes y Mi cuenta / Seguridad se incorporarán al implementar sus vistas; no se enlazan módulos pendientes. Las capacidades y roles de las rutas existentes se centralizan en `utils/roles.js`.
+
 ### 5.2 Análisis Detallado por Vista
 
 #### 1. `Catalogo.jsx` (171 líneas)
@@ -955,7 +957,8 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 ### 5.5 Guardas de Rutas y Manejo de Sesión en Cliente
 - Implementadas en `ProtectedRoute.jsx`. Mientras `loading === true` muestra `LoadingSpinner`.
 - Si `user === null`, redirige a `/login` con `state: { from: location }`.
-- Si `roles` está definido y no incluye `user.rol`, renderiza una pantalla "Acceso denegado" (403 visual) con botón al catálogo. El rol `Usuario` ve Registrar e Inventario en el `Navbar` y recibe ese 403 visual al entrar: es una decisión de producto vigente.
+- Si `roles` está definido y no incluye `user.rol`, renderiza una pantalla "Acceso denegado" (403 visual) con botón al catálogo. Los roles de ruta se evalúan mediante `puedeAcceder` de `utils/roles.js`; el rol `Usuario` conserva acceso a las rutas públicas y no ve enlaces operativos.
+- `Navbar.jsx` filtra la navegación por rol y presenta un menú móvil desplegable accesible. Su configuración contempla grupos de Administración y Mi cuenta / Seguridad que permanecen ocultos mientras no tengan vistas implementadas.
 
 ### 5.6 Configuración de Tailwind CSS y Vite
 - **Vite (`vite.config.js`)**: Puerto `5173`. Configura proxy reverso para `/api` hacia `http://localhost:3000`.
@@ -1159,7 +1162,7 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 | Anular Venta | `POST /api/ventas/:id/anular` | Denegado (401) | Denegado (403) | Permitido | Denegado (403) |
 
 ### 8.2 Diferencias con lo Declarado en AGENTS.md
-1. **Rol Usuario**: `AGENTS.md` lo describe como existente en BD y sin acceso a nada protegido. Así es en el backend (403 en endpoints protegidos). En el frontend, el `Navbar` muestra Registrar, Inventario y Ventas a cualquier sesión (incluido `Usuario`) y `ProtectedRoute` responde con el 403 visual; es una decisión de producto vigente. No existe endpoint de autorregistro.
+1. **Rol Usuario**: `AGENTS.md` lo describe como existente en BD y sin acceso a nada protegido. Así es en el backend (403 en endpoints protegidos). En el frontend, el menú ofrece solo las rutas públicas a este rol y `ProtectedRoute` mantiene el 403 visual ante acceso directo. No existe endpoint de autorregistro.
 2. **Escaneo por ISBN (`POST /api/libros/escanear`)**: La ruta exige `authenticate` + `authorize('Administrador', 'Empleado')`; el rol `Usuario` recibe 403 y sin token se responde 401. El frontend no lo consume.
 3. **Gestión de Empleados**: AGENTS.md la lista en "Roadmap (NO implementado)" y sus specs están en `app/docs/roadmap/`. En el código solo existe `GET /api/usuarios` (lectura).
 4. **"El Empleado ve precios"**: AGENTS.md dice que el Empleado ve precios pero no los fija. En el código, el Empleado ve el precio en el Catálogo y el Detalle públicos, pero NO en la ficha del libro existente de `RegistrarLibro` (`FichaLibroExistente.jsx` la condiciona a `esAdmin`). Inventario no muestra precios.

@@ -3,6 +3,7 @@ import { Navigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import LoadingSpinner from './LoadingSpinner';
 import { ShieldAlert, BookOpen } from 'lucide-react';
+import { puedeAcceder } from '../utils/roles';
 
 export default function ProtectedRoute({ children, roles }) {
   const { user, loading } = useAuth();
@@ -20,7 +21,7 @@ export default function ProtectedRoute({ children, roles }) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (roles && roles.length > 0 && !roles.includes(user.rol)) {
+  if (roles && roles.length > 0 && !puedeAcceder(user, roles)) {
     return (
       <div className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md bg-white border border-gray-200 rounded-2xl p-8 text-center shadow-sm">

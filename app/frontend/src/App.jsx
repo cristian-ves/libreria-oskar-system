@@ -12,7 +12,7 @@ import Ventas from './views/Ventas';
 import NuevaVenta from './views/NuevaVenta';
 import VentaDetalle from './views/VentaDetalle';
 import Login from './views/Login';
-import { ROLES_OPERATIVOS } from './utils/roles';
+import { ROLES_POR_RUTA } from './utils/roles';
 
 export default function App() {
   const [toast, setToast] = useState(null);
@@ -48,7 +48,7 @@ export default function App() {
           <Route
             path="/registrar"
             element={
-              <ProtectedRoute roles={ROLES_OPERATIVOS}>
+              <ProtectedRoute roles={ROLES_POR_RUTA.registrar}>
                 <RegistrarLibro onShowToast={showToast} />
               </ProtectedRoute>
             }
@@ -56,7 +56,7 @@ export default function App() {
           <Route
             path="/inventario"
             element={
-              <ProtectedRoute roles={ROLES_OPERATIVOS}>
+              <ProtectedRoute roles={ROLES_POR_RUTA.inventario}>
                 <Inventario />
               </ProtectedRoute>
             }
@@ -64,7 +64,7 @@ export default function App() {
           <Route
             path="/ventas"
             element={
-              <ProtectedRoute roles={ROLES_OPERATIVOS}>
+              <ProtectedRoute roles={ROLES_POR_RUTA.ventas}>
                 <Ventas />
               </ProtectedRoute>
             }
@@ -72,7 +72,7 @@ export default function App() {
           <Route
             path="/ventas/nueva"
             element={
-              <ProtectedRoute roles={ROLES_OPERATIVOS}>
+              <ProtectedRoute roles={ROLES_POR_RUTA.ventas}>
                 <NuevaVenta />
               </ProtectedRoute>
             }
@@ -80,7 +80,7 @@ export default function App() {
           <Route
             path="/ventas/:id"
             element={
-              <ProtectedRoute roles={ROLES_OPERATIVOS}>
+              <ProtectedRoute roles={ROLES_POR_RUTA.ventas}>
                 <VentaDetalle />
               </ProtectedRoute>
             }

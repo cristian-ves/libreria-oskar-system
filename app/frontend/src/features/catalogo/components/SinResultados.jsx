@@ -6,7 +6,7 @@ export default function SinResultados({
   hayFiltros,
   onLimpiarFiltros,
   authLoading,
-  user,
+  puedeRegistrar,
   onNavigateToScanner,
 }) {
   return (
@@ -34,7 +34,7 @@ export default function SinResultados({
               Limpiar filtros
             </button>
           ) : (
-            !authLoading && user && (
+            !authLoading && puedeRegistrar && (
               <button
                 type="button"
                 onClick={onNavigateToScanner}

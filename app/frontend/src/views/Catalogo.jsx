@@ -7,9 +7,11 @@ import DrawerFiltros from '../features/catalogo/components/DrawerFiltros';
 import EtiquetasFiltros from '../features/catalogo/components/EtiquetasFiltros';
 import BookGrid from '../features/catalogo/components/BookGrid';
 import SinResultados from '../features/catalogo/components/SinResultados';
+import { ROLES_OPERATIVOS, puedeAcceder } from '../utils/roles';
 
 export default function Catalogo({ onNavigateToScanner }) {
   const { user, loading: authLoading } = useAuth();
+  const puedeRegistrar = puedeAcceder(user, ROLES_OPERATIVOS);
   const {
     libros,
     categorias,
@@ -96,7 +98,7 @@ export default function Catalogo({ onNavigateToScanner }) {
               </button>
 
               {/* Botón "Escanear" */}
-              {!authLoading && user && (
+              {!authLoading && puedeRegistrar && (
                 <button
                   type="button"
                   onClick={onNavigateToScanner}
@@ -153,7 +155,7 @@ export default function Catalogo({ onNavigateToScanner }) {
               hayFiltros={hayFiltros}
               onLimpiarFiltros={limpiarFiltros}
               authLoading={authLoading}
-              user={user}
+              puedeRegistrar={puedeRegistrar}
               onNavigateToScanner={onNavigateToScanner}
             />
           ) : (
