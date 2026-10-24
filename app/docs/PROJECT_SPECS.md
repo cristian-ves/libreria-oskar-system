@@ -629,6 +629,9 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `GET` | `/api/health` | Ninguno (Público) | `healthController.check` | No aplica | No aplica (usa `testSequelizeConnection()`) | Monitoreo de salud para Cloud Run / Docker. Responde 200 `healthy` o 503 `degraded` (formato propio, sin envoltorio `status: 'success'`). |
 | `GET` | `/api/bodegas` | Ninguno (Público) | `bodegaController.listar` | `bodegaService.listarActivas` | `bodegaRepository.findActivas` | Listado de bodegas activas con su sucursal. |
 | `GET` | `/api/categorias`| Ninguno (Público) | `categoriaController.listar` | `categoriaService.listar` | `categoriaRepository.findAll` | Catálogo de categorías temáticas ordenadas. |
+| `POST` | `/api/categorias` | `authenticate`, `authorize('Administrador')` | `categoriaController.crear` | `categoriaService.crear` | `categoriaRepository.findByNombre`, `create` | Crea una categoría; recorta nombre, exige valor no vacío y rechaza duplicados sin distinguir mayúsculas (409). |
+| `PUT` | `/api/categorias/:id` | `authenticate`, `authorize('Administrador')` | `categoriaController.renombrar` | `categoriaService.renombrar` | `findById`, `findByNombre`, `updateNombre` | Renombra una categoría; valida UUID, existencia y duplicados (409), permite conservar el nombre y no altera libros asociados. |
+| `DELETE` | `/api/categorias/:id` | `authenticate`, `authorize('Administrador')` | `categoriaController.eliminar` | `categoriaService.eliminar` | `findById`, `countLibros`, `delete` | Elimina solo si no tiene libros; con asociaciones devuelve 409 e indica la cantidad. |
 | `GET` | `/api/usuarios` | `authenticate`, `authorize('Administrador')` | `usuarioController.listar` | `usuarioService.listar` | `usuarioRepository.findActivosConRol` / `findConRol` | Sin parámetros conserva la lista de usuarios activos y su forma original; `?incluirInactivos=true` incluye activos e inactivos con `activo`. |
 | `POST` | `/api/usuarios` | `authenticate`, `authorize('Administrador')` | `usuarioController.crear` | `usuarioService.crear` | `usuarioRepository.create`, `findRoleByName`, `emailExists` | Crea Administrador o Empleado activo; normaliza email y aplica política de contraseña y bcrypt. |
 | `PUT` | `/api/usuarios/:id` | `authenticate`, `authorize('Administrador')` | `usuarioController.actualizar` | `usuarioService.actualizar` | `usuarioRepository.findByIdForUpdate`, `update`, `findRoleByName` | Edita nombre, correo, rol y estado; protege rol propio y último Administrador activo. No cambia contraseña. |
@@ -682,7 +685,7 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 Todos son instancias de clase exportadas (`module.exports = new XController()`).
 - `health.controller.js`: `check(req, res)`: llama a `testSequelizeConnection()`; responde 200 `healthy` o 503 `degraded`.
 - `bodega.controller.js`: `listar` → `bodegaService.listarActivas`.
-- `categoria.controller.js`: `listar` → `categoriaService.listar`.
+- `categoria.controller.js`: `listar`, `crear`, `renombrar` y `eliminar` delegan en `categoriaService`; el GET público conserva su respuesta `{ status: 'success', data }`.
 - `usuario.controller.js`: `listar` → `usuarioService.listarActivosConRol`.
 - `auth.controller.js`:
   - `login(req, res, next)`: Extrae `email` y `password`, llama a `authService.login`, responde con HTTP 200.
@@ -700,7 +703,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 
 #### Capa de Servicios (`src/services/`)
 - `auth.service.js`: `login({ email, password })`: valida presencia de campos, busca usuario por email, compara con `bcrypt.compare`, valida estado `activo` y firma el JWT con `jwt.sign`.
-- `bodega.service.js` (`listarActivas`), `categoria.service.js` (`listar`), `usuario.service.js` (`listarActivosConRol`): delegan en su repositorio.
+- `bodega.service.js` (`listarActivas`), `categoria.service.js` (`listar`, `crear`, `renombrar`, `eliminar`) y `usuario.service.js` (`listarActivosConRol`): delegan en sus repositorios. Categorías valida nombres (recorte, no vacío y unicidad case-insensitive) y UUID; impide borrar categorías con libros asociados.
 - `catalogo.service.js`: `listar({ q, categoriaId, categoria_id })` (agrega `ref`) y `detalle(ref)` (`parseRef`; `ValidationError` si la ref es inválida, `NotFoundError` si no existe).
 - `googleBooks.service.js`: `normalizarIsbn`, `buscarPorIsbn(rawIsbn)` (caché de 1 h; cascada Google Books → OpenLibrary → `FALLBACK_CATALOG`), `_consultarGoogleBooks` y `_consultarFallbackOpenLibrary`.
 - `libro.service.js` es una **fachada**: una instancia de la clase `LibroService` vacía a cuyo prototipo se le aplica `Object.assign` con los módulos de `services/libro/`. Los consumidores (controlador, pruebas) importan la fachada, no los módulos internos:
@@ -728,7 +731,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 - `usuario.repository.js`: `findByEmail`, `findById`, `findAll`, `create`, `update`, `findActivosConRol`, `findConRol`, `findRoleByName`, `emailExists`, `findByIdForUpdate`, `lockRoles` y `countActiveAdministrators`. El listado predeterminado conserva la forma anterior y ordena en memoria con `localeCompare` y desempate por ID para igualar orden de forma determinista. `findAll` y `findActivosConRol` tienen contratos distintos.
 - `usuario.service.js` concentra las validaciones y reglas del CRUD. Cambios que afectan roles/estado y altas serializan al bloquear las filas de roles en orden de ID dentro de una transacción. `utils/passwordPolicy.js` exige 10 caracteres, letra, número y un máximo de 72 bytes UTF-8 antes de aplicar bcrypt.
 - `venta.repository.js` (solo Sequelize, sin SQL crudo): `createVenta`, `createDetalles`, `findByIdForUpdate` (exige `{ transaction }`), `findLineasByVenta`, `marcarAnulada`, `findDetalleById`, `findPagina` y `contarLineasPorVentas` (COUNT/SUM agrupados).
-- `bodega.repository.js` (`findActivas`, `findActivaById`), `categoria.repository.js` (`findAll`, `findById`, `findByNombre`, `create`), `autor.repository.js` y `editorial.repository.js` (`findByNombre`, `findById`, `findAll`, `create`, `upsert`), `libro.repository.js` (`findByIsbn`, `findById`, `findByIds`, `updatePrecio`, `upsert`, `create`, `searchAndList`, `findDetalleByRef`) y `movimiento.repository.js` (`getTipoMovimientoByName`, `ensureTipoMovimiento`, `createMovimiento` (acepta `ventaId` opcional, guardado como `venta_id`), `findAllWithFilters`).
+- `bodega.repository.js` (`findActivas`, `findActivaById`), `categoria.repository.js` (`findAll`, `findById`, `findByNombre`, `create`, `updateNombre`, `countLibros`, `delete`), `autor.repository.js` y `editorial.repository.js` (`findByNombre`, `findById`, `findAll`, `create`, `upsert`), `libro.repository.js` (`findByIsbn`, `findById`, `findByIds`, `updatePrecio`, `upsert`, `create`, `searchAndList`, `findDetalleByRef`) y `movimiento.repository.js` (`getTipoMovimientoByName`, `ensureTipoMovimiento`, `createMovimiento` (acepta `ventaId` opcional, guardado como `venta_id`), `findAllWithFilters`).
 
 #### Manejo de Transacciones y Control de Concurrencia
 - **Mecanismo transaccional**: `sequelize.transaction(async (transaction) => { ... })`. Todas las llamadas ORM dentro de la unidad de trabajo reciben `{ transaction }`.
@@ -810,6 +813,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 | `tests/libroServiceSequelize.test.js` | 12 | Integración | `libreria_oskar_test` | Escaneo, registro por rol, ingresos repetidos y atomicidad (mock de `googleBooksService`). Importa `config/db`. |
 | `tests/escanear.integration.test.js` | 8 | Integración | `libreria_oskar_test` | Escaneo con sembrado dinámico y rollback inducido. Importa `config/db`. |
 | `tests/api.e2e.test.js` | 22 | End-to-End | `libreria_oskar_test` | Endpoints HTTP reales vía servidor Express temporal. Importa `config/db`. |
+| `tests/categoriasCrud.e2e.test.js` | 4 grupos | End-to-End | `libreria_oskar_test` | CRUD administrativo de categorías: validación, duplicados, roles, respuestas y GET público; limpia fixtures temporales. |
 | `tests/ventasEsquema.test.js` | 7 | Integración | `libreria_oskar_test` | Esquema de ventas: correlativo `numero`, valores por defecto, CHECK, `uq_venta_libro`, FK RESTRICT, Salida con `venta_id` (trigger) y asociaciones. No importa `config/db`. |
 | `tests/ventasUtils.test.js` | 9 | Unitaria | No requiere | `utils/ventas.js`: centavos, redondeo exacto, rechazos, código `V-xxxxxx`, desbordamiento y rango de fechas de Guatemala. |
 | `tests/ventasServicio.test.js` | 11 | Integración | `libreria_oskar_test` | Crear venta: importes, precio de BD, actor, defaults, rechazos sin persistir (precio 0, stock, 404, descuento, desborde NUMERIC) y rollback con fallo en la segunda línea. No importa `config/db`. |
@@ -885,6 +889,7 @@ La navegación muestra Catálogo y Nosotros para público y cualquier rol; Regis
 - **Responsabilidades**: Orquesta la vista; la lógica está en `features/catalogo/hooks/useCatalogo.js` (estado de libros, categorías, búsqueda con debounce propio por `setTimeout`, categoría seleccionada y drawer móvil; sincroniza `q` y `categoriaId` con los query params de la URL).
 - **Endpoints consumidos** (vía `services/api/catalogo.api.js`, `fetch` directo): `GET /api/categorias` y `GET /api/libros?q=...&categoriaId=...`.
 - **Componentes**: `PanelFiltros`, `DrawerFiltros`, `EtiquetasFiltros`, `BookGrid`, `SinResultados` (en `features/catalogo/components/`; `BtnCategoria` lo usan los paneles), `Footer`.
+- Los filtros agrupan visualmente bajo «Ramas del Derecho» toda categoría cuyo nombre comienza por «Derecho», sin distinguir mayúsculas. Renombrar una categoría puede cambiar su agrupación visual; el endpoint público y esta regla del catálogo permanecen sin cambios.
 - **Precio**: `BookGrid` usa `formatPrecio`: `Q 12.50` o "Precio por confirmar".
 
 #### 2. `LibroDetalle.jsx` (66 líneas)

@@ -23,6 +23,9 @@ router.patch('/usuarios/:id/activo', authenticate, authorize('Administrador'), u
 
 // Listado de categorías temáticas para catálogo y filtros
 router.get('/categorias', categoriaController.listar.bind(categoriaController));
+router.post('/categorias', authenticate, authorize('Administrador'), categoriaController.crear.bind(categoriaController));
+router.put('/categorias/:id', authenticate, authorize('Administrador'), categoriaController.renombrar.bind(categoriaController));
+router.delete('/categorias/:id', authenticate, authorize('Administrador'), categoriaController.eliminar.bind(categoriaController));
 
 // Rutas de módulos
 router.use('/auth', authRoutes);

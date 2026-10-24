@@ -17,6 +17,27 @@ class CategoriaController {
       next(err);
     }
   }
+
+  async crear(req, res, next) {
+    try {
+      const data = await categoriaService.crear(req.body);
+      res.status(201).json({ status: 'success', data });
+    } catch (err) { next(err); }
+  }
+
+  async renombrar(req, res, next) {
+    try {
+      const data = await categoriaService.renombrar(req.params.id, req.body);
+      res.status(200).json({ status: 'success', data });
+    } catch (err) { next(err); }
+  }
+
+  async eliminar(req, res, next) {
+    try {
+      const data = await categoriaService.eliminar(req.params.id);
+      res.status(200).json({ status: 'success', data });
+    } catch (err) { next(err); }
+  }
 }
 
 module.exports = new CategoriaController();

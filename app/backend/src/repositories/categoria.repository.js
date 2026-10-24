@@ -1,4 +1,4 @@
-const { Categoria, sequelize } = require('../models');
+const { Categoria, Libro, sequelize } = require('../models');
 
 class CategoriaRepository {
   /**
@@ -71,6 +71,28 @@ class CategoriaRepository {
       options && options.transaction ? { transaction: options.transaction } : {}
     );
     return item.get({ plain: true });
+  }
+
+  async updateNombre(id, nombre, options = {}) {
+    const [updated] = await Categoria.update(
+      { nombre },
+      { where: { id }, returning: true, ...(options.transaction ? { transaction: options.transaction } : {}) }
+    );
+    return updated ? Categoria.findByPk(id, { raw: true, ...(options.transaction ? { transaction: options.transaction } : {}) }) : null;
+  }
+
+  async countLibros(id, options = {}) {
+    return Libro.count({
+      where: { categoria_id: id },
+      ...(options.transaction ? { transaction: options.transaction } : {}),
+    });
+  }
+
+  async delete(id, options = {}) {
+    return Categoria.destroy({
+      where: { id },
+      ...(options.transaction ? { transaction: options.transaction } : {}),
+    });
   }
 }
 
