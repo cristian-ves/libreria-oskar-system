@@ -854,7 +854,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 ```text
 src/
 ├── App.jsx, main.jsx, index.css
-├── views/                  Orquestadores de ruta (Catalogo, LibroDetalle, RegistrarLibro, Inventario, Usuarios, Categorias, Login, Nosotros, Ventas, NuevaVenta, VentaDetalle)
+├── views/                  Orquestadores de ruta (Catalogo, LibroDetalle, RegistrarLibro, Inventario, Usuarios, Categorias, GestionLibros, Login, Nosotros, Ventas, NuevaVenta, VentaDetalle)
 ├── components/             Compartidos: Navbar, Footer, Toast, LoadingSpinner, ModalPrecioLibro, ProtectedRoute, BarcodeScanner, EstadoEscaner
 │   └── ui/                 Modal, ErrorBox, FieldLabel, Input, ControlCantidad, OpcionesSegmentadas, Select, Paginacion
 ├── context/                AuthContext.jsx
@@ -864,9 +864,10 @@ src/
 │   ├── registrar-libro/    components/ + hooks/ (useRegistrarLibro) + validacion.js + camposFaltantes.js
 │   ├── ventas/             components/ + hooks/ (useNuevaVenta, useVentas, useVentaDetalle)
 │   ├── usuarios/           components/ + hooks/ (useUsuarios)
-│   └── categorias/         components/ + hooks/ (useCategorias)
+│   ├── categorias/         components/ + hooks/ (useCategorias)
+│   └── libros/             components/ + hooks/ (useGestionLibros)
 ├── hooks/                  useDebouncedValue.js, useCamaraEscaner.js, useGeometriaEscaner.js, useDiagnosticoEscaner.js
-├── services/api/           client.js, auth.api.js, catalogo.api.js, bodegas.api.js, categorias.api.js, inventario.api.js, libros.api.js, ventas.api.js, usuarios.api.js
+├── services/api/           client.js, auth.api.js, catalogo.api.js, bodegas.api.js, categorias.api.js, inventario.api.js, libros.api.js, librosAdmin.api.js, ventas.api.js, usuarios.api.js
 └── utils/                  tokenStorage.js, roles.js, formatters.js, parsers.js, dinero.js, cargarDetectorDeCodigos.js, errorCamara.js, geometriaEscaner.js
 ```
 
@@ -888,9 +889,10 @@ Reglas de la estructura: las llamadas HTTP salen solo de `services/api/`; las vi
 | `/ventas/:id` | `VentaDetalle` | `ROLES_OPERATIVOS` | Detalle de la venta; el Administrador puede anularla (`ProtectedRoute`) |
 | `/usuarios` | `Usuarios` | `ROLES_POR_RUTA.usuarios` (`Administrador`) | Gestión de cuentas, búsqueda, filtros, alta, edición y activación/desactivación (`ProtectedRoute`) |
 | `/categorias` | `Categorias` | `ROLES_POR_RUTA.categorias` (`Administrador`) | Gestión de categorías, búsqueda, conteo de libros, alta, renombrado y eliminación protegida (`ProtectedRoute`) |
+| `/libros/gestion` | `GestionLibros` | `ROLES_POR_RUTA.gestionLibros` (`Administrador`) | Listado paginado de libros activos e inactivos, edición bibliográfica y baja/reactivación lógica (`ProtectedRoute`) |
 | `*` | `Navigate` | Público | Redirige cualquier ruta desconocida a `/catalogo` |
 
-La navegación muestra Catálogo y Nosotros para público y cualquier rol; Registrar, Inventario y Ventas solo para Administrador y Empleado; Usuarios y Categorías aparecen en Administración solo para Administrador. Gestión de libros, Reportes y Mi cuenta / Seguridad siguen pendientes. Las capacidades y roles de las rutas se centralizan en `utils/roles.js`.
+La navegación muestra Catálogo y Nosotros para público y cualquier rol; Registrar, Inventario y Ventas solo para Administrador y Empleado; Usuarios, Categorías y Gestión de libros aparecen en Administración solo para Administrador. Reportes y Mi cuenta / Seguridad siguen pendientes. Las capacidades y roles de las rutas se centralizan en `utils/roles.js`.
 
 ### 5.2 Análisis Detallado por Vista
 
@@ -907,6 +909,14 @@ La navegación muestra Catálogo y Nosotros para público y cualquier rol; Regis
 - `TablaCategorias.jsx` muestra tabla en escritorio y tarjetas en móvil; `FormularioCategoria.jsx` reutiliza alta y renombrado, muestra errores del backend y explica la agrupación automática de «Derecho» en el catálogo.
 - `services/api/categorias.api.js` usa `apiFetch` para `GET /api/categorias/admin`, `POST /api/categorias`, `PUT /api/categorias/:id` y `DELETE /api/categorias/:id`. El GET público del catálogo sigue siendo `/api/categorias`.
 - **Prueba manual pendiente**: Administrador (búsqueda, crear, renombrar, duplicados, borrado vacío y conflicto con conteo de libros); Empleado y Usuario (acceso denegado); visitante (redirige a login); verificar teclado, móvil y escritorio.
+
+#### Gestión administrativa de libros (`GestionLibros.jsx`)
+- `views/GestionLibros.jsx` orquesta `features/libros/hooks/useGestionLibros.js`; `/libros/gestion` exige Administrador mediante `ProtectedRoute` y `ROLES_POR_RUTA.gestionLibros`. Navbar la muestra solo en Administración para dicho rol.
+- `FiltrosGestionLibros.jsx` ofrece búsqueda por título, categoría y estado admitidos por backend. `TablaGestionLibros.jsx` presenta tabla de escritorio y tarjetas adaptables, con ISBN, estado textual, precio de solo lectura cuando viene en el listado y acciones. `Paginacion` reutiliza el control compartido, con tamaño inicial 20 y opciones 20/50/100.
+- `useGestionLibros.js` cancela solicitudes de listado obsoletas, aplica debounce a la búsqueda y conserva filtros/página al recargar tras una operación. `services/api/librosAdmin.api.js` usa `apiFetch` para `GET /api/libros/admin?q=&categoriaId=&estado=&limit=&offset=`, `PUT /api/libros/:id` y `PATCH /api/libros/:id/activo`.
+- `FormularioEditarLibro.jsx` precarga título, autor, editorial, categoría, reseña, imagen e ISBN. Valida requeridos, autor marcador e ISBN-10/13 mediante checksum; presenta errores del backend, incluido ISBN duplicado 409. El PUT no incluye precio ni existencias; el precio conserva el flujo independiente `PATCH /api/libros/:id/precio` y `ModalPrecioLibro`.
+- La desactivación solicita confirmación y explica que el libro deja el catálogo y no se vende, pero conserva inventario e historial. Reactivar usa el mismo endpoint sin confirmación. El backend sigue siendo la autoridad para impedir operaciones sobre libros inactivos.
+- **Prueba manual pendiente**: Administrador (edición, ISBN duplicado, desactivación/reactivación, filtros y páginas); Empleado/Usuario (acceso denegado); visitante sin sesión (redirige a login); comprobar teclado, escritorio y móvil.
 
 #### 1. `Catalogo.jsx` (171 líneas)
 - **Responsabilidades**: Orquesta la vista; `features/catalogo/hooks/useCatalogo.js` mantiene libros, filtros y paginación. Sincroniza `q` y `categoriaId` con la URL, reinicia el offset al cambiar filtros o tamaño y cancela solicitudes obsoletas. El tamaño inicial es 12 (opciones 12, 24 y 48); la lista solicita `limit` y `offset` al backend y consume `total`.
@@ -964,7 +974,7 @@ La navegación muestra Catálogo y Nosotros para público y cualquier rol; Regis
 | `Footer` | `components/Footer.jsx` | Ninguna | Pie de página. |
 | `LoadingSpinner` | `components/LoadingSpinner.jsx` | `message` (String, default: "Cargando...") | Spinner para llamadas asíncronas. |
 | `Toast` | `components/Toast.jsx` | `toast` (Objeto), `onClose` (Función) | Notificación flotante con temporizador; capa `z-[60]`, por encima de Navbar, `Modal`, `LoadingSpinner` y `DrawerFiltros` (`z-50`). |
-| `ModalPrecioLibro` | `components/ModalPrecioLibro.jsx` | `libro`, `onClose`, `onSuccess` | Modal (sobre `ui/Modal`) que muestra título y precio actual, pide el nuevo precio y llama a `actualizarPrecioLibro` (`PATCH /api/libros/:id/precio`); muestra `message` y `details` con `ErrorBox`. Llama `onSuccess(json.data)` con el libro actualizado. Lo usan `LibroDetalle` y `FichaLibroExistente`. |
+| `ModalPrecioLibro` | `components/ModalPrecioLibro.jsx` | `libro`, `onClose`, `onSuccess` | Modal (sobre `ui/Modal`) que muestra título y precio actual, pide el nuevo precio y llama a `actualizarPrecioLibro` (`PATCH /api/libros/:id/precio`); muestra `message` y `details` con `ErrorBox`. Llama `onSuccess(json.data)` con el libro actualizado. Lo usan `LibroDetalle` y `FichaLibroExistente`; gestión bibliográfica no modifica precios. |
 | `ControlCantidad` | `components/ui/ControlCantidad.jsx` | `cantidad` (texto), `onChange`, `max` (opcional), `disabled`, `titulo` (opcional) | Botones − y + alrededor de un input numérico (mín. 1, 44 px). Sin `max` no hay tope y el input no lleva `max`. Lo usan `LineasVenta` (con `max` = stock), `FormularioIngreso` y `FormularioRegistro` (sin `max`). |
 | `Paginacion` | `components/ui/Paginacion.jsx` | `paginaActual`, `totalResultados`, `tamanoPagina`, `opcionesTamano`, `onCambiarPagina`, `onCambiarTamano`, `cargando`, `etiquetaResultados` | Control accesible y adaptable para cambiar página y tamaño; deshabilita acciones durante carga y en los extremos. Se usa en catálogo e inventario. |
 | `BarcodeScanner` | `components/BarcodeScanner.jsx` | `onScanSuccess`, `isProcessing`, `onClose` (opcional) | Vista del escáner (139 líneas): JSX (selector de cámara, entrada manual, «Cerrar visor», visor con el overlay de error dentro, `EstadoEscaner` debajo del visor), el estado de la entrada manual y el cableado de los tres hooks de abajo. Se usa desde `PanelLateral`. Lee solo EAN-13, EAN-8, UPC-A y UPC-E; el resto del comportamiento (resolución ideal 1280x720, `qrbox` en función, ancho lógico de 800 px con `transform: scale()`, alto visible máximo 1:1 (`MAX_VISIBLE_RATIO = 1`), apagado según `getState()`, arranque único con callback e `isProcessing` por `useRef`, cooldown de 3 s, fases `iniciando`/`buscando`/`ayuda` con ayuda tras 8 s, `navigator.vibrate?.(80)`, espera de `cargarDetectorDeCodigos()` antes de `new Html5Qrcode` y su lector de respaldo WASM) vive en los hooks y utilidades descritos en las filas siguientes. En desarrollo hay un botón «Diag escáner» con una línea de diagnóstico (incluye `motor: nativo \| wasm \| js`); no llega al build. Lectura real con cámara pendiente de prueba manual (ver §9). |
@@ -1212,7 +1222,7 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 2. **Escaneo por ISBN (`POST /api/libros/escanear`)**: La ruta exige `authenticate` + `authorize('Administrador', 'Empleado')`; el rol `Usuario` recibe 403 y sin token se responde 401. El frontend no lo consume.
 3. **Gestión administrativa de usuarios**: implementada en backend y en la ruta protegida `/usuarios`; solo Administrador. La gestión de categorías sigue en el roadmap separado.
 4. **"El Empleado ve precios"**: AGENTS.md dice que el Empleado ve precios pero no los fija. En el código, el Empleado ve el precio en el Catálogo y el Detalle públicos, pero NO en la ficha del libro existente de `RegistrarLibro` (`FichaLibroExistente.jsx` la condiciona a `esAdmin`). Inventario no muestra precios.
-5. **Administración de libros** (backend implementado, interfaz pendiente): `GET /api/libros/admin`, `PUT /api/libros/:id` y `PATCH /api/libros/:id/activo` requieren Administrador. `PATCH /api/libros/:id/precio` se conserva para precio. Inactivos se excluyen del catálogo y de ventas/ingresos, pero permanecen en inventario e historial; no se borran físicamente.
+5. **Administración de libros**: backend y pantalla `/libros/gestion` implementados. `GET /api/libros/admin`, `PUT /api/libros/:id` y `PATCH /api/libros/:id/activo` requieren Administrador. `PATCH /api/libros/:id/precio` se conserva como flujo separado. Inactivos se excluyen del catálogo y de ventas/ingresos, pero permanecen en inventario e historial; no se borran físicamente. Prueba manual de roles, formularios y navegación adaptable pendiente.
 
 ### 8.3 Ocultamiento de Precios al Empleado (Comportamiento Exacto)
 - **En Backend (`POST /api/libros/registrar`)**: `libroService.registrarLibro` (`services/libro/registro.service.js`) evalúa `esAdmin = (usuarioRol === 'Administrador')`. Si el usuario no es Administrador, ignora cualquier `precio` enviado, fuerza `precio = 0` y devuelve `"precio_pendiente": true`.
@@ -1263,8 +1273,8 @@ Cada ítem cita su archivo como evidencia. Resueltos y retirados de esta secció
    - Roadmap; spec en `app/docs/roadmap/inventory-email-alerts/`.
    - **Estado real**: Existe el módulo de correo `services/mail/` (`mail.service.js`, dependencia `nodemailer`), pero ningún código lo consume; las alertas de inventario siguen sin implementar y no hay tareas programadas.
 3. **CRUD Administrativo de Catálogo y Empleados**:
-   - Roadmap; spec en `app/docs/roadmap/catalog-employee-crud/`. Los CRUD de usuarios/categorías ya están integrados; la administración de libros ya tiene endpoints backend y queda pendiente su interfaz React.
-   - **Estado real**: El CRUD administrativo de usuarios está disponible en `GET/POST/PUT/PATCH /api/usuarios` y la vista protegida `/usuarios`. Para libros, edición y baja lógica ya están disponibles en backend (`GET /api/libros/admin`, `PUT /api/libros/:id`, `PATCH /api/libros/:id/activo`); la interfaz React sigue pendiente. El precio conserva su endpoint independiente `PATCH /api/libros/:id/precio`.
+   - Roadmap; spec en `app/docs/roadmap/catalog-employee-crud/`. Los CRUD de usuarios/categorías están integrados; la gestión administrativa de libros también cuenta con backend y vista protegida.
+   - **Estado real**: El CRUD administrativo de usuarios está disponible en `GET/POST/PUT/PATCH /api/usuarios` y la vista protegida `/usuarios`. La gestión de libros está disponible en `/libros/gestion`, respaldada por `GET /api/libros/admin`, `PUT /api/libros/:id` y `PATCH /api/libros/:id/activo`; el precio conserva su endpoint independiente `PATCH /api/libros/:id/precio`.
 4. **Ventas**:
    - Diseño en `app/docs/roadmap/ventas/SPEC.md`.
    - **Estado real**: Esquema, API e interfaz implementados; los reportes de ventas no forman parte de este módulo (corresponden a reportes aparte). La venta de libros inactivos se rechaza con 409 antes de persistir. Ambos roles operativos siguen viendo todas las ventas.

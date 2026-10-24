@@ -22,6 +22,7 @@ const seccionesNavegacion = [
     id: 'administracion', label: 'Administración', enlaces: [
       { path: '/usuarios', label: 'Usuarios', icon: Users, roles: [ROLES.ADMINISTRADOR] },
       { path: '/categorias', label: 'Categorías', icon: Tags, roles: [ROLES.ADMINISTRADOR] },
+      { path: '/libros/gestion', label: 'Gestión de libros', icon: BookOpen, roles: [ROLES.ADMINISTRADOR] },
     ],
   },
   { id: 'cuenta', label: 'Mi cuenta / Seguridad', enlaces: [] },
