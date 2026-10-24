@@ -38,7 +38,7 @@ export default function TablaExistencias({
               key={chip.id}
               type="button"
               onClick={() => setEstadoFilter(chip.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-150 cursor-pointer ${
+              className={`min-h-11 px-3 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-150 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b07c19] ${
                 estadoFilter === chip.id
                   ? 'bg-[#e19922] text-[#252525] shadow-xs'
                   : 'bg-[#f3f3f3] text-[#252525] hover:bg-[#b07c19] hover:text-white border border-gray-200'
@@ -54,17 +54,18 @@ export default function TablaExistencias({
           <div className="relative w-full sm:w-64">
             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
-              type="text"
+              type="search"
+              aria-label="Buscar existencias por título, autor o ISBN"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Buscar título, autor, ISBN..."
-              className="w-full bg-[#f3f3f3] border border-gray-200 text-[#252525] text-xs rounded-xl pl-9 pr-3.5 py-2 outline-none focus:border-[#b07c19] transition-all placeholder:text-gray-400"
+              className="w-full min-h-11 bg-[#f3f3f3] border border-gray-200 text-[#252525] text-xs rounded-xl pl-9 pr-12 py-2 outline-none focus:border-[#b07c19] focus:ring-1 focus:ring-[#b07c19] transition-all placeholder:text-gray-400"
             />
             {searchInput && (
               <button
                 type="button"
                 onClick={() => setSearchInput('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#252525]"
+                className="absolute right-1 top-1/2 -translate-y-1/2 min-h-11 min-w-11 flex items-center justify-center rounded-lg text-gray-500 hover:text-[#252525] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#b07c19]"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -74,7 +75,8 @@ export default function TablaExistencias({
           <select
             value={selectedBodega}
             onChange={(e) => setSelectedBodega(e.target.value)}
-            className="w-full sm:w-52 bg-[#f3f3f3] border border-gray-200 text-[#252525] text-xs rounded-xl px-3 py-2 outline-none focus:border-[#b07c19] transition-all cursor-pointer font-medium"
+            aria-label="Filtrar existencias por bodega"
+            className="w-full min-h-11 sm:w-52 bg-[#f3f3f3] border border-gray-200 text-[#252525] text-xs rounded-xl px-3 py-2 outline-none focus:border-[#b07c19] focus:ring-1 focus:ring-[#b07c19] transition-all cursor-pointer font-medium"
           >
             <option value="">Todas las bodegas</option>
             {bodegas.map((b) => (
@@ -115,7 +117,7 @@ export default function TablaExistencias({
       ) : (
         <>
           {/* Tabla para pantallas grandes */}
-          <div className="hidden md:block bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+          <div className="hidden lg:block bg-white border border-gray-200 rounded-2xl overflow-x-auto shadow-sm">
             <table className="w-full text-left text-xs">
               <thead className="bg-[#f3f3f3] text-gray-600 font-bold uppercase tracking-wider border-b border-gray-200">
                 <tr>
@@ -206,7 +208,7 @@ export default function TablaExistencias({
           </div>
 
           {/* Tarjetas apiladas para móvil */}
-          <div className="md:hidden space-y-3">
+          <div className="lg:hidden space-y-3">
             {existencias.map((item) => (
               <div
                 key={item.inventario_id}
@@ -250,21 +252,24 @@ export default function TablaExistencias({
                   <button
                     type="button"
                     onClick={() => abrirModalSalida(item)}
-                    className="py-1.5 text-center text-xs font-bold rounded-xl bg-red-600 text-white active:scale-95 transition-all"
+                    aria-label={`Registrar salida de ${item.titulo}`}
+                    className="min-h-11 text-center text-xs font-bold rounded-xl bg-red-600 text-white active:scale-95 transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
                   >
                     Salida
                   </button>
                   <button
                     type="button"
                     onClick={() => abrirModalAjuste(item)}
-                    className="py-1.5 text-center text-xs font-bold rounded-xl bg-[#b07c19] text-white active:scale-95 transition-all"
+                    aria-label={`Ajustar existencias de ${item.titulo}`}
+                    className="min-h-11 text-center text-xs font-bold rounded-xl bg-[#b07c19] text-white active:scale-95 transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#252525]"
                   >
                     Ajuste
                   </button>
                   <button
                     type="button"
                     onClick={() => handleVerKardex(item)}
-                    className="py-1.5 text-center text-xs font-semibold rounded-xl bg-[#f3f3f3] text-[#252525] border border-gray-200 active:scale-95 transition-all"
+                    aria-label={`Ver Kardex de ${item.titulo}`}
+                    className="min-h-11 text-center text-xs font-semibold rounded-xl bg-[#f3f3f3] text-[#252525] border border-gray-200 active:scale-95 transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b07c19]"
                   >
                     Kardex
                   </button>

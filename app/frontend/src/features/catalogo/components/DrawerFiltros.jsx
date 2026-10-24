@@ -73,7 +73,7 @@ export default function DrawerFiltros({
               <button
                 type="button"
                 onClick={onClose}
-                className="text-gray-400 hover:text-[#252525] p-1 rounded-lg hover:bg-gray-100 transition-colors"
+                className="text-gray-400 hover:text-[#252525] min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors"
                 aria-label="Cerrar filtros"
               >
                 <X className="w-5 h-5" />
@@ -166,7 +166,7 @@ export default function DrawerFiltros({
                 onClose();
               }}
               disabled={!hayFiltrosEnCajon}
-              className="w-full text-center text-xs text-gray-500 hover:text-[#252525] disabled:opacity-40 py-2.5 px-4 rounded-xl border border-gray-200 bg-[#f3f3f3] transition-colors min-h-[40px] flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed font-medium"
+              className="w-full text-center text-xs text-gray-500 hover:text-[#252525] disabled:opacity-40 py-2.5 px-4 rounded-xl border border-gray-200 bg-[#f3f3f3] transition-colors min-h-[44px] flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed font-medium"
             >
               <X className="w-3.5 h-3.5" />
               <span>Limpiar filtros</span>

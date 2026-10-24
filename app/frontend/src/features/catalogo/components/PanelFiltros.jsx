@@ -27,7 +27,7 @@ export default function PanelFiltros({
           placeholder="Título, autor o ISBN..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full bg-[#f3f3f3] border border-gray-200 text-[#252525] placeholder-gray-400 text-xs rounded-xl pl-9 pr-3 py-2.5 min-h-[40px] outline-none focus:border-[#b07c19] focus:ring-1 focus:ring-[#b07c19] transition-all"
+            className="w-full bg-[#f3f3f3] border border-gray-200 text-[#252525] placeholder-gray-400 text-xs rounded-xl pl-9 pr-3 py-2.5 min-h-[44px] outline-none focus:border-[#b07c19] focus:ring-1 focus:ring-[#b07c19] transition-all"
         />
       </div>
 
@@ -94,7 +94,7 @@ export default function PanelFiltros({
           <button
             type="button"
             onClick={onLimpiarFiltros}
-            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#b07c19] transition-colors min-h-[38px] font-medium"
+            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#b07c19] transition-colors min-h-[44px] font-medium"
           >
             <X className="w-3.5 h-3.5" />
             Limpiar filtros

@@ -51,7 +51,7 @@ export default function FormularioUsuario({ usuario, guardando, error, onClose, 
           </h2>
           <p className="text-xs text-gray-500 mt-1">Completa los datos de acceso y el rol asignado.</p>
         </div>
-        <button type="button" onClick={onClose} disabled={guardando} aria-label="Cerrar formulario" className="p-1 text-gray-400 hover:text-[#252525] disabled:opacity-40">
+        <button type="button" onClick={onClose} disabled={guardando} aria-label="Cerrar formulario" className="min-h-11 min-w-11 flex items-center justify-center rounded-lg text-gray-400 hover:text-[#252525] disabled:opacity-40">
           <X aria-hidden="true" className="w-5 h-5" />
         </button>
       </div>

@@ -57,7 +57,7 @@ export default function TablaKardex({
                 setKardexTipo(chip.id);
                 setKardexOffset(0);
               }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-150 cursor-pointer ${
+              className={`min-h-11 px-3 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-150 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#b07c19] ${
                 kardexTipo === chip.id
                   ? 'bg-[#e19922] text-[#252525] shadow-xs'
                   : 'bg-[#f3f3f3] text-[#252525] hover:bg-[#b07c19] hover:text-white border border-gray-200'
@@ -70,12 +70,13 @@ export default function TablaKardex({
 
         {/* Dropdown de Bodega */}
         <select
+          aria-label="Filtrar movimientos por bodega"
           value={kardexBodega}
           onChange={(e) => {
             setKardexBodega(e.target.value);
             setKardexOffset(0);
           }}
-          className="w-full sm:w-56 bg-[#f3f3f3] border border-gray-200 text-[#252525] text-xs rounded-xl px-3 py-2 outline-none focus:border-[#b07c19] transition-all cursor-pointer font-medium"
+          className="w-full min-h-11 sm:w-56 bg-[#f3f3f3] border border-gray-200 text-[#252525] text-xs rounded-xl px-3 py-2 outline-none focus:border-[#b07c19] focus:ring-1 focus:ring-[#b07c19] transition-all cursor-pointer font-medium"
         >
           <option value="">Todas las bodegas</option>
           {bodegas.map((b) => (
@@ -103,7 +104,7 @@ export default function TablaKardex({
       ) : (
         <>
           {/* Tabla desktop */}
-          <div className="hidden md:block bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+          <div className="hidden xl:block bg-white border border-gray-200 rounded-2xl overflow-x-auto shadow-sm">
             <table className="w-full text-left text-xs">
               <thead className="bg-[#f3f3f3] text-gray-600 font-bold uppercase tracking-wider border-b border-gray-200">
                 <tr>
@@ -149,7 +150,7 @@ export default function TablaKardex({
           </div>
 
           {/* Tarjetas móvil */}
-          <div className="md:hidden space-y-3">
+          <div className="xl:hidden space-y-3">
             {movimientos.map((m) => (
               <div
                 key={m.id}
@@ -200,7 +201,8 @@ export default function TablaKardex({
                 type="button"
                 onClick={() => setKardexOffset((prev) => Math.max(0, prev - KARDEX_LIMIT))}
                 disabled={kardexOffset === 0}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-gray-200 bg-[#f3f3f3] text-gray-700 hover:text-[#252525] hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer font-semibold"
+                aria-label="Ver movimientos anteriores"
+                className="inline-flex min-h-11 items-center gap-1 px-3 rounded-xl border border-gray-200 bg-[#f3f3f3] text-gray-700 hover:text-[#252525] hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer font-semibold"
               >
                 <ChevronLeft className="w-4 h-4" />
                 <span>Anterior</span>
@@ -209,7 +211,8 @@ export default function TablaKardex({
                 type="button"
                 onClick={() => setKardexOffset((prev) => prev + KARDEX_LIMIT)}
                 disabled={kardexOffset + KARDEX_LIMIT >= totalMovimientos}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-gray-200 bg-[#f3f3f3] text-gray-700 hover:text-[#252525] hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer font-semibold"
+                aria-label="Ver movimientos siguientes"
+                className="inline-flex min-h-11 items-center gap-1 px-3 rounded-xl border border-gray-200 bg-[#f3f3f3] text-gray-700 hover:text-[#252525] hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer font-semibold"
               >
                 <span>Siguiente</span>
                 <ChevronRight className="w-4 h-4" />

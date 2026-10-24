@@ -4,10 +4,10 @@ import ErrorBox from '../../../components/ui/ErrorBox';
 function Acciones({ categoria, onEditar, onEliminar }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <button type="button" onClick={() => onEditar(categoria)} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-xs font-bold text-[#252525] hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#b07c19]">
+      <button type="button" onClick={() => onEditar(categoria)} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-xs font-bold text-[#252525] hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#b07c19]">
         <Pencil aria-hidden="true" className="w-3.5 h-3.5" /><span>Editar</span>
       </button>
-      <button type="button" onClick={() => onEliminar(categoria)} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 text-xs font-bold text-red-700 hover:bg-red-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-500">
+      <button type="button" onClick={() => onEliminar(categoria)} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 text-xs font-bold text-red-700 hover:bg-red-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-500">
         <Trash2 aria-hidden="true" className="w-3.5 h-3.5" /><span>Eliminar</span>
       </button>
     </div>
@@ -30,7 +30,7 @@ export default function TablaCategorias({ categorias, totalCategorias, cargando,
   if (error) {
     return <div className="space-y-3">
       <ErrorBox error={error} />
-      <button type="button" onClick={onReintentar} className="min-h-10 px-4 rounded-xl text-sm font-bold bg-[#e19922] text-[#252525] hover:bg-[#b07c19] hover:text-white">Reintentar</button>
+    <button type="button" onClick={onReintentar} className="min-h-11 px-4 rounded-xl text-sm font-bold bg-[#e19922] text-[#252525] hover:bg-[#b07c19] hover:text-white">Reintentar</button>
     </div>;
   }
 

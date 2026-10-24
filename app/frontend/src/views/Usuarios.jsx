@@ -66,7 +66,7 @@ export default function Usuarios() {
         <div className="mb-5 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800" role="status" aria-live="polite">
           <CircleCheck aria-hidden="true" className="w-5 h-5 shrink-0" />
           <p className="flex-1">{mensaje}</p>
-          <button type="button" onClick={limpiarMensaje} aria-label="Cerrar confirmación" className="rounded p-0.5 hover:bg-emerald-100"><X aria-hidden="true" className="w-4 h-4" /></button>
+          <button type="button" onClick={limpiarMensaje} aria-label="Cerrar confirmación" className="min-h-11 min-w-11 flex items-center justify-center rounded p-0.5 hover:bg-emerald-100"><X aria-hidden="true" className="w-4 h-4" /></button>
         </div>
       )}
 
@@ -119,7 +119,7 @@ export default function Usuarios() {
               <h2 id="confirmar-estado-usuario" className="text-lg font-extrabold text-[#252525]">{usuarioPendienteEstado.activo ? 'Desactivar usuario' : 'Activar usuario'}</h2>
               <p className="mt-1 text-xs text-gray-500 break-all">{usuarioPendienteEstado.email}</p>
             </div>
-            <button type="button" onClick={() => { cancelarCambioEstado(); limpiarErrorOperacion(); setConfirmacionError(null); }} disabled={guardando} aria-label="Cerrar confirmación" className="p-1 text-gray-400 hover:text-[#252525] disabled:opacity-40"><X aria-hidden="true" className="w-5 h-5" /></button>
+            <button type="button" onClick={() => { cancelarCambioEstado(); limpiarErrorOperacion(); setConfirmacionError(null); }} disabled={guardando} aria-label="Cerrar confirmación" className="min-h-11 min-w-11 flex items-center justify-center rounded-lg text-gray-400 hover:text-[#252525] disabled:opacity-40"><X aria-hidden="true" className="w-5 h-5" /></button>
           </div>
           {(confirmacionError || errorOperacion) && <ErrorBox error={errorOperacion || confirmacionError} />}
           <p className="text-sm text-gray-600">

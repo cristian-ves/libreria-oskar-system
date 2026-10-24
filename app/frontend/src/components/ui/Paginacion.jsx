@@ -33,7 +33,7 @@ export default function Paginacion({
             value={tamanoPagina}
             disabled={cargando}
             onChange={(event) => onCambiarTamano(Number(event.target.value))}
-            className="min-h-[40px] rounded-lg border border-gray-200 bg-[#f3f3f3] px-2 text-[#252525] focus:outline-none focus:ring-2 focus:ring-[#b07c19] disabled:opacity-50"
+            className="min-h-[44px] rounded-lg border border-gray-200 bg-[#f3f3f3] px-2 text-[#252525] focus:outline-none focus:ring-2 focus:ring-[#b07c19] disabled:opacity-50"
             aria-label={`Resultados por página de ${etiquetaResultados}`}
           >
             {opcionesTamano.map((opcion) => <option key={opcion} value={opcion}>{opcion}</option>)}
@@ -51,7 +51,7 @@ export default function Paginacion({
             onClick={() => onCambiarPagina(Math.max(1, paginaActual - 1))}
             disabled={anteriorDeshabilitado}
             aria-label="Ir a la página anterior"
-            className="inline-flex items-center justify-center gap-1 min-h-[40px] px-3 rounded-xl border border-gray-200 bg-[#f3f3f3] text-gray-700 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="inline-flex items-center justify-center gap-1 min-h-[44px] px-3 rounded-xl border border-gray-200 bg-[#f3f3f3] text-gray-700 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             <ChevronLeft className="w-4 h-4" aria-hidden="true" />
             <span>Anterior</span>
@@ -61,7 +61,7 @@ export default function Paginacion({
             onClick={() => onCambiarPagina(Math.min(paginasTotales, paginaActual + 1))}
             disabled={siguienteDeshabilitado}
             aria-label="Ir a la página siguiente"
-            className="inline-flex items-center justify-center gap-1 min-h-[40px] px-3 rounded-xl border border-gray-200 bg-[#f3f3f3] text-gray-700 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="inline-flex items-center justify-center gap-1 min-h-[44px] px-3 rounded-xl border border-gray-200 bg-[#f3f3f3] text-gray-700 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             <span>Siguiente</span>
             <ChevronRight className="w-4 h-4" aria-hidden="true" />

@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+:where(button, a, input, select, textarea, [role="button"], [tabindex]):focus-visible {
+  outline: 2px solid #b07c19;
+  outline-offset: 2px;
+}
+
 @keyframes pulse-scan {
   0%, 100% {
     transform: translateY(0);

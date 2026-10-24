@@ -15,15 +15,15 @@ function Acciones({ usuario, currentUserId, onEditar, onCambiarEstado }) {
   const esPropio = usuario.id === currentUserId;
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <button type="button" onClick={() => onEditar(usuario)} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-xs font-bold text-[#252525] hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#b07c19]">
+      <button type="button" onClick={() => onEditar(usuario)} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-xs font-bold text-[#252525] hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#b07c19]">
         <Pencil aria-hidden="true" className="w-3.5 h-3.5" /><span>Editar</span>
       </button>
       {esPropio ? (
-        <span className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-gray-100 px-3 text-[11px] font-semibold text-gray-500" title="No puedes desactivar tu propia cuenta">
+        <span className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-gray-100 px-3 text-[11px] font-semibold text-gray-500" title="No puedes desactivar tu propia cuenta">
           <UserRoundX aria-hidden="true" className="w-3.5 h-3.5" /><span>No puedes desactivar</span>
         </span>
       ) : (
-        <button type="button" onClick={() => onCambiarEstado(usuario)} className={`inline-flex min-h-10 items-center gap-1.5 rounded-lg border px-3 text-xs font-bold focus-visible:outline focus-visible:outline-2 ${usuario.activo ? 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100 focus-visible:outline-red-500' : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 focus-visible:outline-emerald-500'}`}>
+        <button type="button" onClick={() => onCambiarEstado(usuario)} className={`inline-flex min-h-11 items-center gap-1.5 rounded-lg border px-3 text-xs font-bold focus-visible:outline focus-visible:outline-2 ${usuario.activo ? 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100 focus-visible:outline-red-500' : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 focus-visible:outline-emerald-500'}`}>
           {usuario.activo ? <UserRoundX aria-hidden="true" className="w-3.5 h-3.5" /> : <UserRoundCheck aria-hidden="true" className="w-3.5 h-3.5" />}
           <span>{usuario.activo ? 'Desactivar' : 'Activar'}</span>
         </button>
@@ -51,7 +51,7 @@ export default function TablaUsuarios({ usuarios, totalUsuarios, cargando, error
     return (
       <div className="space-y-3">
         <ErrorBox error={error} />
-        <button type="button" onClick={onReintentar} className="min-h-10 px-4 rounded-xl text-sm font-bold bg-[#e19922] text-[#252525] hover:bg-[#b07c19] hover:text-white">Reintentar</button>
+      <button type="button" onClick={onReintentar} className="min-h-11 px-4 rounded-xl text-sm font-bold bg-[#e19922] text-[#252525] hover:bg-[#b07c19] hover:text-white">Reintentar</button>
       </div>
     );
   }
@@ -98,7 +98,7 @@ export default function TablaUsuarios({ usuarios, totalUsuarios, cargando, error
               </div>
               <Estado activo={usuario.activo} />
             </div>
-            <div className="flex items-center justify-between gap-2 border-t border-gray-100 pt-3">
+            <div className="flex flex-col gap-2 border-t border-gray-100 pt-3 sm:flex-row sm:items-center sm:justify-between">
               <RolBadge rol={usuario.rol_nombre} />
               <Acciones usuario={usuario} currentUserId={currentUserId} onEditar={onEditar} onCambiarEstado={onCambiarEstado} />
             </div>

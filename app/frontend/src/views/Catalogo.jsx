@@ -93,7 +93,7 @@ export default function Catalogo({ onNavigateToScanner }) {
               <button
                 type="button"
                 onClick={() => setSidebarOpen(true)}
-                className="lg:hidden inline-flex items-center gap-2 bg-white hover:bg-[#b07c19] hover:text-white border border-gray-200 text-[#252525] text-xs font-bold px-3.5 min-h-[40px] rounded-xl transition-all shadow-xs"
+                className="lg:hidden inline-flex items-center gap-2 bg-white hover:bg-[#b07c19] hover:text-white border border-gray-200 text-[#252525] text-xs font-bold px-3.5 min-h-[44px] rounded-xl transition-all shadow-xs"
               >
                 <SlidersHorizontal className="w-4 h-4" />
                 <span>Filtros</span>
@@ -109,7 +109,7 @@ export default function Catalogo({ onNavigateToScanner }) {
                 <button
                   type="button"
                   onClick={onNavigateToScanner}
-                  className="inline-flex items-center gap-2 bg-[#e19922] hover:bg-[#b07c19] hover:text-white text-[#252525] text-xs font-bold px-4 min-h-[40px] rounded-xl shadow-xs transition-all hover:-translate-y-0.5 cursor-pointer"
+                  className="inline-flex items-center gap-2 bg-[#e19922] hover:bg-[#b07c19] hover:text-white text-[#252525] text-xs font-bold px-4 min-h-[44px] rounded-xl shadow-xs transition-all hover:-translate-y-0.5 cursor-pointer"
                 >
                   <span>Escanear Nuevo Ejemplar</span>
                 </button>

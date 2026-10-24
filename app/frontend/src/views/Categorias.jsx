@@ -62,7 +62,7 @@ export default function Categorias() {
 
     {mensaje && <div className="mb-5 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800" role="status" aria-live="polite">
       <CircleCheck aria-hidden="true" className="w-5 h-5 shrink-0" /><p className="flex-1">{mensaje}</p>
-      <button type="button" onClick={limpiarMensaje} aria-label="Cerrar confirmación" className="rounded p-0.5 hover:bg-emerald-100"><X aria-hidden="true" className="w-4 h-4" /></button>
+      <button type="button" onClick={limpiarMensaje} aria-label="Cerrar confirmación" className="min-h-11 min-w-11 flex items-center justify-center rounded p-0.5 hover:bg-emerald-100"><X aria-hidden="true" className="w-4 h-4" /></button>
     </div>}
 
     <section className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5" aria-label="Resumen de categorías">
@@ -110,7 +110,7 @@ export default function Categorias() {
             <h2 id="titulo-eliminar-categoria" className="text-lg font-extrabold text-[#252525]">Eliminar categoría</h2>
             <p className="mt-1 text-xs text-gray-500 break-words">{categoriaPendienteEliminar.nombre}</p>
           </div>
-          <button type="button" onClick={cerrarConfirmacion} disabled={eliminando} aria-label="Cerrar confirmación" className="p-1 text-gray-400 hover:text-[#252525] disabled:opacity-40"><X aria-hidden="true" className="w-5 h-5" /></button>
+          <button type="button" onClick={cerrarConfirmacion} disabled={eliminando} aria-label="Cerrar confirmación" className="min-h-11 min-w-11 flex items-center justify-center rounded-lg text-gray-400 hover:text-[#252525] disabled:opacity-40"><X aria-hidden="true" className="w-5 h-5" /></button>
         </div>
         {(errorOperacion || errorConfirmacion) && <ErrorBox error={errorOperacion || errorConfirmacion} />}
         <p id="descripcion-eliminar-categoria" className="text-sm text-gray-600">
