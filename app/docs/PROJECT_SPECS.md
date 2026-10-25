@@ -1505,7 +1505,17 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 - **Servicio Frontend en Compose**: No existe declarado en `docker-compose.yml`; el frontend corre en el host con `npm run frontend:dev` (proxy de `/api` a `localhost:3000`).
 - **Arranque y cierre del backend**: `server.js` espera la BD con `esperarBaseDatos()` (reintentos en producción, ver §4.2) antes de escuchar y, ante `SIGINT`/`SIGTERM`, cierra el servidor HTTP y luego `sequelize.close()` (ver §4.2).
 
-### 7.3 Workflows CI/CD (`app/.github/workflows/deploy.yml`)
+### 7.3 Workflows CI/CD
+#### CI (GitHub Actions)
+- **Archivo**: `.github/workflows/ci.yml` en la raíz del repositorio (ubicación que GitHub sí lee). Sin despliegue, sin publicación de imágenes y sin `secrets.*`. Permisos `contents: read`; `concurrency` con grupo `ci-${{ github.ref }}` y `cancel-in-progress`.
+- **Disparadores**: `push` en todas las ramas (`branches: ['**']`) y `workflow_dispatch`.
+- **Jobs independientes** (`ubuntu-latest`, Node 22, caché npm por `package-lock.json` de `app/backend` o `app/frontend`):
+  - `pruebas-backend`: servicio `postgres:15-alpine` con BD `libreria_oskar_test` (puerto 5432); aplica `app/database/schema.sql` con `psql`, ejecuta `npm ci` en `app/backend` y `npm test` desde `app/` con `TEST_DB_HOST=127.0.0.1`, `TEST_DB_PORT=5432`, `TEST_DB_USER` y `TEST_DB_PASSWORD`. No define `NODE_ENV`: `run-tests.js` lo fija en `test`.
+  - `build-frontend`: `npm ci` en `app/frontend` y `npm run frontend:build` desde `app/`.
+  - `build-imagen-backend`: `docker build -f backend/Dockerfile -t oskar-api:ci .` desde `app/` y comprueba que `$MIGRATIONS_DIR` lista los `.sql`; sin push ni login.
+- **NO verificado**: la ejecución real en GitHub, el comportamiento de las pruebas con Node 22 (la línea base se midió con Node v24.18.0) y los tiempos de ejecución.
+
+#### Despliegue (`app/.github/workflows/deploy.yml`, obsoleto y sin ejecutarse)
 - **Estado**: ese workflow construye la imagen con contexto `backend` (`--file backend/Dockerfile backend`), por lo que quedará obsoleto frente al Dockerfile actual (contexto `app/`) al rehacerlo. El archivo está en `app/.github/workflows/deploy.yml`, pero GitHub solo ejecuta workflows ubicados en `.github/workflows` en la raíz del repositorio, por lo que hoy NO se ejecuta. Además sus rutas (`backend/`, `database/`) suponen que `app/` es la raíz. Su funcionamiento no está verificado y será rehecho. Lo que sigue describe el contenido del archivo, no un comportamiento comprobado.
 - **Disparadores declarados**: `push` a la rama `main` o ejecución manual `workflow_dispatch` (sin efecto mientras el archivo siga en esa ubicación).
 - **Variables y Secretos**: `GCP_PROJECT_ID`, `GCP_SA_KEY`, `CLOUD_SQL_CONNECTION_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `GOOGLE_BOOKS_API_KEY`.

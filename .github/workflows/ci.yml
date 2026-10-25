@@ -1,0 +1,113 @@
+# Integración continua de Librería Oskar.
+# El sistema vive en app/; la raíz del repositorio NO es app/.
+# Solo valida (pruebas y builds): no despliega, no publica imágenes y no usa secretos.
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+# Cancela ejecuciones anteriores de la misma rama/referencia
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  pruebas-backend:
+    name: Pruebas del backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      # Base aislada de pruebas; el nombre debe ser libreria_oskar_test (lo exige run-tests.js)
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: libreria_oskar_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d libreria_oskar_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Clonar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/backend/package-lock.json
+
+      - name: Asegurar el cliente psql
+        run: |
+          if ! command -v psql >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y postgresql-client
+          fi
+          psql --version
+
+      - name: Aplicar el esquema de la base de datos
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -p 5432 -U postgres -d libreria_oskar_test -v ON_ERROR_STOP=1 -f app/database/schema.sql
+
+      - name: Instalar dependencias del backend
+        working-directory: app/backend
+        run: npm ci
+
+      - name: Ejecutar las pruebas
+        working-directory: app
+        env:
+          TEST_DB_HOST: 127.0.0.1
+          TEST_DB_PORT: 5432
+          TEST_DB_USER: postgres
+          TEST_DB_PASSWORD: postgres
+        run: npm test
+
+  build-frontend:
+    name: Build del frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Clonar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/frontend/package-lock.json
+
+      - name: Instalar dependencias del frontend
+        working-directory: app/frontend
+        run: npm ci
+
+      - name: Construir el frontend
+        working-directory: app
+        run: npm run frontend:build
+
+  build-imagen-backend:
+    name: Build de la imagen del backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Clonar el repositorio
+        uses: actions/checkout@v4
+
+      # Contexto app/; sin push ni login a ningún registro
+      - name: Construir la imagen
+        working-directory: app
+        run: docker build -f backend/Dockerfile -t oskar-api:ci .
+
+      - name: Comprobar que las migraciones están en la imagen
+        run: docker run --rm --entrypoint sh oskar-api:ci -c 'ls "$MIGRATIONS_DIR"'
