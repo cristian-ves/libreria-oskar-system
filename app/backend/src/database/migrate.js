@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { sequelize, Sequelize } = require('../config/sequelize');
+const { esperarBaseDatos } = require('./esperarBaseDatos');
 
 const { QueryTypes } = Sequelize;
 
@@ -66,7 +67,12 @@ async function migrate() {
 }
 
 if (require.main === module) {
-  migrate()
+  esperarBaseDatos()
+    .catch((error) => {
+      console.error(`[DATABASE CONNECTION FAILED]: ${error.message}`);
+      process.exit(1);
+    })
+    .then(() => migrate())
     .then(() => process.exit(0))
     .catch(() => process.exit(1));
 }

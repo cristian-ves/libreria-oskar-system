@@ -130,14 +130,14 @@ app/
 │   └── workflows/
 │       └── deploy.yml (150)
 ├── backend/
-│   ├── .env.example (55)
+│   ├── .env.example (66)
 │   ├── Dockerfile (61)
 │   ├── README.md (63)
 │   ├── package.json (47)
 │   ├── src/
 │   │   ├── app.js (47)
 │   │   ├── run-tests.js (50)
-│   │   ├── server.js (46)
+│   │   ├── server.js (47)
 │   │   ├── test-sequelize.js (91)
 │   │   ├── assets/
 │   │   │   └── logo-correo.png
@@ -163,8 +163,9 @@ app/
 │   │   │   ├── usuario.controller.js (34)
 │   │   │   └── venta.controller.js (70)
 │   │   ├── database/
-│   │   │   ├── migrate.js (74)
-│   │   │   └── seed.js (200)
+│   │   │   ├── esperarBaseDatos.js (91)
+│   │   │   ├── migrate.js (80)
+│   │   │   └── seed.js (206)
 │   │   ├── middlewares/
 │   │   │   ├── auth.js (86)
 │   │   │   ├── auth2fa.js (55)
@@ -317,6 +318,7 @@ app/
 │       ├── dosFactoresRestablecer.test.js (117)
 │       ├── errorHandler.test.js (123)
 │       ├── escanear.integration.test.js (151)
+│       ├── esperarBaseDatos.test.js (173)
 │       ├── googleBooks.test.js (145)
 │       ├── inventarioRepository.test.js (468)
 │       ├── inventarioService.test.js (204)
@@ -764,6 +766,7 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `DB_PASSWORD` | String | Contraseña de conexión a PostgreSQL | `postgres` |
 | `DB_NAME` | String | Nombre de la base de datos de negocio | `libreria_oskar` |
 | `DATABASE_URL` | String | URI de conexión completa a PostgreSQL | `undefined` |
+| `DB_CONNECT_MAX_WAIT_MS` | Número (entero 0-600000, ms) | Tiempo máximo que `server.js`, `migrate.js` y `seed.js` esperan a la BD al arrancar, reintentando. Lo lee `database/esperarBaseDatos.js` directamente de `process.env` (no pasa por `config/env.js`); un valor inválido lanza Error sin mostrar el valor | `120000` en producción; `0` (un solo intento) en los demás entornos |
 | `TEST_DB_HOST` | String | Host de base de pruebas aislada | `localhost` |
 | `TEST_DB_PORT` | Número | Puerto de base de pruebas | `5435` |
 | `TEST_DB_USER` | String | Usuario de base de pruebas | `postgres` |
@@ -799,7 +802,7 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 - **`DATABASE_URL`**: `config/env.js` fuerza `connectionString: undefined` cuando `NODE_ENV=test`, de modo que las pruebas nunca usan una URL completa.
 
 ### 4.2 Bootstrap y Middlewares Globales (`src/app.js` y `src/server.js`)
-- `server.js`: Verifica conectividad con `testSequelizeConnection()` (de `config/sequelize.js`), inicia `app.listen(env.PORT)` y registra escuchadores de `SIGINT` y `SIGTERM` para un *graceful shutdown*: cierra el servidor HTTP y luego llama a `sequelize.close()`. Si la conexión inicial falla, termina el proceso con código 1.
+- `server.js`: Espera a la BD con `esperarBaseDatos()` (`database/esperarBaseDatos.js`, que envuelve `testSequelizeConnection()` de `config/sequelize.js`): en producción reintenta con pausas de 1, 2, 4, 8 y 10 s hasta `DB_CONNECT_MAX_WAIT_MS` (120 s por defecto), registrando `[DATABASE RETRY]`; los errores de autenticación y de base inexistente (`28P01`, `28000`, `3D000`, `SequelizeAccessDeniedError`) no se reintentan. Fuera de producción el valor por defecto es 0: un solo intento, como antes. Luego inicia `app.listen(env.PORT)` y registra escuchadores de `SIGINT` y `SIGTERM` para un *graceful shutdown*: cierra el servidor HTTP y luego llama a `sequelize.close()`. Si la conexión inicial falla (o se agota la espera), termina el proceso con código 1. `migrate.js` y `seed.js` hacen la misma espera solo al ejecutarse como script (`require.main === module`); importarlos no espera nada.
 - Middlewares globales en `app.js` (en orden de ejecución):
   1. `helmet()`: Cabeceras de seguridad HTTP.
   2. Configura `trust proxy` con `TRUST_PROXY` (0 por defecto) y aplica la lista `CORS_ORIGINS`; incluye métodos GET/POST/PUT/PATCH/DELETE/OPTIONS y expone `Content-Disposition`. OPTIONS responde preflight con 204. Las solicitudes sin `Origin` no reciben permiso CORS.
@@ -1497,7 +1500,7 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
   2. `db-test`: Imagen `postgres:15-alpine`. Expone puerto host `5435:5432`. Perfil `["test"]`. Base `libreria_oskar_test`. Volumen `pgdata_test`.
   3. `backend`: Construye con `context: .` (`app/`) y `dockerfile: backend/Dockerfile`. Expone puerto host `3000:8080`. Variables: `NODE_ENV=production`, `DB_HOST=db`, `DB_PORT=5432`, `PORT=8080`, `JWT_SECRET` (con valor por defecto de desarrollo), `TWO_FACTOR_ENFORCED` (por defecto `false`), `TWO_FACTOR_ENCRYPTION_KEY` (clave falsa de desarrollo por defecto) `CORS_ORIGINS` (por defecto `http://localhost:5173,http://localhost:4173`; se sobreescribe desde la terminal) y `FRONTEND_URL` (por defecto `http://localhost:5173`; base de los enlaces de recuperación de contraseña). Como `NODE_ENV=production` exige `CORS_ORIGINS`, sin ella el backend no arranca (`security.config.js`). No define `TRUST_PROXY` ni `LOGIN_RATE_*`. Espera estado saludable de `db`.
 - **Servicio Frontend en Compose**: No existe declarado en `docker-compose.yml`; el frontend corre en el host con `npm run frontend:dev` (proxy de `/api` a `localhost:3000`).
-- **Arranque y cierre del backend**: `server.js` verifica la BD con `testSequelizeConnection()` antes de escuchar y, ante `SIGINT`/`SIGTERM`, cierra el servidor HTTP y luego `sequelize.close()` (ver §4.2).
+- **Arranque y cierre del backend**: `server.js` espera la BD con `esperarBaseDatos()` (reintentos en producción, ver §4.2) antes de escuchar y, ante `SIGINT`/`SIGTERM`, cierra el servidor HTTP y luego `sequelize.close()` (ver §4.2).
 
 ### 7.3 Workflows CI/CD (`app/.github/workflows/deploy.yml`)
 - **Estado**: ese workflow construye la imagen con contexto `backend` (`--file backend/Dockerfile backend`), por lo que quedará obsoleto frente al Dockerfile actual (contexto `app/`) al rehacerlo. El archivo está en `app/.github/workflows/deploy.yml`, pero GitHub solo ejecuta workflows ubicados en `.github/workflows` en la raíz del repositorio, por lo que hoy NO se ejecuta. Además sus rutas (`backend/`, `database/`) suponen que `app/` es la raíz. Su funcionamiento no está verificado y será rehecho. Lo que sigue describe el contenido del archivo, no un comportamiento comprobado.

@@ -1,11 +1,12 @@
 const app = require('./app');
 const env = require('./config/env');
-const { sequelize, testSequelizeConnection } = require('./config/sequelize');
+const { sequelize } = require('./config/sequelize');
+const { esperarBaseDatos } = require('./database/esperarBaseDatos');
 
 const startServer = async () => {
   try {
-    // Verificar conectividad con PostgreSQL
-    const connInfo = await testSequelizeConnection();
+    // Verificar conectividad con PostgreSQL (con reintentos si DB_CONNECT_MAX_WAIT_MS > 0)
+    const connInfo = await esperarBaseDatos();
     console.log(`[DATABASE CONNECTED]: PostgreSQL en ${env.db.host}:${env.db.port} | BD: ${connInfo.db_name} | Hora servidor: ${connInfo.current_time}`);
 
     const server = app.listen(env.PORT, () => {

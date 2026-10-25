@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const { sequelize, Sequelize } = require('../config/sequelize');
+const { esperarBaseDatos } = require('./esperarBaseDatos');
 const { validarPassword } = require('../utils/passwordPolicy');
 
 const { QueryTypes } = Sequelize;
@@ -192,7 +193,12 @@ async function seed() {
 }
 
 if (require.main === module) {
-  seed()
+  esperarBaseDatos()
+    .catch((error) => {
+      console.error(`[DATABASE CONNECTION FAILED]: ${error.message}`);
+      process.exit(1);
+    })
+    .then(() => seed())
     .then(() => process.exit(0))
     .catch(() => process.exit(1));
 }
