@@ -3,30 +3,30 @@ name: catalog-employee-crud
 description: Implementar CRUD de catálogo y empleados con Express, Sequelize, RBAC y validaciones.
 ---
 
-> **ESTADO: NO IMPLEMENTADO (roadmap).** Esta skill describe una función planificada que aún no existe en el código. No usar como instrucción de trabajo hasta su implementación.
+> **ESTADO: IMPLEMENTADO** (verificado en el código el 2026-10-24). Este archivo queda como diseño de referencia; lo que existe hoy está descrito en `docs/PROJECT_SPECS.md` (§4.3 endpoints, §5.2 vistas, §10 punto 3). Donde el diseño y el código discrepan, manda el código.
 
 # CRUD de catálogo y empleados
 
-## Alcance de esta implementación
+## Alcance (diseño original)
 - **EN ALCANCE**: CRUD administrativo de **usuarios** y de **categorías**.
-- **FUERA**: edición completa y baja de libros (`PUT /api/libros/:id`), que sigue pendiente y se hace aparte. Fijar el precio ya quedó implementado con `PATCH /api/libros/:id/precio` (solo Administrador), prerrequisito de ventas (`docs/roadmap/ventas/SPEC.md`).
-- Los cambios de esquema que hagan falta usan la migración 005 en adelante (la 004 es la de ventas) y requieren autorización explícita.
+- **FUERA**: edición completa y baja de libros, que se hizo aparte. El precio se fija con `PATCH /api/libros/:id/precio` (solo Administrador), prerrequisito de ventas (`docs/roadmap/ventas/SPEC.md`).
+- Cambios de esquema: la numeración de migraciones se reparte 005-009 para el otro desarrollador y 010-019 para seguridad (reparto acordado entre el equipo, **no verificable en el código**). Hoy existen 002, 003, 004 (ventas), 010 (2FA) y 011 (recuperación de contraseña); el CRUD no necesitó ninguna.
 
-## Puntos de partida verificados
-- `GET /api/usuarios` existe, solo Administrador (`backend/src/routes/index.js`, `authenticate` + `authorize('Administrador')`).
-- Contrato a conservar: arreglo de `{ id, nombre_completo, email, rol_nombre }`, solo usuarios con `activo = true`, ordenado por `nombre_completo` ASC, sin `password_hash` ni secretos 2FA (`backend/src/repositories/usuario.repository.js`, `findActivosConRol`; `backend/src/services/usuario.service.js`, `listarActivosConRol`).
-- `usuarioRepository` ya tiene `create` y `update` (`backend/src/repositories/usuario.repository.js`).
-- `categoriaRepository` tiene `findAll`, `findById`, `findByNombre` y `create`; no tiene `update` ni `delete` (`backend/src/repositories/categoria.repository.js`).
-- `movimientos_inventario.usuario_id` es `ON DELETE RESTRICT`: un usuario con movimientos no se puede borrar, solo desactivar (`database/schema.sql`).
-- `categorias` no tiene columna `activo` (solo `id`, `nombre` único y `creado_en`) (`database/schema.sql`).
-- `libros.categoria_id` es `ON DELETE SET NULL`: borrar una categoría deja sus libros sin categoría (`database/schema.sql`).
+## Lo implementado (verificado)
+- Usuarios, solo Administrador (`backend/src/routes/index.js:19-22`): `GET /api/usuarios`, `POST /api/usuarios`, `PUT /api/usuarios/:id`, `PATCH /api/usuarios/:id/activo`. No hay `DELETE`: se desactiva.
+- Categorías (`backend/src/routes/index.js:25-29`): `GET /api/categorias/admin` (Administrador, con conteo de libros), `GET /api/categorias` (público), `POST`, `PUT /:id` y `DELETE /:id` (Administrador).
+- Libros (`backend/src/routes/libro.routes.js:18-19, 27-28, 35-36`): `GET /api/libros/admin`, `PUT /api/libros/:id` y `PATCH /api/libros/:id/activo`, sobre `backend/src/services/libro/administracion.service.js` (`actualizarLibro`, `cambiarActivoLibro`, `listarLibrosAdministracion`).
+- Contrato del listado por defecto, que se conserva: arreglo de `{ id, nombre_completo, email, rol_nombre }`, solo `activo = true`, orden `nombre_completo` ASC, sin `password_hash` ni secretos 2FA (`backend/src/repositories/usuario.repository.js:205-226`; `backend/src/services/usuario.service.js:27-32`).
+- `usuarioRepository` tiene, entre otros, `create`, `update`, `findActivosConRol` y `findConRol` (`backend/src/repositories/usuario.repository.js:172, 188, 205, 229`).
+- `categoriaRepository` tiene `findAll`, `findAllWithLibroCount`, `findById`, `findByNombre`, `create`, `updateNombre`, `countLibros` y `delete` (`backend/src/repositories/categoria.repository.js:9-107`).
 
-## Decisiones pendientes (NO resueltas)
-- Baja lógica o borrado físico de categorías: **no decidido**.
-- Si se añade `activo` a `categorias` mediante la migración 005: **no decidido**.
+## Diferencias entre el diseño y lo implementado
+- `GET /api/usuarios` sigue devolviendo solo activos por defecto; añade el parámetro `incluirInactivos=true` (`backend/src/controllers/usuario.controller.js:11`).
+- Categorías: el diseño dejaba abierta la baja lógica o física; se implementó borrado físico (`categoriaRepository.delete`) y el servicio responde 409 si la categoría tiene libros (`backend/src/services/categoria.service.js:48-56`), en vez de dejarlos sin categoría por el `ON DELETE SET NULL`.
+- No se añadió `activo` a `categorias` (`database/schema.sql:98-102`: `id`, `nombre` único, `creado_en`) ni hubo migración 005.
+- Hechos del diseño que siguen vigentes: `movimientos_inventario.usuario_id` es `ON DELETE RESTRICT` (`database/schema.sql:186`) y `libros.categoria_id` es `ON DELETE SET NULL` (`database/schema.sql:108`).
 
-
-## Procedimiento
+## Procedimiento (diseño original)
 1. Revisar rutas, controladores, servicios, repositorios, modelos y pantallas actuales para no duplicar endpoints.
 2. Definir contratos de listar, crear, mostrar, editar y desactivar; preferir baja lógica si hay historial referenciado.
 3. Validar campos y permisos en backend, no solo en React. Administrador gestiona empleados y precios según reglas actuales.

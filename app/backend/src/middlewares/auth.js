@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const env = require('../config/env');
 const usuarioRepository = require('../repositories/usuario.repository');
 const { UnauthorizedError, ForbiddenError } = require('../utils/errors');
+const { sesionVigente } = require('../utils/sesionVigente');
 
 /**
  * Middleware de autenticación mediante Bearer token JWT.
@@ -41,6 +42,11 @@ const authenticate = async (req, res, next) => {
 
     if (!usuario.activo) {
       throw new UnauthorizedError('El usuario ya no está activo');
+    }
+
+    // Tras un restablecimiento de contraseña, los tokens emitidos antes dejan de valer.
+    if (!sesionVigente(decoded, usuario.password_cambiada_en)) {
+      throw new UnauthorizedError('La sesión ya no es válida. Inicie sesión de nuevo.');
     }
 
     req.user = {

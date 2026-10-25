@@ -3,6 +3,10 @@ const MAX_ASUNTO = 200;
 const MAX_CUERPO_BYTES = 100 * 1024;
 const CRLF = /[\r\n]/;
 const DIRECCION = /^[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+$/;
+const MAX_ADJUNTOS = 3;
+const MAX_ADJUNTO_BYTES = 100 * 1024;
+const TIPOS_ADJUNTO = ['image/png', 'image/jpeg'];
+const NOMBRE_SIMPLE = /^[A-Za-z0-9._-]{1,64}$/;
 
 function validarCuerpo(nombre, valor) {
   if (valor === undefined || valor === null) return null;
@@ -11,10 +15,26 @@ function validarCuerpo(nombre, valor) {
   return null;
 }
 
+// Adjuntos en línea (imágenes referenciadas con cid:). Devuelve { lista } o { error }.
+function validarAdjuntos(adjuntos) {
+  if (adjuntos === undefined || adjuntos === null) return { lista: undefined };
+  if (!Array.isArray(adjuntos) || adjuntos.length > MAX_ADJUNTOS) return { error: `adjuntos: hasta ${MAX_ADJUNTOS}` };
+  for (const a of adjuntos) {
+    if (!a || typeof a !== 'object') return { error: 'adjunto ausente' };
+    if (typeof a.nombre !== 'string' || !NOMBRE_SIMPLE.test(a.nombre)) return { error: 'adjunto con nombre inválido' };
+    if (typeof a.cid !== 'string' || !NOMBRE_SIMPLE.test(a.cid)) return { error: 'adjunto con cid inválido' };
+    if (!TIPOS_ADJUNTO.includes(a.tipo)) return { error: 'adjunto de tipo no permitido' };
+    if (!Buffer.isBuffer(a.contenido) || a.contenido.length === 0 || a.contenido.length > MAX_ADJUNTO_BYTES) {
+      return { error: 'adjunto vacío o de más de 100 kB' };
+    }
+  }
+  return { lista: adjuntos.map(({ nombre, contenido, tipo, cid }) => ({ nombre, contenido, tipo, cid })) };
+}
+
 // Devuelve { ok: true, mensaje } normalizado o { ok: false, detalle }.
 function validarMensaje(entrada) {
   if (!entrada || typeof entrada !== 'object') return { ok: false, detalle: 'mensaje ausente' };
-  const { para, asunto, texto, html } = entrada;
+  const { para, asunto, texto, html, adjuntos } = entrada;
 
   const destinos = Array.isArray(para) ? para : [para];
   if (destinos.length === 0 || destinos.length > MAX_DESTINATARIOS) {
@@ -41,10 +61,14 @@ function validarMensaje(entrada) {
   if (!(texto && texto.trim()) && !(html && html.trim())) {
     return { ok: false, detalle: 'se requiere texto o html' };
   }
+  const { lista, error } = validarAdjuntos(adjuntos);
+  if (error) return { ok: false, detalle: error };
 
   return {
     ok: true,
-    mensaje: { para: destinos.map((d) => d.trim()), asunto: asunto.trim(), texto, html },
+    mensaje: {
+      para: destinos.map((d) => d.trim()), asunto: asunto.trim(), texto, html, ...(lista ? { adjuntos: lista } : {}),
+    },
   };
 }
 

@@ -92,6 +92,7 @@ class UsuarioRepository {
         'activo',
         'creado_en',
         'actualizado_en',
+        'password_cambiada_en',
       ],
     };
 

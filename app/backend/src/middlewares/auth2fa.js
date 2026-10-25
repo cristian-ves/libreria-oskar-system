@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const env = require('../config/env');
 const usuarioRepository = require('../repositories/usuario.repository');
 const { UnauthorizedError } = require('../utils/errors');
+const { sesionVigente } = require('../utils/sesionVigente');
 
 /**
  * Middleware para los pasos del 2FA: exige un token temporal con el `scope` indicado
@@ -33,6 +34,10 @@ const exigirAlcance = (alcance) => async (req, res, next) => {
     const usuario = await usuarioRepository.findById(decoded.sub);
     if (!usuario || !usuario.activo) {
       throw new UnauthorizedError('Usuario no encontrado');
+    }
+
+    if (!sesionVigente(decoded, usuario.password_cambiada_en)) {
+      throw new UnauthorizedError('La sesión ya no es válida. Inicie sesión de nuevo.');
     }
 
     req.user = {

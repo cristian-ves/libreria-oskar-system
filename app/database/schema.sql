@@ -56,13 +56,15 @@ CREATE TABLE IF NOT EXISTS usuarios (
     password_hash VARCHAR(255) NOT NULL, -- Contraseñas cifradas con bcrypt/argon2
     dos_factores_activo BOOLEAN NOT NULL DEFAULT FALSE, -- Requisito 2FA
     dos_factores_secreto VARCHAR(128), -- Secreto TOTP cifrado con AES-256-GCM (formato v1, máx. 86 caracteres); compatible con cualquier app TOTP estándar
-    token_recuperacion VARCHAR(255),
+    token_recuperacion VARCHAR(255), -- SHA-256 hexadecimal del token de recuperación (nunca el token en claro)
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     creado_en TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado_en TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     dos_factores_intentos INTEGER NOT NULL DEFAULT 0, -- Fallos 2FA consecutivos (TOTP y respaldo)
     dos_factores_bloqueado_hasta TIMESTAMPTZ, -- Bloqueo temporal tras el máximo de fallos
-    dos_factores_ultimo_paso BIGINT -- Último paso TOTP aceptado (anti-reutilización)
+    dos_factores_ultimo_paso BIGINT, -- Último paso TOTP aceptado (anti-reutilización)
+    token_recuperacion_expira TIMESTAMPTZ, -- Vencimiento del enlace de recuperación (hora de la BD)
+    password_cambiada_en TIMESTAMPTZ -- Último restablecimiento; invalida los JWT emitidos antes
 );
 
 -- Códigos de respaldo 2FA de un solo uso; solo se guarda su HMAC-SHA256.
@@ -294,6 +296,8 @@ CREATE INDEX IF NOT EXISTS idx_inventarios_libro ON inventarios(libro_id);
 
 -- Optimización de búsquedas de usuarios por correo (Auth y Login)
 CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_usuarios_token_recuperacion ON usuarios (token_recuperacion)
+WHERE token_recuperacion IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_codigos_respaldo_2fa_usuario_id ON codigos_respaldo_2fa(usuario_id);
 
 -- Auditoría, trazabilidad y reportes de movimientos por fecha

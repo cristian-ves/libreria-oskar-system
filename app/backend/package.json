@@ -9,6 +9,7 @@
     "seed": "node src/database/seed.js",
     "migrate": "node src/database/migrate.js",
     "correo:probar": "node src/scripts/probar-correo.js",
+    "correo:vista-previa": "node src/scripts/vista-previa-correos.js",
     "reset-2fa": "node src/scripts/reset-2fa.js",
     "test": "node src/run-tests.js",
     "test:sequelize": "node src/test-sequelize.js"

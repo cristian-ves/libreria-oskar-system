@@ -17,4 +17,4 @@ description: Implementar autenticación de dos factores sin debilitar bcrypt, JW
 
 ## Diferencias con lo planeado
 - No hay activación voluntaria con sesión completa: el alta solo se ofrece con el token temporal `2fa-setup` del login.
-- La recuperación no usa `token_recuperacion`: son 10 códigos de respaldo de un solo uso y el restablecimiento por el Administrador (endpoint, aún sin botón en la interfaz) o con `npm --prefix backend run reset-2fa -- correo`.
+- La recuperación del 2FA no usa `token_recuperacion` (esa columna la usa la recuperación de contraseña por correo): son 10 códigos de respaldo de un solo uso y el restablecimiento por el Administrador (endpoint, aún sin botón en la interfaz) o con `npm --prefix backend run reset-2fa -- correo`.

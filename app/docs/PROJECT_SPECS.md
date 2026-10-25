@@ -106,7 +106,7 @@ Generado con `find`/`os.walk` + conteo de saltos de línea (equivalente a `wc -l
 ```text
 app/
 ├── AGENTS.md (89)
-├── docker-compose.yml (82)
+├── docker-compose.yml (84)
 ├── package.json (18)
 ├── .agents/
 │   └── skills/
@@ -130,20 +130,23 @@ app/
 │       └── deploy.yml (150)
 ├── backend/
 │   ├── .dockerignore (10)
-│   ├── .env.example (51)
+│   ├── .env.example (55)
 │   ├── Dockerfile (53)
 │   ├── README.md (63)
-│   ├── package.json (46)
+│   ├── package.json (47)
 │   ├── src/
 │   │   ├── app.js (47)
 │   │   ├── run-tests.js (50)
 │   │   ├── server.js (46)
 │   │   ├── test-sequelize.js (91)
+│   │   ├── assets/
+│   │   │   └── logo-correo.png
 │   │   ├── config/
 │   │   │   ├── cors.config.js (11)
 │   │   │   ├── db.js (87)
-│   │   │   ├── env.js (61)
+│   │   │   ├── env.js (68)
 │   │   │   ├── mail.config.js (55)
+│   │   │   ├── recuperacion.config.js (39)
 │   │   │   ├── security.config.js (39)
 │   │   │   ├── sequelize.js (47)
 │   │   │   └── twoFactor.config.js (58)
@@ -155,6 +158,7 @@ app/
 │   │   │   ├── health.controller.js (36)
 │   │   │   ├── inventario.controller.js (117)
 │   │   │   ├── libro.controller.js (236)
+│   │   │   ├── recuperacion.controller.js (27)
 │   │   │   ├── reportes.controller.js (67)
 │   │   │   ├── usuario.controller.js (34)
 │   │   │   └── venta.controller.js (70)
@@ -162,10 +166,11 @@ app/
 │   │   │   ├── migrate.js (74)
 │   │   │   └── seed.js (140)
 │   │   ├── middlewares/
-│   │   │   ├── auth.js (80)
-│   │   │   ├── auth2fa.js (50)
+│   │   │   ├── auth.js (86)
+│   │   │   ├── auth2fa.js (55)
 │   │   │   ├── errorHandler.js (82)
 │   │   │   ├── rateLimit.js (43)
+│   │   │   ├── rateLimitRecuperacion.js (8)
 │   │   │   ├── validator.js (57)
 │   │   │   └── validators/
 │   │   │       ├── common.js (29)
@@ -190,7 +195,7 @@ app/
 │   │   │   ├── rol.model.js (49)
 │   │   │   ├── sucursal.model.js (62)
 │   │   │   ├── tipoMovimiento.model.js (42)
-│   │   │   ├── usuario.model.js (113)
+│   │   │   ├── usuario.model.js (121)
 │   │   │   ├── venta.model.js (156)
 │   │   │   └── ventaDetalle.model.js (78)
 │   │   ├── repositories/
@@ -202,7 +207,8 @@ app/
 │   │   │   ├── inventario.repository.js (11)
 │   │   │   ├── libro.repository.js (382)
 │   │   │   ├── movimiento.repository.js (257)
-│   │   │   ├── usuario.repository.js (244)
+│   │   │   ├── recuperacion.repository.js (83)
+│   │   │   ├── usuario.repository.js (245)
 │   │   │   ├── venta.repository.js (152)
 │   │   │   ├── inventario/
 │   │   │   │   ├── inventarioBasico.repository.js (240)
@@ -214,7 +220,7 @@ app/
 │   │   │       ├── kardex.repository.js (9)
 │   │   │       └── ventas.repository.js (141)
 │   │   ├── routes/
-│   │   │   ├── auth.routes.js (17)
+│   │   │   ├── auth.routes.js (24)
 │   │   │   ├── dosFactores.routes.js (27)
 │   │   │   ├── index.js (39)
 │   │   │   ├── inventario.routes.js (65)
@@ -224,7 +230,8 @@ app/
 │   │   │   └── venta.routes.js (65)
 │   │   ├── scripts/
 │   │   │   ├── probar-correo.js (40)
-│   │   │   └── reset-2fa.js (34)
+│   │   │   ├── reset-2fa.js (34)
+│   │   │   └── vista-previa-correos.js (33)
 │   │   ├── services/
 │   │   │   ├── auth.service.js (71)
 │   │   │   ├── bodega.service.js (13)
@@ -235,6 +242,7 @@ app/
 │   │   │   ├── inventario.service.js (189)
 │   │   │   ├── libro.service.js (15)
 │   │   │   ├── mail.service.js (15)
+│   │   │   ├── recuperacion.service.js (99)
 │   │   │   ├── reportes.service.js (21)
 │   │   │   ├── usuario.service.js (115)
 │   │   │   ├── venta.service.js (11)
@@ -253,11 +261,16 @@ app/
 │   │   │   │   ├── precio.service.js (17)
 │   │   │   │   └── registro.service.js (160)
 │   │   │   ├── mail/
-│   │   │   │   ├── consola.provider.js (29)
+│   │   │   │   ├── consola.provider.js (36)
 │   │   │   │   ├── fabrica.service.js (132)
+│   │   │   │   ├── logo.js (45)
+│   │   │   │   ├── plantillas.js (103)
 │   │   │   │   ├── seguridad.mail.js (16)
-│   │   │   │   ├── smtp.provider.js (46)
-│   │   │   │   └── validacion.mail.js (51)
+│   │   │   │   ├── smtp.provider.js (53)
+│   │   │   │   └── validacion.mail.js (75)
+│   │   │   ├── recuperacion/
+│   │   │   │   ├── correos.js (73)
+│   │   │   │   └── token.js (13)
 │   │   │   ├── reportes/
 │   │   │   │   ├── contrato.service.js (12)
 │   │   │   │   ├── corteCaja.service.js (29)
@@ -283,6 +296,7 @@ app/
 │   │       ├── errors.js (50)
 │   │       ├── isbn.js (71)
 │   │       ├── passwordPolicy.js (14)
+│   │       ├── sesionVigente.js (17)
 │   │       ├── slug.js (97)
 │   │       ├── uuid.js (20)
 │   │       └── ventas.js (129)
@@ -292,6 +306,7 @@ app/
 │       ├── categoriasConteoAdmin.e2e.test.js (86)
 │       ├── categoriasCrud.e2e.test.js (130)
 │       ├── consultarSugerencia.test.js (130)
+│       ├── correoPlantillas.test.js (151)
 │       ├── dosFactoresAlta.test.js (133)
 │       ├── dosFactoresBloqueo.test.js (141)
 │       ├── dosFactoresConcurrencia.test.js (142)
@@ -310,11 +325,17 @@ app/
 │       ├── libroRepository.test.js (237)
 │       ├── libroServiceSequelize.test.js (387)
 │       ├── librosAdmin.e2e.test.js (230)
+│       ├── mailAdjuntos.test.js (106)
 │       ├── mailConfig.test.js (43)
 │       ├── mailProveedores.test.js (84)
 │       ├── mailReintentos.test.js (137)
 │       ├── movimientoRepository.test.js (245)
 │       ├── paginacionCatalogoInventario.e2e.test.js (160)
+│       ├── recuperacionConfig.test.js (73)
+│       ├── recuperacionCorreoHtml.test.js (96)
+│       ├── recuperacionRestablecer.test.js (116)
+│       ├── recuperacionSesiones.test.js (141)
+│       ├── recuperacionSolicitar.test.js (167)
 │       ├── reportes.e2e.test.js (143)
 │       ├── reportesExportacion.e2e.test.js (150)
 │       ├── reportesVentas.e2e.test.js (153)
@@ -334,17 +355,19 @@ app/
 │       └── helpers/
 │           ├── dosFactores.js (123)
 │           ├── httpMocks.js (50)
+│           ├── recuperacion.js (60)
 │           ├── ventasFixtures.js (118)
 │           └── ventasHttp.js (43)
 ├── database/
-│   ├── schema.sql (355)
+│   ├── schema.sql (359)
 │   └── migrations/
 │       ├── 002_categorias.sql (25)
 │       ├── 003_categorias_adicionales.sql (22)
 │       ├── 004_ventas.sql (58)
-│       └── 010_dos_factores.sql (29)
+│       ├── 010_dos_factores.sql (29)
+│       └── 011_recuperacion_contrasena.sql (18)
 ├── docs/
-│   ├── PROJECT_SPECS.md (1606)
+│   ├── PROJECT_SPECS.md (1692)
 │   └── roadmap/
 │       ├── auth-2fa/
 │       │   └── SKILL.md (20)
@@ -362,7 +385,7 @@ app/
     ├── tailwind.config.js (25)
     ├── vite.config.js (16)
     └── src/
-        ├── App.jsx (138)
+        ├── App.jsx (142)
         ├── index.css (39)
         ├── main.jsx (16)
         ├── assets/
@@ -458,21 +481,30 @@ app/
         │   │   ├── codigos.js (48)
         │   │   ├── errores.js (20)
         │   │   ├── navegador.js (41)
+        │   │   ├── recuperacion.js (41)
         │   │   ├── components/
         │   │   │   ├── AlertaError.jsx (29)
         │   │   │   ├── BotonCopiar.jsx (33)
         │   │   │   ├── BotonPrincipal.jsx (20)
+        │   │   │   ├── CampoAcceso.jsx (23)
         │   │   │   ├── CampoCodigoTotp.jsx (26)
         │   │   │   ├── CodigosRespaldo.jsx (69)
-        │   │   │   ├── FormularioCredenciales.jsx (73)
+        │   │   │   ├── ConfirmacionSolicitud.jsx (21)
+        │   │   │   ├── EnlaceSecundario.jsx (8)
+        │   │   │   ├── FormularioCredenciales.jsx (83)
+        │   │   │   ├── FormularioOlvide.jsx (33)
         │   │   │   ├── FormularioRegenerar.jsx (50)
+        │   │   │   ├── FormularioRestablecer.jsx (53)
         │   │   │   ├── PanelSeguridad.jsx (80)
         │   │   │   ├── PasoConfigurar.jsx (104)
-        │   │   │   └── PasoVerificar.jsx (108)
+        │   │   │   ├── PasoVerificar.jsx (108)
+        │   │   │   └── TarjetaAcceso.jsx (28)
         │   │   └── hooks/
         │   │       ├── useFocoCodigo.js (28)
         │   │       ├── useLoginDosPasos.js (155)
-        │   │       └── useSeguridad.js (77)
+        │   │       ├── useRestablecerContrasena.js (81)
+        │   │       ├── useSeguridad.js (77)
+        │   │       └── useSolicitarRecuperacion.js (49)
         │   ├── usuarios/
         │   │   ├── components/
         │   │   │   ├── FiltrosUsuarios.jsx (48)
@@ -511,6 +543,7 @@ app/
         │       ├── inventario.api.js (27)
         │       ├── libros.api.js (29)
         │       ├── librosAdmin.api.js (21)
+        │       ├── recuperacion.api.js (19)
         │       ├── reportes.api.js (30)
         │       ├── usuarios.api.js (21)
         │       └── ventas.api.js (27)
@@ -532,8 +565,10 @@ app/
             ├── Login.jsx (77)
             ├── Nosotros.jsx (88)
             ├── NuevaVenta.jsx (98)
+            ├── OlvideContrasena.jsx (33)
             ├── RegistrarLibro.jsx (194)
             ├── Reportes.jsx (71)
+            ├── RestablecerContrasena.jsx (44)
             ├── Seguridad.jsx (25)
             ├── Usuarios.jsx (141)
             ├── VentaDetalle.jsx (88)
@@ -551,7 +586,7 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `app/backend/tests/inventarioRepository.test.js` | 468 | Persistencia de inventario: bloqueo `FOR UPDATE`, stock obsoleto, alertas y KPIs de resumen. |
 | `app/backend/tests/libroServiceSequelize.test.js` | 387 | Transacciones del servicio de libros: rollback, trigger, concurrencia de escaneo. |
 | `app/backend/src/repositories/libro.repository.js` | 382 | Búsqueda por ISBN/UUID (con variantes `ForUpdate`; `findByIds` para ventas), `upsert`/`create` con captura de `23505`, edición bibliográfica, baja (`updateActivo`), listado admin paginado (`findAdminPage`), catálogo paginado y detalle por `ref`. |
-| `app/database/schema.sql` | 355 | DDL de 14 tablas, extensiones, secuencia de ventas, trigger PL/pgSQL, 19 índices y semillas (roles, tipos de movimiento, 20 categorías). |
+| `app/database/schema.sql` | 359 | DDL de 14 tablas, extensiones, secuencia de ventas, trigger PL/pgSQL, 20 índices y semillas (roles, tipos de movimiento, 20 categorías). |
 | `app/backend/src/services/googleBooks.service.js` | 312 | Cliente de Google Books con fallback a OpenLibrary, catálogo de contingencia y caché TTL; cada resultado trae `relleno`. |
 | `app/frontend/src/features/inventario/components/TablaExistencias.jsx` | 295 | Tabla de existencias con `EstadoBadge` por fila y `Paginacion`. |
 | `app/backend/tests/ventasEsquema.test.js` | 266 | Esquema de ventas: correlativo, CHECK, UNIQUE, FK RESTRICT y movimiento con `venta_id` (trigger). |
@@ -571,6 +606,7 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
   - `schema.sql` siembra las **20 categorías** (las 6 originales y las 14 de la migración `003_categorias_adicionales.sql`, con `ON CONFLICT (nombre) DO NOTHING`). Una BD creada desde cero con `schema.sql` ya equivale a aplicar `schema.sql + 002 + 003`. Las migraciones 002 y 003 permanecen como scripts idempotentes válidos para BDs ya existentes.
   - La migración `004_ventas.sql` (secuencia `ventas_numero_seq`, tablas `ventas` y `venta_detalles`, columna `movimientos_inventario.venta_id` e índices) es idempotente y su DDL es el mismo que `schema.sql`: una BD nueva equivale a la BD anterior + 004. La API de ventas (crear, listar, consultar y anular) existe desde el segundo commit de la serie y la interfaz (`/ventas`, `/ventas/nueva`, `/ventas/:id`) desde el tercero.
   - La migración `010_dos_factores.sql` (columnas `dos_factores_intentos`, `dos_factores_bloqueado_hasta` y `dos_factores_ultimo_paso` al final de `usuarios`, tabla `codigos_respaldo_2fa` e índice `idx_codigos_respaldo_2fa_usuario_id`) es idempotente y su DDL es el mismo que `schema.sql`, con las columnas en el mismo orden. Aplicada dos veces a `libreria_oskar_test` sin errores (la segunda la omite `schema_migrations`; re-ejecutar su SQL dentro de una transacción revertida tampoco falla). La equivalencia por `pg_dump --schema-only` no está verificada. El rango 010-019 queda reservado para el 2FA.
+  - La migración `011_recuperacion_contrasena.sql` (columnas `token_recuperacion_expira` y `password_cambiada_en` al final de `usuarios`, después de las de 010 y en el mismo orden, e índice único parcial `idx_usuarios_token_recuperacion`) es idempotente y su DDL es el mismo que `schema.sql`. Reutiliza la columna existente `token_recuperacion` para el SHA-256 del token (64 hexadecimales en `VARCHAR(255)`). Aplicada dos veces a `libreria_oskar_test` (la segunda la omite `schema_migrations`; re-ejecutar su SQL en una transacción revertida tampoco falla). No crea tablas: siguen 14. La equivalencia por `pg_dump --schema-only` no está verificada.
   - La tabla `schema_migrations` es creada exclusivamente en runtime por `migrate.js` y no forma parte del `schema.sql` estático.
 
 ### 3.2 Catálogo de Tablas y Columnas Clave
@@ -598,11 +634,13 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `usuarios` | `password_hash` | `VARCHAR(255)` | NOT NULL (hash bcrypt) |
 | `usuarios` | `dos_factores_activo` | `BOOLEAN` | NOT NULL, DEFAULT FALSE |
 | `usuarios` | `dos_factores_secreto` | `VARCHAR(128)` | Nullable. Secreto TOTP cifrado (AES-256-GCM, formato `v1:<iv>:<etiqueta>:<cifrado>` en base64url, 86 caracteres). No nulo con `dos_factores_activo = false` = alta pendiente |
-| `usuarios` | `token_recuperacion` | `VARCHAR(255)` | Nullable |
+| `usuarios` | `token_recuperacion` | `VARCHAR(255)` | Nullable. SHA-256 hexadecimal (64 caracteres) del token de recuperación de contraseña; nunca el token en claro. Índice único parcial `idx_usuarios_token_recuperacion` |
 | `usuarios` | `activo` | `BOOLEAN` | NOT NULL, DEFAULT TRUE |
 | `usuarios` | `dos_factores_intentos` | `INTEGER` | NOT NULL, DEFAULT 0 (fallos 2FA consecutivos, TOTP y respaldo) |
 | `usuarios` | `dos_factores_bloqueado_hasta` | `TIMESTAMPTZ` | Nullable (bloqueo de 15 min al 5.º fallo, hora de la BD) |
 | `usuarios` | `dos_factores_ultimo_paso` | `BIGINT` | Nullable (último paso TOTP aceptado; anti-reutilización) |
+| `usuarios` | `token_recuperacion_expira` | `TIMESTAMPTZ` | Nullable (vencimiento del enlace: 30 min, hora de la BD; migración 011) |
+| `usuarios` | `password_cambiada_en` | `TIMESTAMPTZ` | Nullable (último restablecimiento, reloj de la app; invalida los JWT con `iat` anterior; migración 011) |
 | `codigos_respaldo_2fa` | `id` | `UUID` | PK, `DEFAULT uuid_generate_v4()` |
 | `codigos_respaldo_2fa` | `usuario_id` | `UUID` | FK -> `usuarios(id)` ON DELETE CASCADE, NOT NULL; `uq_codigos_respaldo_2fa_usuario_hash` UNIQUE (`usuario_id`, `codigo_hash`) |
 | `codigos_respaldo_2fa` | `codigo_hash` | `VARCHAR(128)` | NOT NULL (HMAC-SHA256 en hex, 64 caracteres; el código en claro no se guarda) |
@@ -693,6 +731,7 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `idx_inventarios_bodega` | `inventarios` | `bodega_id` | B-Tree |
 | `idx_inventarios_libro` | `inventarios` | `libro_id` | B-Tree |
 | `idx_usuarios_email` | `usuarios` | `email` | B-Tree |
+| `idx_usuarios_token_recuperacion` | `usuarios` | `token_recuperacion` | UNIQUE parcial: `WHERE token_recuperacion IS NOT NULL` (migración 011) |
 | `idx_codigos_respaldo_2fa_usuario_id` | `codigos_respaldo_2fa` | `usuario_id` | B-Tree (redundante con el UNIQUE que empieza por `usuario_id`, ver §9) |
 | `idx_movimientos_fecha` | `movimientos_inventario` | `fecha_movimiento DESC` | B-Tree ordenado descendente |
 | `idx_movimientos_inventario_id` | `movimientos_inventario` | `inventario_id` | B-Tree |
@@ -745,9 +784,11 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `TRUST_PROXY` | Entero no negativo | Número exacto de saltos proxy confiables para `req.ip` | `0` (no confiar en `X-Forwarded-For`) |
 | `LOGIN_RATE_LIMIT` | Entero positivo | Intentos por IP permitidos en login | `10` |
 | `LOGIN_RATE_WINDOW_MS` | Entero positivo en milisegundos | Ventana del limitador de login | `900000` (15 minutos) |
+| `FRONTEND_URL` | Origen HTTP(S) sin ruta ni barra final | Base del enlace de recuperación de contraseña (`{FRONTEND_URL}/restablecer#token=…`). Valor inválido lanza Error sin mostrarlo. Con `NODE_ENV=test` se ignora | `http://localhost:5173` fuera de producción; en producción, si falta, `[WARN CONFIG]` y no se envían enlaces. Compose: `http://localhost:5173` (sobreescribible) |
 
 - **Correo (`src/config/mail.config.js`)**: `leerConfigCorreo(entorno, nodeEnv)` es una función pura; `env.js` la invoca y expone el resultado como `env.mail` (`proveedor`, `host`, `port`, `user`, `password`, `from`, `faltantes`). Con `smtp` y `MAIL_USER`/`MAIL_PASSWORD` ausentes no lanza: `env.js` emite un `[WARN CONFIG]` que nombra las variables faltantes (nunca valores) y los envíos fallan registrados.
 - **2FA (`src/config/twoFactor.config.js`)**: `leerConfigDosFactores(entorno, nodeEnv)` es una función pura (estilo `mail.config.js`); `env.js` expone `env.twoFactor` con `enforced`, `encryptionKey` (Buffer), `claveDesarrollo` y las constantes: emisor `Librería Oskar`, 6 dígitos, periodo 30 s, SHA-1, tolerancia ±1 paso, token temporal de 600 s, 5 intentos, bloqueo de 15 min y 10 códigos de respaldo. `enforced` se lee en cada login (las pruebas lo cambian y lo restauran).
+- **Recuperación de contraseña (`src/config/recuperacion.config.js`)**: `leerConfigRecuperacion(entorno, nodeEnv)` es una función pura (estilo `mail.config.js`); `env.js` expone `env.recuperacion` con `frontendUrl` (o `null`), `faltantes` y las constantes: vencimiento 30 min, enfriamiento 2 min, `recuperarMax` 5, `restablecerMax` 10 y ventana de 15 min. En producción sin `FRONTEND_URL` no lanza: `env.js` emite un `[WARN CONFIG]` que nombra la variable y `POST /api/auth/recuperar` responde igual sin enviar nada (registra `[RECUPERACION]`).
 - **Conexión Sequelize (`src/config/sequelize.js`)**: Instancia `Sequelize` configurada con `freezeTableName: true`, `underscored: true`, `timestamps: false`, y pool de conexiones (max: 20, min: 0, acquire: 30000ms, idle: 30000ms).
 - **Cliente `pg` nativo (`src/config/db.js`)**: Pool de `pg` de uso exclusivo de pruebas (lo importan 7 archivos de `tests/`; su cabecera lo indica). La app no lo importa: `server.js`, `health.controller.js`, `run-tests.js`, `database/migrate.js` y `database/seed.js` usan Sequelize. Se retira en una fase posterior junto con esas pruebas.
 - **Puerto en `.env.example`**: usa `DB_PORT=5434` para coincidir con el puerto que publica Compose; el valor por defecto de `config/env.js` sigue siendo `5432`.
@@ -767,7 +808,7 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 
 ### 4.3 Tabla Completa de Endpoints
 
-`src/routes/index.js` solo cablea rutas (sin lógica) y monta `auth.routes.js`, `libro.routes.js`, `inventario.routes.js`, `movimiento.routes.js` y `venta.routes.js`. `auth.routes.js` monta `dosFactores.routes.js` en `/api/auth/2fa`. Todos los handlers viven en controladores.
+`src/routes/index.js` solo cablea rutas (sin lógica) y monta `auth.routes.js`, `libro.routes.js`, `inventario.routes.js`, `movimiento.routes.js` y `venta.routes.js`. `auth.routes.js` monta `dosFactores.routes.js` en `/api/auth/2fa` y declara `/recuperar` y `/restablecer`. Todos los handlers viven en controladores.
 
 | Método | Ruta | Middlewares (Auth / Rol) | Controller.Función | Service.Función | Repository.Función | Descripción |
 |---|---|---|---|---|---|---|
@@ -784,6 +825,8 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `PATCH` | `/api/usuarios/:id/activo` | `authenticate`, `authorize('Administrador')` | `usuarioController.cambiarActivo` | `usuarioService.cambiarActivo` | `usuarioRepository.findByIdForUpdate`, `countActiveAdministrators` | Activa o desactiva la cuenta con protección de auto desactivación y último Administrador activo. |
 | `POST` | `/api/auth/login` | Ninguno (Público) | `authController.login` | `authService.login` | `usuarioRepository.findByEmail` | Autentica credenciales. Sin segundo factor: 200 `{ token, usuario }` (igual que antes). Con 2FA activo (cualquier rol): 200 `{ paso: 'verificar', tokenTemporal, expiraEnSegundos }`. Con `TWO_FACTOR_ENFORCED` y rol Administrador/Empleado sin 2FA: 200 `{ paso: 'configurar', tokenTemporal, expiraEnSegundos }`. Errores sin cambios. |
 | `GET` | `/api/auth/me` | `authenticate` | `authController.me` | No aplica | No aplica (lee `req.user`) | Perfil del usuario autenticado en la sesión. |
+| `POST` | `/api/auth/recuperar` | Ninguno (Público), `Cache-Control: no-store`, `limiteRecuperar` (5 por 15 min por IP) | `recuperacionController.recuperar` | `recuperacionService.solicitar` | `recuperacionRepository.buscarActivoPorEmail`, `emitirToken` | Body `{ email }` (string no vacío, ≤150 tras recortar; si no, 400). Siempre 200 `{ mensaje }` con el mismo texto, exista o no la cuenta, esté activa o no, se envíe o no el correo. Solo a cuentas activas y fuera del enfriamiento de 2 min envía (sin esperarlo) un enlace `{FRONTEND_URL}/restablecer#token=…` que vence en 30 min y reemplaza al anterior. 429 límite. |
+| `POST` | `/api/auth/restablecer` | Ninguno (Público), `Cache-Control: no-store`, `limiteRestablecer` (10 por 15 min por IP) | `recuperacionController.restablecer` | `recuperacionService.restablecer` | `recuperacionRepository.buscarPorTokenVigente`, `consumirToken` | Body `{ token, password }`. 200 `{ restablecido: true }` (no inicia sesión, no toca el 2FA; invalida los JWT anteriores y envía un aviso). 400 "El enlace no es válido o ya venció. Solicita uno nuevo." (formato, inexistente, vencido, usado, cuenta inactiva), 400 política de contraseña o igual a la actual (sin consumir el enlace), 429 límite. |
 | `POST` | `/api/auth/2fa/configurar` | `exigirAlcance('2fa-setup')` | `dosFactoresController.configurar` | `dosFactoresService.configurar` | `dosFactoresRepository.obtenerEstado`, `guardarSecretoPendiente` | Genera un secreto nuevo (reemplaza uno pendiente), lo guarda cifrado con activo=false. 200 `{ qrDataUrl, secretoManual, otpauthUrl }` con `Cache-Control: no-store`; 409 si ya está activo. |
 | `POST` | `/api/auth/2fa/activar` | `exigirAlcance('2fa-setup')` | `dosFactoresController.activar` | `dosFactoresService.activar` | `obtenerEstado` (con `FOR UPDATE`), `reservarIntento`, `reclamarPaso`, `reemplazarRespaldos` | Body `{ codigo }`. 200 `{ token, usuario, codigosRespaldo }` (10, una sola vez; `no-store`). 400 formato, 401 código inválido, 409 sin alta pendiente o ya activo, 429 bloqueo. |
 | `POST` | `/api/auth/2fa/verificar` | `exigirAlcance('2fa-verify')` | `dosFactoresController.verificar` | `dosFactoresService.verificar` | `obtenerEstado`, `reservarIntento`, `reclamarPaso`, `consumirRespaldo`, `reiniciarIntentos` | Body `{ codigo }` o `{ codigoRespaldo }` (exactamente uno). 200 `{ token, usuario }` (`no-store`). 400, 401 "Código inválido o vencido." (igual para TOTP y respaldo), 429. |
@@ -882,6 +925,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
   - `actualizarPrecio`: Extrae `id` de params y `precio` del body, llama a `libroService.actualizarPrecio` y responde 200 con el libro.
   - `detalle`: Extrae `ref` de params y llama a `catalogoService.detalle`.
 - `dosFactores.controller.js`: `configurar`, `activar`, `verificar`, `estado`, `regenerarRespaldo` y `restablecer` delegan en `dosFactoresService` con `req.user.id` (y `req.params.id` en `restablecer`); los que devuelven secretos, códigos o tokens ponen `Cache-Control: no-store`.
+- `recuperacion.controller.js`: `recuperar` (`req.body.email`) y `restablecer` (`req.body.token`, `req.body.password`) delegan en `recuperacionService`; `Cache-Control: no-store` lo fija la ruta antes del limitador (cubre 200, 400 y 429).
 - `venta.controller.js`: `crear` (201), `listar`, `obtener` y `anular` delegan en `ventaService`; `crear` y `anular` toman el actor de `req.user.id` (un `usuarioId` en el body se ignora).
 - `inventario.controller.js`: `listar`, `resumen`, `listarMovimientos`, `salida` y `ajuste`; todos delegan en `inventarioService` (`listarInventario`, `obtenerResumen`, `listarMovimientos`, `registrarSalida`, `registrarAjuste`). `salida` y `ajuste` toman el actor de `req.user.id`.
 
@@ -911,7 +955,8 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
   - `registrarAjuste({ inventarioId, stockNuevo, motivo, usuarioId })`: transacción; bloqueo con `findByIdForUpdate`; valida cambio; inserta movimiento `Ajuste` con cantidad = `stockNuevo`.
 - `reportes.service.js` es una fachada para informes; `services/reportes/` contiene los casos `inventarioValorizado` y `kardex`, más `contrato.service.js` para el sobre paginado común. Los resultados son objetos de datos independientes de futuros formatos de exportación.
 
-- `mail.service.js` es una **fachada** del correo (`services/mail/`); sin consumidores todavía. Exporta `enviar`, `verificar`, `esperarPendientes`, `crearServicioCorreo` y, solo con proveedor `consola`, `bandeja` y `vaciarBandeja()` (máx. 100 mensajes), construidos con `env.mail`. `enviar({ para, asunto, texto, html })` nunca lanza ni rechaza y resuelve `{ ok, intentos, reintentando, motivo? }`; entrada inválida (CR/LF, formato, más de 20 destinatarios, asunto vacío o de más de 200, cuerpo vacío o de más de 100 kB) → `motivo: 'invalido'` sin reintentar. Tras el primer intento hay 3 reintentos en segundo plano (esperas por defecto 5 s, 30 s, 120 s; temporizadores `unref()`; máx. 100 pendientes), salvo error permanente (`EAUTH`, `responseCode` 500-599 o configuración SMTP incompleta). Piezas: `fabrica.service.js` (`crearServicioCorreo`, reintentos), `smtp.provider.js` (Nodemailer, timeouts de 10 s/10 s/20 s), `consola.provider.js` (memoria + log con destinatario enmascarado; cuerpo solo en `development`; silencioso en `test`), `validacion.mail.js`, `seguridad.mail.js` (sanitizador de secretos y enmascarado). Prueba manual: `npm run correo:probar -- destino@dominio.com`.
+- `recuperacion.service.js` es la **fachada** de la recuperación de contraseña (clase con métodos propios sobre `services/recuperacion/`): `solicitar(email)`, `restablecer({ token, password })` y `esperarEnvios()` (espera los envíos iniciados sin `setTimeout`; lo usan las pruebas). Envía los correos sin esperarlos dentro de la petición (un `Set` de tareas pendientes) y registra fallos con `[RECUPERACION]` y el id del usuario. Módulos: `recuperacion/token.js` (`generarToken`: 32 bytes de `crypto.randomBytes` en base64url, 43 caracteres; `hashToken`: SHA-256 hexadecimal; `formatoValido`: `/^[A-Za-z0-9_-]{43}$/`) y `recuperacion/correos.js` (`enlaceRestablecer`, `mensajeEnlace`, `mensajeAviso` → `{ para, asunto, texto, html, adjuntos }`: `texto` de respaldo, `html` con la plantilla base, el logo como adjunto en línea o `adjuntos: []` si no está; `cargarLogo` inyectable para pruebas). `enviarSinEsperar(construir, usuarioId, tipo)` recibe una función y construye el mensaje dentro de la cadena de promesas que captura errores: un fallo de la plantilla, del logo o del enlace solo se registra con `[RECUPERACION]` y el id, y la respuesta HTTP no cambia.
+- `mail.service.js` es una **fachada** del correo (`services/mail/`); su único consumidor de la app es `recuperacion.service.js` (además del script `probar-correo.js`). Exporta `enviar`, `verificar`, `esperarPendientes`, `crearServicioCorreo` y, solo con proveedor `consola`, `bandeja` y `vaciarBandeja()` (máx. 100 mensajes), construidos con `env.mail`. `enviar({ para, asunto, texto, html, adjuntos? })` nunca lanza ni rechaza y resuelve `{ ok, intentos, reintentando, motivo? }`; entrada inválida (CR/LF, formato, más de 20 destinatarios, asunto vacío o de más de 200, cuerpo vacío o de más de 100 kB; `adjuntos` que no sea un arreglo de hasta 3 `{ nombre, contenido: Buffer de 1 B a 100 kB, tipo: 'image/png' | 'image/jpeg', cid }` con `nombre` y `cid` en `/^[A-Za-z0-9._-]{1,64}$/`) → `motivo: 'invalido'` sin reintentar. Tras el primer intento hay 3 reintentos en segundo plano (esperas por defecto 5 s, 30 s, 120 s; temporizadores `unref()`; máx. 100 pendientes), salvo error permanente (`EAUTH`, `responseCode` 500-599 o configuración SMTP incompleta). Piezas: `fabrica.service.js` (`crearServicioCorreo`, reintentos), `smtp.provider.js` (Nodemailer, timeouts de 10 s/10 s/20 s; los adjuntos pasan como `attachments` con `cid` y `contentDisposition: 'inline'`, y sin adjuntos no se envía la clave), `consola.provider.js` (memoria + log con destinatario enmascarado; solo el `texto` y solo en `development`, nunca el `html` ni los adjuntos; de los adjuntos la bandeja guarda `{ nombre, tipo, cid, bytes }`; silencioso en `test`), `validacion.mail.js`, `seguridad.mail.js` (sanitizador de secretos y enmascarado), `plantillas.js` (`plantillaCorreo({ preencabezado, titulo, saludo, parrafos, boton: { texto, url }, notas, pie, logoCid })`, `escaparHtml`, `urlSegura`: documento completo con tablas `role="presentation"`, estilos en línea, máx. 600 px, paleta de la página, sin scripts, hojas, fuentes web ni más imagen que `cid:{logoCid}`; escapa todo dato dinámico, omite el botón si la URL no es http(s) y no lanza ante datos extraños; reutilizable por futuros correos) y `logo.js` (`crearCargadorLogo`, `cargarLogo`, `adjuntoLogo`, `LOGO_CID`: lee `src/assets/logo-correo.png` una vez con caché; si falta devuelve `null` y avisa una sola vez con `[MAIL]`, sin rutas). Prueba manual: `npm run correo:probar -- destino@dominio.com`. Vista previa sin enviar: `npm run correo:vista-previa [-- directorio]` (`src/scripts/vista-previa-correos.js`: datos ficticios, token falso, escribe `correo-recuperacion.html` y `correo-aviso.html` en el directorio temporal con el logo como `data:` solo en esos archivos; no lee `.env`, no importa `models` ni usa red).
 - `venta.service.js` es una **fachada** (11 líneas, `Object.assign` sobre el prototipo de `VentaService`) de `services/venta/`:
   - `venta/crear.service.js`: `crearVenta({ bodegaId, items, metodoPago, clienteNombre, clienteNit, descuento, notas, usuarioId })`. Una transacción; orden: bodega activa → libros bloqueados en orden de id (`findByIdsForUpdate`; 404 si falta alguno, 409 si están inactivos o `precio <= 0`) → bloqueos de inventarios → validación de stock → importes en centavos → cabecera → líneas → movimientos `Salida` con `ventaId`. Una baja concurrente se serializa con la creación de venta; libros inactivos no persisten ventas, líneas ni movimientos.
   - `venta/anular.service.js`: `anularVenta({ ventaId, motivo, usuarioId })`. Una transacción: `Venta` con `FOR UPDATE` (404/409), bloqueo de inventarios en el mismo orden por id, un `Ingreso` por línea con `ventaId` y "Anulación de venta V-xxxxxx: <motivo>", y un solo UPDATE de `estado`, `anulada_en`, `anulada_por`, `motivo_anulacion`.
@@ -922,7 +967,8 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 - `inventario.repository.js` es una **fachada** (misma técnica `Object.assign` sobre el prototipo) de `repositories/inventario/`: `inventarioBasico.repository.js` (`findByLibroAndBodega`, `findOrCreate`, `findById`, `findByLibrosAndBodega` (varios libros en una bodega, ordenados por `id`, sin bloqueo), `findByLibroId`, `setStockMinimo`, `findByIdForUpdate`), `inventarioListado.repository.js` (`findAllWithDetails`), `inventarioResumen.repository.js` (`getResumen`) y el helper `inventarioSubconsultas.helper.js` (`ULTIMA_SALIDA_SQL`).
 - `usuario.repository.js`: `findByEmail`, `findById`, `findAll`, `create`, `update`, `findActivosConRol`, `findConRol`, `findRoleByName`, `emailExists`, `findByIdForUpdate`, `lockRoles` y `countActiveAdministrators`. El listado predeterminado conserva la forma anterior y ordena en memoria con `localeCompare` y desempate por ID para igualar orden de forma determinista. `findAll` y `findActivosConRol` tienen contratos distintos.
 - `usuario.service.js` concentra las validaciones y reglas del CRUD. Cambios que afectan roles/estado y altas serializan al bloquear las filas de roles en orden de ID dentro de una transacción. `utils/passwordPolicy.js` exige 10 caracteres, letra, número y un máximo de 72 bytes UTF-8 antes de aplicar bcrypt.
-- `dosFactores.repository.js` (solo Sequelize): único repositorio que consulta y devuelve `dos_factores_secreto` (cifrado). `usuario.repository.js` no lo devuelve: `findByEmail`, `findById`, `findAll`, `findConRol` y `findActivosConRol` piden listas fijas de atributos y `create`/`update` devuelven solo `id`, `rol_id`, `nombre_completo`, `email` y `activo`; ninguno incluye el secreto ni `token_recuperacion`, y solo `findByEmail` incluye `password_hash` (login). `findByIdForUpdate` devuelve la instancia completa, que `usuario.service.js` usa dentro de la transacción sin devolverla. Fuera de la capa de datos, `dosFactores.service.js#activar` usa el valor CIFRADO (comprueba que exista y, dentro de la transacción, que no haya cambiado) y `dosFactores/intentos.js#abrirSecreto` lo descifra en memoria. `obtenerEstado(id, { transaction, lock })` (bandera `bloqueado` calculada con `CURRENT_TIMESTAMP` de la BD; con `lock` usa `FOR UPDATE OF "Usuario"`), `buscarIdPorEmail`, `guardarSecretoPendiente`, `reclamarPaso(id, paso, { transaction, where, extra })`, `reservarIntento(id, maxIntentos, bloqueoMinutos)` → `{ permitido, bloqueadoAhora }`, `reiniciarIntentos`, `consumirRespaldo`, `reemplazarRespaldos`, `contarRespaldosRestantes` y `restablecer`. El 2FA no modificó `usuario.repository.js`.
+- `dosFactores.repository.js` (solo Sequelize): único repositorio que consulta y devuelve `dos_factores_secreto` (cifrado). `usuario.repository.js` no lo devuelve: `findByEmail`, `findById`, `findAll`, `findConRol` y `findActivosConRol` piden listas fijas de atributos (`findById` incluye además `password_cambiada_en`, que `authenticate` y `exigirAlcance` comparan con el `iat`; no llega a `req.user`) y `create`/`update` devuelven solo `id`, `rol_id`, `nombre_completo`, `email` y `activo`; ninguno incluye el secreto ni `token_recuperacion`, y solo `findByEmail` incluye `password_hash` (login). `findByIdForUpdate` devuelve la instancia completa, que `usuario.service.js` usa dentro de la transacción sin devolverla. Fuera de la capa de datos, `dosFactores.service.js#activar` usa el valor CIFRADO (comprueba que exista y, dentro de la transacción, que no haya cambiado) y `dosFactores/intentos.js#abrirSecreto` lo descifra en memoria. `obtenerEstado(id, { transaction, lock })` (bandera `bloqueado` calculada con `CURRENT_TIMESTAMP` de la BD; con `lock` usa `FOR UPDATE OF "Usuario"`), `buscarIdPorEmail`, `guardarSecretoPendiente`, `reclamarPaso(id, paso, { transaction, where, extra })`, `reservarIntento(id, maxIntentos, bloqueoMinutos)` → `{ permitido, bloqueadoAhora }`, `reiniciarIntentos`, `consumirRespaldo`, `reemplazarRespaldos`, `contarRespaldosRestantes` y `restablecer`. El 2FA no modificó `usuario.repository.js`.
+- `recuperacion.repository.js` (solo Sequelize, sin `sequelize.query`; vencimientos con `sequelize.literal('CURRENT_TIMESTAMP …')`): único lugar que lee o escribe `token_recuperacion` y `token_recuperacion_expira` y que escribe `password_cambiada_en`. `buscarActivoPorEmail(email)` (sin distinguir mayúsculas; `id`, `nombre_completo`, `email`), `emitirToken(id, hash, config)` → boolean, `buscarPorTokenVigente(hash)` (incluye `password_hash` para comparar) y `consumirToken(hash, passwordHash, cambiadaEn)` → boolean.
 - `venta.repository.js` (solo Sequelize, sin SQL crudo): `createVenta`, `createDetalles`, `findByIdForUpdate` (exige `{ transaction }`), `findLineasByVenta`, `marcarAnulada`, `findDetalleById`, `findPagina` y `contarLineasPorVentas` (COUNT/SUM agrupados).
 - `bodega.repository.js` (`findActivas`, `findActivaById`), `categoria.repository.js` (`findAll`, `findAllWithLibroCount`, `findById`, `findByNombre`, `create`, `updateNombre`, `countLibros`, `delete`), `autor.repository.js` y `editorial.repository.js` (`findByNombre`, `findById`, `findAll`, `create`, `upsert`), `libro.repository.js` (`findByIsbn`, `findByIsbnForUpdate`, `findById`, `findByIdForUpdate`, `findByIds`, `findByIdsForUpdate`, `findAdminPage`, `updateBibliografia`, `updateActivo`, `updatePrecio`, `upsert`, `create`, `searchAndList`, `findDetalleByRef`) y `movimiento.repository.js` (`getTipoMovimientoByName`, `ensureTipoMovimiento`, `createMovimiento` (acepta `ventaId` opcional, guardado como `venta_id`), `findAllWithFilters`). `repositories/reportes/` contiene consultas separadas por informe; inventario valorizado usa ORM para filas/paginación y SQL analítico con binds para agregados sin joins multiplicadores; Kardex adapta la consulta existente con filtros de fecha/categoría y `venta_id` opcional, manteniendo intacta la forma de `/api/movimientos`.
 
@@ -931,6 +977,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 - **Bloqueo pesimista**: Se aplica en `inventarioRepository.findByIdForUpdate(id, { transaction })` mediante `lock: transaction.LOCK.UPDATE` (`SELECT ... FOR UPDATE`) para evitar *race conditions* en decrementos y ajustes simultáneos.
 - **Ventas**: crear y anular bloquean los `inventarios` de sus líneas en orden ascendente de `id` (`bloquearInventariosOrdenados`); la anulación bloquea además la fila de `ventas` antes de los inventarios. El stock se pre-valida bajo el bloqueo para responder 409 con el título (el trigger solo lanza un error genérico, mapeado a 400).
 - **2FA (sentencias atómicas, cada una un único UPDATE con comprobación de filas afectadas)**: `reclamarPaso` → `UPDATE usuarios SET dos_factores_ultimo_paso = :paso, intentos = 0, bloqueado_hasta = NULL WHERE id = :id AND (ultimo_paso IS NULL OR ultimo_paso < :paso)`; `consumirRespaldo` → `UPDATE codigos_respaldo_2fa SET usado_en = CURRENT_TIMESTAMP WHERE usuario_id = :id AND codigo_hash = :h AND usado_en IS NULL`; `reservarIntento` → `UPDATE usuarios SET intentos = CASE WHEN intentos + 1 >= 5 THEN 0 ELSE intentos + 1 END, bloqueado_hasta = CASE WHEN intentos + 1 >= 5 THEN CURRENT_TIMESTAMP + make_interval(mins => 15) ELSE bloqueado_hasta END WHERE id = :id AND (bloqueado_hasta IS NULL OR bloqueado_hasta <= CURRENT_TIMESTAMP) RETURNING intentos` (en el SET las columnas valen lo anterior; 0 filas → 429; `bloqueadoAhora` = el contador devuelto es 0), sin transacción para que se confirme aunque la operación termine en error. Se ejecuta ANTES de verificar el código, en `activar`, `verificar` (TOTP y respaldo) y `regenerarRespaldo`, después del 429 temprano y de validar el formato (el formato inválido no consume intento; el secreto se descifra antes de reservar, así que un secreto ilegible tampoco). Dos reservas simultáneas se serializan: la segunda espera el bloqueo de fila de la primera y, bajo READ COMMITTED, PostgreSQL reevalúa el WHERE sobre la versión ya confirmada; por eso por cada ventana de bloqueo a lo sumo 5 verificaciones llegan a ejecutarse (comprobado con 30 peticiones simultáneas en `tests/dosFactoresConcurrencia.test.js`, con una sola instancia del backend). El éxito reinicia contador y bloqueo (`reclamarPaso` o `reiniciarIntentos`). En `activar`, un 409 por alta cambiada a mitad deja el intento consumido (sí se verificó un código). `activar` corre en una transacción con la fila del usuario bloqueada (`FOR UPDATE`): reclama el paso, pone activo=true y crea los 10 códigos; `regenerarRespaldo` y `restablecer` reemplazan/borran los códigos en una transacción.
+- **Recuperación de contraseña (un UPDATE atómico con comprobación de filas afectadas, sin transacción explícita)**: `emitirToken` → `UPDATE usuarios SET token_recuperacion = :hash, token_recuperacion_expira = CURRENT_TIMESTAMP + make_interval(mins => 30) WHERE id = :id AND (token_recuperacion_expira IS NULL OR token_recuperacion_expira < CURRENT_TIMESTAMP + make_interval(mins => 28))` (0 filas = enlace emitido hace menos de 2 min: no se envía nada); `consumirToken` → `UPDATE usuarios SET password_hash = :nuevo, token_recuperacion = NULL, token_recuperacion_expira = NULL, password_cambiada_en = :ahora WHERE token_recuperacion = :hash AND token_recuperacion_expira > CURRENT_TIMESTAMP AND activo = true` (0 filas → 400 genérico). Dos restablecimientos simultáneos con el mismo enlace: el segundo espera el bloqueo de fila y, bajo READ COMMITTED, reevalúa el WHERE sobre la fila ya sin token → exactamente un 200 y un 400 (`tests/recuperacionRestablecer.test.js`). Sequelize añade `actualizado_en` a ambos UPDATE.
 - **Savepoints**: En `_upsertMasterRecord` (`services/libro/maestros.service.js`) y `MovimientoRepository.ensureTipoMovimiento` se usa una transacción anidada (savepoint) para aislar violaciones `UNIQUE` (`23505`) sin abortar la transacción principal.
 
 ### 4.6 Autenticación, 2FA y RBAC
@@ -940,6 +987,14 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 - Tiempo de vida: configurado en `env.jwt.expiresIn` (por defecto `8h`).
 - Payload del token de sesión: `{ sub: usuario.id, rol: usuario.rol_nombre, nombre: usuario.nombre_completo }` (lo firma `authService.emitirSesion`).
 - Tokens temporales del 2FA: mismo secreto, payload mínimo `{ sub, scope }` con `scope` `2fa-verify` o `2fa-setup` y `exp` de 600 s. `authenticate` los rechaza (401) y solo los acepta `exigirAlcance` (`middlewares/auth2fa.js`).
+- **Invalidación tras restablecer la contraseña**: `authenticate` y `exigirAlcance`, después de cargar al usuario con `findById`, aplican `utils/sesionVigente.js` (`sesionVigente(decoded, password_cambiada_en)`): vigente si `password_cambiada_en` es null o si `iat * 1000 > password_cambiada_en`; sin `iat` y con cambio registrado → no vigente. Si no, 401 "La sesión ya no es válida. Inicie sesión de nuevo.". Es estricta: un token emitido en el mismo segundo del cambio se rechaza. Tokens de usuarios sin cambio registrado (seed, helpers de pruebas que firman `{ sub }`) siguen funcionando.
+
+#### Recuperación de contraseña
+- **Endpoints**: `POST /api/auth/recuperar` y `POST /api/auth/restablecer` (§4.3), públicos, `no-store`, con limitadores propios por IP en `middlewares/rateLimitRecuperacion.js` (`limiteRecuperar` 5 y `limiteRestablecer` 10 por 15 min, instancias nuevas de `createRateLimit`; no comparten contador con el login).
+- **Token**: 32 bytes aleatorios en base64url (43 caracteres). En la BD solo su SHA-256 hexadecimal en `token_recuperacion` (índice único parcial). El token en claro solo existe en memoria y en el cuerpo del correo; nunca en logs, respuestas ni errores. Enlace: `{FRONTEND_URL}/restablecer#token=<token>` (en el fragmento, que el navegador no envía al servidor ni en `Referer`).
+- **Solicitar**: respuesta 200 idéntica en todos los casos con formato válido. Solo cuentas activas, fuera del enfriamiento de 2 min; un enlace nuevo reemplaza al anterior. Vence a los 30 min (hora de la BD). El correo se envía sin esperarlo; subsiste una pequeña diferencia de tiempo cuando la cuenta existe (UPDATE extra a la BD).
+- **Restablecer**, en este orden: (1) formato del token (400 genérico); (2) `validarPassword` (400 con su mensaje, sin consumir); (3) búsqueda por hash con vencimiento futuro y `activo = true` (400 genérico); (4) `bcrypt.compare` con la actual: igual → 400 "La nueva contraseña debe ser distinta de la actual." sin consumir; (5) `bcrypt.hash(password, 10)`; (6) `consumirToken` atómico (0 filas → 400 genérico). `password_cambiada_en` usa el reloj de la APP (`new Date()`), porque se compara con el `iat` que firma la app; el vencimiento del enlace usa solo la hora de la BD. No toca columnas ni tablas del 2FA (sigue activo) y no inicia sesión. Tras el éxito envía un correo de aviso sin esperarlo.
+- **Configuración**: `env.recuperacion` (§4.1). En producción sin `FRONTEND_URL` falla cerrado: misma respuesta, sin tocar la BD ni enviar, y `[RECUPERACION]` en el log.
 
 #### 2FA (Segundo Factor)
 - **Estado real**: implementado en el backend (endpoints en §4.3, flujo en §6.2) y en la interfaz (`Login.jsx` con `useLoginDosPasos`, vista `/cuenta/seguridad`; §5.2). Sin interfaz: restablecer (`/usuarios/:id/restablecer`) y activar el 2FA con sesión completa (el backend no lo permite).
@@ -1033,6 +1088,8 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 | `tests/ventasApiConsulta.test.js` | 5 | End-to-End | `libreria_oskar_test` | `GET /api/ventas` y `/:id`: roles, filtros por estado y fechas (venta a las 23:30 de Guatemala), paginación, `lineas`/`unidades`, parámetros inválidos y compatibilidad de `GET /api/movimientos`. No importa `config/db`. |
 | `tests/mailConfig.test.js` | 6 | Unitaria | No requiere | `leerConfigCorreo`: `test` fuerza consola, producción sin variables (aviso, sin lanzar), alias, `MAIL_FROM` y rechazo de proveedor/puerto inválidos. |
 | `tests/mailReintentos.test.js` | 8 | Unitaria / Mock | No requiere | `enviar` nunca rechaza; reintentos (2 fallos → 3 intentos, 4 intentos y descarte, error permanente → 1); tope de pendientes; validación sin llamar al proveedor; secretos fuera de logs. |
+| `tests/mailAdjuntos.test.js` | 6 | Unitaria / Mock | No requiere | Adjuntos en línea: inválidos (más de 3, tamaño, vacío, tipo, `cid`/`nombre` con CR/LF o formato) → `invalido` sin llamar al proveedor; normalización; sin adjuntos el mensaje no cambia; SMTP con `attachments` (`cid`, `inline`) o sin la clave; bandeja con metadatos y `bytes`; la consola nunca imprime `html` ni adjuntos. |
+| `tests/correoPlantillas.test.js` | 10 | Unitaria | No requiere | Plantilla (tablas, viewport, `color-scheme`, paleta, botón y enlace con el mismo URL, escape, `javascript:`/sin protocolo sin botón, datos extraños sin lanzar, sin `<script`/`<link`/`@import`, única `<img` `cid:` solo con `logoCid`), `texto` y `asunto` idénticos a los anteriores, HTML < 15 kB, logo con caché y logo ausente (sin adjuntos, encabezado de texto, un aviso sin rutas). |
 | `tests/mailProveedores.test.js` | 3 | Unitaria / Mock | No requiere | SMTP con transporte inyectado (puertos 587 y 465, auth, timeouts, `MAIL_FROM`), configuración incompleta y consola (bandeja de 100, enmascarado, cuerpo solo en `development`). |
 | `tests/dosFactoresConfig.test.js` | 6 | Unitaria | No requiere | `leerConfigDosFactores`: valores por defecto, `test` fuerza `enforced=false`, producción sin clave → Error, clave inválida → Error sin mostrar el valor, `TWO_FACTOR_ENFORCED` inválido. |
 | `tests/dosFactoresCripto.test.js` | 10 | Unitaria | No requiere | Cifrado (ida y vuelta, IV distinto, manipulación, clave equivocada, AAD de otro usuario, versión, longitud ≤ 128), TOTP (±1 paso con el paso devuelto, ±2 rechazado, URI y QR) y códigos de respaldo (formato, alfabeto, normalización, HMAC con subclave). |
@@ -1042,12 +1099,18 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 | `tests/dosFactoresBloqueo.test.js` | 8 | End-to-End | `libreria_oskar_test` | 5 fallos → 429, código correcto con bloqueo → 429, bloqueo vencido vuelve a funcionar, éxito reinicia, contador compartido, fallo registrado aunque falle la operación, concurrencia (mismo TOTP, mismo respaldo, 5 fallos simultáneos) y falla cerrada del descifrado. |
 | `tests/dosFactoresConcurrencia.test.js` | 5 | End-to-End | `libreria_oskar_test` | 30 peticiones simultáneas con códigos erróneos distintos en `verificar` (TOTP y respaldo), `activar` y `regenerar`: exactamente 5 verificaciones (`totp.verificarCodigo` o `consumirRespaldo` reemplazados temporalmente y restaurados en `finally`), 4×401 (4×400 en regenerar) y 26×429, sin 500; con bloqueo un código correcto → 429 sin verificarse, y con el bloqueo vencido → 200; el formato inválido no consume intento. |
 | `tests/dosFactoresRestablecer.test.js` | 5 | End-to-End | `libreria_oskar_test` | Restablecer: 401/403/400/404/403 a sí mismo, éxito (luego el login pide `configurar` con `enforced`), `restablecerPorEmail` y el script `reset-2fa` (código 1 sin argumento o con email inexistente, 0 con éxito, sin secretos en la salida). |
-| **Total** | **358** | | | `npm test`: 358 pasan, 0 fallan (ejecutado el 2026-10-24). |
+| `tests/recuperacionConfig.test.js` | 7 | Unitaria | No requiere | `leerConfigRecuperacion` (`test` ignora el entorno, desarrollo por defecto, producción sin variable → `faltantes`, URL inválida/con ruta/barra final → Error sin el valor, constantes), `sesionVigente` (estricta, mismo segundo, sin `iat`) y formato/hash del token y del enlace. |
+| `tests/recuperacionSolicitar.test.js` | 6 | End-to-End | `libreria_oskar_test` | `POST /api/auth/recuperar`: cuerpo idéntico (existente, inexistente, inactivo), un solo correo con enlace en el fragmento, solo SHA-256 en la BD, 400 por formato, enfriamiento y reemplazo del enlace, falla cerrada sin `FRONTEND_URL`, límites 6.ª/11.ª → 429 sin compartir contador con el login. |
+| `tests/recuperacionRestablecer.test.js` | 5 | End-to-End | `libreria_oskar_test` | `POST /api/auth/restablecer`: éxito y aviso, reuso, token mal formado/inexistente/vencido con el mismo mensaje, política o contraseña igual sin consumir el enlace, cuenta desactivada y concurrencia con el mismo enlace (un 200 y un 400; solo la ganadora inicia sesión). |
+| `tests/recuperacionCorreoHtml.test.js` | 3 | End-to-End | `libreria_oskar_test` | Correo de recuperación con `texto`, `html` y logo `image/png` cuyo `cid` aparece en el html, enlace `#token=` en botón y texto; aviso con `html` sin botón; si construir el mensaje lanza, respuesta idéntica (estado y cuerpo) a la de un correo inexistente y un solo registro `[RECUPERACION]` sin correo ni token. |
+| `tests/recuperacionSesiones.test.js` | 4 | End-to-End | `libreria_oskar_test` | JWT y token temporal 2FA anteriores → 401 en `/auth/me`, `/usuarios` y `/2fa/verificar`; sin cambio registrado siguen; login posterior con la nueva; 2FA intacto y `paso: 'verificar'`; token, hash, contraseñas y correo fuera de consola y respuestas. |
+| **Total** | **399** | | | `npm test`: 399 pasan, 0 fallan (ejecutado el 2026-10-24). |
 
 - **Runner**: Node.js test runner nativo (`node --test --test-concurrency=1 tests/**/*.test.js`), lanzado por `src/run-tests.js`. La columna Tests usa el conteo del runner: una prueba con subpruebas `t.test` cuenta la prueba padre más cada subprueba.
 - **Aislamiento**: `src/run-tests.js` aborta si `NODE_ENV === 'production'` y comprueba con Sequelize (`SELECT current_database()`) que la conexión apunta a `libreria_oskar_test`. Requiere `db-test` levantado (puerto host 5435).
 - **Cliente `pg` en pruebas**: 7 archivos importan `src/config/db.js` (cliente `pg` nativo) (`db.pool.query` y `pool.end()`) para consultas directas, sembrado o limpieza; ver §9.
 - **Frontend**: no tiene pruebas automatizadas.
+- **Pruebas de recuperación**: reutilizan la fábrica y el servidor de `tests/helpers/dosFactores.js` y `tests/helpers/recuperacion.js` (reinicio de `limiteRecuperar`/`limiteRestablecer`, `esperarEnvios()`, lectura del token desde la bandeja de consola); simulan el paso del tiempo moviendo `token_recuperacion_expira` o `password_cambiada_en` en la BD (sin esperas) y restauran `console.*` y `env.recuperacion.frontendUrl` en `finally`. `recuperacionSolicitar.test.js` exige ahora que el correo traiga `html` (antes exigía que no lo hubiera).
 - **Pruebas 2FA**: crean y borran sus propios usuarios (`tests/helpers/dosFactores.js`), nunca tocan el estado 2FA de los usuarios del seed, no usan red y restauran `env.twoFactor.enforced` en `finally`.
 
 ---
@@ -1059,7 +1122,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 ```text
 src/
 ├── App.jsx, main.jsx, index.css
-├── views/                  Orquestadores de ruta (Catalogo, LibroDetalle, RegistrarLibro, Inventario, Usuarios, Categorias, GestionLibros, Login, Nosotros, Ventas, NuevaVenta, VentaDetalle, Seguridad)
+├── views/                  Orquestadores de ruta (Catalogo, LibroDetalle, RegistrarLibro, Inventario, Usuarios, Categorias, GestionLibros, Login, OlvideContrasena, RestablecerContrasena, Nosotros, Ventas, NuevaVenta, VentaDetalle, Seguridad)
 ├── components/             Compartidos: Navbar, Footer, Toast, LoadingSpinner, ModalPrecioLibro, ProtectedRoute, BarcodeScanner, EstadoEscaner
 │   └── ui/                 Modal, ErrorBox, FieldLabel, Input, ControlCantidad, OpcionesSegmentadas, Select, Paginacion
 ├── context/                AuthContext.jsx
@@ -1067,13 +1130,13 @@ src/
 │   ├── catalogo/           components/ + hooks/ (useCatalogo, useLibroDetalle)
 │   ├── inventario/         components/ + hooks/ (useInventarioData, useKardex)
 │   ├── registrar-libro/    components/ + hooks/ (useRegistrarLibro) + validacion.js + camposFaltantes.js
-│   ├── seguridad/          components/ + hooks/ (useLoginDosPasos, useSeguridad, useFocoCodigo) + codigos.js y errores.js (puros) + navegador.js (copiar/descargar)
+│   ├── seguridad/          components/ + hooks/ (useLoginDosPasos, useSeguridad, useFocoCodigo, useSolicitarRecuperacion, useRestablecerContrasena) + codigos.js, errores.js y recuperacion.js (puros) + navegador.js (copiar/descargar)
 │   ├── ventas/             components/ + hooks/ (useNuevaVenta, useVentas, useVentaDetalle)
 │   ├── usuarios/           components/ + hooks/ (useUsuarios)
 │   ├── categorias/         components/ + hooks/ (useCategorias)
 │   └── libros/             components/ + hooks/ (useGestionLibros)
 ├── hooks/                  useDebouncedValue.js, useCamaraEscaner.js, useGeometriaEscaner.js, useDiagnosticoEscaner.js
-├── services/api/           client.js, auth.api.js, dosFactores.api.js, catalogo.api.js, bodegas.api.js, categorias.api.js, inventario.api.js, libros.api.js, librosAdmin.api.js, ventas.api.js, usuarios.api.js
+├── services/api/           client.js, auth.api.js, dosFactores.api.js, recuperacion.api.js, catalogo.api.js, bodegas.api.js, categorias.api.js, inventario.api.js, libros.api.js, librosAdmin.api.js, ventas.api.js, usuarios.api.js
 └── utils/                  tokenStorage.js, roles.js, formatters.js, parsers.js, dinero.js, cargarDetectorDeCodigos.js, errorCamara.js, geometriaEscaner.js
 ```
 
@@ -1088,6 +1151,8 @@ Reglas de la estructura: las llamadas HTTP salen solo de `services/api/`; las vi
 | `/catalogo/:ref` | `LibroDetalle` | Público | Ficha técnica y disponibilidad por sucursal |
 | `/nosotros` | `Nosotros` | Público | Información institucional de la empresa |
 | `/login` | `Login` | Público | Credenciales y, si el backend lo pide, segundo paso 2FA (verificar o alta) |
+| `/olvide-contrasena` | `OlvideContrasena` | Público (sin `ProtectedRoute`; no está en el Navbar) | Pide el enlace de recuperación por correo |
+| `/restablecer` | `RestablecerContrasena` | Público (sin `ProtectedRoute`; no está en el Navbar) | Toma el token del fragmento de la URL y permite elegir la contraseña nueva |
 | `/registrar` | `RegistrarLibro` | `ROLES_OPERATIVOS` (`Administrador`, `Empleado`) | Consulta por ISBN, ingreso de stock y registro de libros (`ProtectedRoute`) |
 | `/inventario` | `Inventario` | `ROLES_OPERATIVOS` | Resumen, existencias y kardex (`ProtectedRoute`) |
 | `/ventas` | `Ventas` | `ROLES_OPERATIVOS` | Listado de ventas con filtros y paginación (`ProtectedRoute`) |
@@ -1164,7 +1229,14 @@ La navegación muestra Catálogo y Nosotros para público y cualquier rol; Regis
 - **Token temporal**: solo en estado de React (ni almacenamiento ni URL); al recargar se vuelve a las credenciales. Si se envía tras `expiraEnSegundos`, no llama al backend y vuelve a las credenciales con "La verificación venció. Inicia sesión de nuevo."; la respuesta se clasifica con `clasificarErrorCodigo` (`features/seguridad/errores.js`). Código inválido (401 con el mensaje exacto "Código inválido o vencido."): el campo y el botón principal quedan deshabilitados, el foco pasa a "Intentar de nuevo", que limpia el campo, lo rehabilita y le devuelve el foco (en el alta no vuelve a llamar a `/configurar` ni cambia el QR); el enlace "Volver" y el cambio app/respaldo siguen disponibles. Bloqueo (429): campo, botón principal y cambio app/respaldo deshabilitados, mensaje del backend con el foco en la alerta y solo "Volver a iniciar sesión". Cualquier otro 401 (token vencido, 2FA restablecido o mensaje desconocido) muestra el mensaje del backend y "Volver a iniciar sesión".
 - **`/configurar`**: se llama una sola vez por token temporal, desde el envío de credenciales (no en un efecto, por StrictMode) y con una guardia `useRef`; no hay botón para regenerar el QR.
 - **Endpoints consumidos**: `POST /api/auth/login` (vía `AuthContext` y `auth.api.js`) y `POST /api/auth/2fa/configurar`, `/activar`, `/verificar` (vía `dosFactores.api.js`, `fetch` directo).
-- **Componentes**: `FormularioCredenciales`, `PasoVerificar`, `PasoConfigurar`, `CodigosRespaldo` (en `features/seguridad/components/`).
+- **Componentes**: `FormularioCredenciales`, `PasoVerificar`, `PasoConfigurar`, `CodigosRespaldo` (en `features/seguridad/components/`). Solo en el paso de credenciales, bajo el botón principal, `FormularioCredenciales` muestra el enlace "¿Olvidaste tu contraseña?" (`Link` a `/olvide-contrasena`); `Login.jsx` no cambió.
+
+#### Recuperar contraseña (`OlvideContrasena.jsx` y `RestablecerContrasena.jsx`)
+- Vistas delgadas sobre `TarjetaAcceso` (misma tarjeta que el login, duplicada a propósito: `Login.jsx` no se refactorizó). El estado vive en `useSolicitarRecuperacion` y `useRestablecerContrasena`; la lógica pura en `features/seguridad/recuperacion.js`.
+- **`/olvide-contrasena`**: un campo de correo (`type="email"`, `autoComplete="email"`, recortado). Estados `formulario` → `enviando` → `enviado`. Con 200 reemplaza el formulario por `data.mensaje` del backend en un `role="status"` (mismo texto exista o no el correo) con "Volver a iniciar sesión" y "Usar otro correo". Con 400, 429 u otro error muestra el mensaje en `AlertaError` y conserva el formulario; sin conexión: "No se pudo conectar con el servidor. Inténtalo de nuevo.".
+- **`/restablecer`**: estados `formulario` | `enviando` | `exito` | `enlaceInvalido`. El token se lee de `window.location.hash` una sola vez, en el inicializador de `useState` (sobrevive a la doble ejecución de efectos de StrictMode); un efecto idempotente borra el fragmento con `history.replaceState` (conserva `history.state`, sin `navigate`) y nunca toca el token. Sin token con formato válido (`/^[A-Za-z0-9_-]{43}$/`) arranca en `enlaceInvalido` sin llamar al backend. La contraseña se valida en el navegador con `validarPasswordNueva` (misma regla y textos que `passwordPolicy.js`, más "Las contraseñas no coinciden.") antes de enviar. Respuesta clasificada con `clasificarErrorRestablecer`: 200 → `exito` (limpia contraseñas y token); 400 con el mensaje de enlace inválido → `enlaceInvalido`; otro 400 (política o igual a la actual) → muestra el mensaje, conserva el token, limpia los campos y devuelve el foco al primero; 429 y otros → mensaje del backend y formulario usable, sin temporizadores (recargar perdería el token). "Ir a iniciar sesión" es un `<a href="/login">` (navegación completa) para que `AuthContext` revalide la sesión con `/api/auth/me` al cargar.
+- Foco: al primer campo en el formulario y al título (`tabIndex={-1}`) en `exito` y `enlaceInvalido`. Token y contraseñas solo en memoria.
+- **Endpoints consumidos**: `POST /api/auth/recuperar` y `POST /api/auth/restablecer` (vía `recuperacion.api.js`, `fetch` directo).
 
 #### 6. `Nosotros.jsx` (88 líneas)
 - Vista estática institucional (sucursales, horarios, contacto). No consume endpoints.
@@ -1212,7 +1284,7 @@ La navegación muestra Catálogo y Nosotros para público y cualquier rol; Regis
 | `Modal`, `ErrorBox`, `FieldLabel`, `Input`, `Select` | `components/ui/*.jsx` | Ver cada archivo | Primitivas de UI reutilizadas por los formularios y modales de las features. |
 | `OpcionesSegmentadas` | `components/ui/OpcionesSegmentadas.jsx` | `opciones` (`{ valor, etiqueta }`), `valor`, `onChange`, `ariaLabel`, `disabled` | Botones táctiles (`role="radiogroup"`/`radio`, mín. 44 px) en lugar de un `<select>`; hoy los usa la interfaz de ventas. |
 
-Los componentes específicos de cada vista viven en `features/<feature>/components/`. Los del 2FA (`features/seguridad/components/`): `FormularioCredenciales`, `PasoVerificar`, `PasoConfigurar`, `CodigosRespaldo`, `FormularioRegenerar`, `PanelSeguridad`, `CampoCodigoTotp` (`inputMode="numeric"`, `autoComplete="one-time-code"`, solo 6 dígitos), `BotonCopiar` (`navigator.clipboard` si existe y el contexto es seguro; si no, `execCommand('copy')` en un textarea temporal; si falla, "Selecciónalo y cópialo manualmente."), `BotonPrincipal` y `AlertaError` (`ErrorBox` dentro de `role="alert"`; con `onReintentar` añade el botón "Intentar de nuevo" y `refFoco` apunta a él o, sin reintento, a la región). `PasoVerificar`, `PasoConfigurar` y `FormularioRegenerar` reciben `estadoCodigo` (`'invalido'` | `'bloqueado'` | `null`) y comparten `hooks/useFocoCodigo.js` para el foco. `BookCard.jsx` fue eliminado (nadie lo importaba).
+Los componentes específicos de cada vista viven en `features/<feature>/components/`. Los del 2FA (`features/seguridad/components/`): `FormularioCredenciales`, `PasoVerificar`, `PasoConfigurar`, `CodigosRespaldo`, `FormularioRegenerar`, `PanelSeguridad`, `CampoCodigoTotp` (`inputMode="numeric"`, `autoComplete="one-time-code"`, solo 6 dígitos), `BotonCopiar` (`navigator.clipboard` si existe y el contexto es seguro; si no, `execCommand('copy')` en un textarea temporal; si falla, "Selecciónalo y cópialo manualmente."), `BotonPrincipal` y `AlertaError` (`ErrorBox` dentro de `role="alert"`; con `onReintentar` añade el botón "Intentar de nuevo" y `refFoco` apunta a él o, sin reintento, a la región). `PasoVerificar`, `PasoConfigurar` y `FormularioRegenerar` reciben `estadoCodigo` (`'invalido'` | `'bloqueado'` | `null`) y comparten `hooks/useFocoCodigo.js` para el foco. Los de la recuperación de contraseña: `TarjetaAcceso` (logo, título con etiqueta dorada y `max-w-md`; exporta `Etiqueta`), `CampoAcceso` (etiqueta, ícono e `input` con `forwardRef`), `EnlaceSecundario`, `FormularioOlvide`, `ConfirmacionSolicitud` y `FormularioRestablecer`. `BookCard.jsx` fue eliminado (nadie lo importaba).
 
 ### 5.4 Hooks, Contextos y Cliente HTTP
 
@@ -1221,13 +1293,13 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 - Inyecta `Content-Type: application/json` si hay cuerpo que no es `FormData`.
 - Si la respuesta es 401 y había token, llama a `clearToken()` y redirige con `window.location.assign('/login')`.
 - Conserva las opciones de `fetch`, incluido `signal`, para cancelar solicitudes. La lista pública paginada de `catalogo.api.js` lo usa; categorías y detalle de catálogo mantienen `fetch` directo.
-- Módulos por dominio que lo usan: `bodegas.api.js`, `categorias.api.js`, `inventario.api.js`, `libros.api.js`, `ventas.api.js`, `usuarios.api.js` y el listado paginado de `catalogo.api.js`. `auth.api.js` conserva `fetch` directo. `dosFactores.api.js` mezcla ambos: `configurarDosFactores`, `activarDosFactores` y `verificarDosFactores` usan `fetch` directo con `Authorization: Bearer <tokenTemporal>` (un 401 del token temporal no debe purgar la sesión ni redirigir); `getEstadoDosFactores` y `regenerarCodigosRespaldo` usan `apiFetch` (sesión completa; un código inválido al regenerar responde 400).
+- Módulos por dominio que lo usan: `bodegas.api.js`, `categorias.api.js`, `inventario.api.js`, `libros.api.js`, `ventas.api.js`, `usuarios.api.js` y el listado paginado de `catalogo.api.js`. `auth.api.js` conserva `fetch` directo. `recuperacion.api.js` (`solicitarRecuperacion(email)` → `POST /api/auth/recuperar`, `restablecerContrasena(token, password)` → `POST /api/auth/restablecer`) usa `fetch` directo sin `Authorization`: son endpoints públicos sin sesión y un 401 no debe purgar nada; devuelve `{ ok, status, data, message, details }` (tolera una respuesta sin JSON) y solo lanza si falla la red. `dosFactores.api.js` mezcla ambos: `configurarDosFactores`, `activarDosFactores` y `verificarDosFactores` usan `fetch` directo con `Authorization: Bearer <tokenTemporal>` (un 401 del token temporal no debe purgar la sesión ni redirigir); `getEstadoDosFactores` y `regenerarCodigosRespaldo` usan `apiFetch` (sesión completa; un código inválido al regenerar responde 400).
 
 #### Otros módulos
 - `utils/formatters.js` (`formatFecha`, `formatPrecio`, `formatFechaVenta`: fecha en `America/Guatemala`, "—" si es nula o inválida), `utils/dinero.js` (centavos enteros sin punto flotante: `aCentavos`, `deCentavos`, `formatQuetzales`, `formatMonto`), `services/api/ventas.api.js` (`crearVenta`, `getVentas`, `getVenta`, `anularVenta`, `buscarLibrosParaVenta`), `utils/parsers.js` (`orNull`, `toNum`), `hooks/useDebouncedValue.js`.
 - `components/ModalPrecioLibro.jsx`: modal (sobre `components/ui/Modal`) que muestra el título y el precio actual, pide el nuevo precio y llama a `actualizarPrecioLibro(libroId, precio)` (`libros.api.js`, `PATCH`); muestra `message` y `details` del backend con `ErrorBox`.
 - Hooks de feature: `useCatalogo`, `useLibroDetalle`, `useInventarioData`, `useKardex`, `useRegistrarLibro`, `useNuevaVenta`, `useVentas`, `useVentaDetalle`, `useUsuarios`, `useLoginDosPasos`, `useSeguridad`, `useFocoCodigo`.
-- `features/seguridad/codigos.js` (puro, sin React): `limpiarCodigoTotp`, `formatearCodigoRespaldo`, `totpCompleto`, `respaldoCompleto`, `agruparClave` y `textoArchivoCodigos` (usa `formatFechaVenta`). `features/seguridad/errores.js` (puro): `MENSAJE_CODIGO_INVALIDO` (copia del texto del backend) y `clasificarErrorCodigo(contexto, status, message)` → `'invalido'` | `'bloqueado'` | `'sesionTerminada'` | `'otro'`. `features/seguridad/navegador.js`: `copiarTexto` (nunca lanza) y `descargarTexto` (`Blob` + enlace `download`, archivo `codigos-respaldo-libreria-oskar.txt`).
+- `features/seguridad/codigos.js` (puro, sin React): `limpiarCodigoTotp`, `formatearCodigoRespaldo`, `totpCompleto`, `respaldoCompleto`, `agruparClave` y `textoArchivoCodigos` (usa `formatFechaVenta`). `features/seguridad/errores.js` (puro): `MENSAJE_CODIGO_INVALIDO` (copia del texto del backend) y `clasificarErrorCodigo(contexto, status, message)` → `'invalido'` | `'bloqueado'` | `'sesionTerminada'` | `'otro'`. `features/seguridad/recuperacion.js` (puro): `MENSAJE_ENLACE_INVALIDO` y `MENSAJE_MISMA_PASSWORD` (copias del texto del backend), `extraerTokenDelHash(hash)` → token o `null`, `validarPasswordNueva(password, confirmacion)` → `null` o mensaje y `clasificarErrorRestablecer(status, message)` → `'enlaceInvalido'` | `'password'` | `'limite'` | `'otro'`. `features/seguridad/navegador.js`: `copiarTexto` (nunca lanza) y `descargarTexto` (`Blob` + enlace `download`, archivo `codigos-respaldo-libreria-oskar.txt`).
 
 #### `context/AuthContext.jsx` (`AuthProvider` y `useAuth`)
 - Estado: `user` (`{ id, nombre_completo, email, rol }`), `token`, `loading`.
@@ -1280,7 +1352,7 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 2. **Alta** (scope `2fa-setup`): `POST /api/auth/2fa/configurar` devuelve `qrDataUrl`, `secretoManual` y `otpauthUrl` (en el celular se puede abrir el enlace o copiar la clave). `POST /api/auth/2fa/activar { codigo }` verifica el primer código y devuelve `{ token, usuario, codigosRespaldo }`.
 3. **Verificación** (scope `2fa-verify`): `POST /api/auth/2fa/verificar` con `{ codigo }` o `{ codigoRespaldo }` devuelve `{ token, usuario }` con el mismo JWT que el login normal.
 4. **Con sesión completa**: `GET /api/auth/2fa/estado` y `POST /api/auth/2fa/respaldo/regenerar { codigo }`.
-5. **Recuperación**: un Administrador restablece a otro usuario con `POST /api/auth/2fa/usuarios/:id/restablecer`; el administrador bloqueado usa `npm run reset-2fa -- correo` en el servidor. No hay recuperación por correo.
+5. **Recuperación**: un Administrador restablece a otro usuario con `POST /api/auth/2fa/usuarios/:id/restablecer`; el administrador bloqueado usa `npm run reset-2fa -- correo` en el servidor. No hay recuperación del 2FA por correo (la recuperación de contraseña, §6.12, no desactiva el 2FA).
 6. **Interfaz**: credenciales → `verificar` → `establecerSesion` → redirección; o credenciales → `configurar` (una sola llamada por token) → `activar` → códigos de respaldo en estado del flujo → "Ya los guardé" + Continuar → `establecerSesion` → redirección. El token temporal vive solo en memoria; vencido (`venceEn`) vuelve a credenciales sin llamar al backend. `/cuenta/seguridad` (enlace desde el chip del `Navbar`) muestra el estado y regenera los códigos.
 
 ### 6.3 Flujo 3: Escaneo Directo por API (`POST /api/libros/escanear`)
@@ -1388,6 +1460,16 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 6. **Base de Datos (Trigger)**: cada `Ingreso` suma a `stock_actual`.
 7. **Confirmación**: 200 con el detalle actualizado. No hay anulación parcial, edición ni devoluciones.
 
+### 6.12 Flujo 12: Recuperación de Contraseña por Correo
+- **Estado en código**: backend probado por HTTP con el proveedor de correo `consola`; interfaz implementada (`/olvide-contrasena` y `/restablecer`, §5.2). **Dato aportado por el usuario, no verificado por el agente**: el 2026-10-24 recorrió a mano el flujo completo (enlace en el login, solicitud, apertura del enlace con el fragmento borrado de la URL, validaciones, restablecimiento y enlace ya usado) y comprobó que el enlace del correo abre desde Gmail en su celular (Xiaomi, Android). No verificados: Outlook, modo oscuro, lectores de pantalla y otros navegadores o clientes de correo; entrega real del correo desde Cloud Run y varias instancias.
+1. **Solicitud**: `POST /api/auth/recuperar { email }` (público, límite 5 por 15 min por IP). Formato inválido → 400; cualquier otro caso → 200 con el mismo `{ mensaje }`.
+2. **Servicio** (`recuperacionService.solicitar`): sin `FRONTEND_URL` registra `[RECUPERACION]` y responde. Busca la cuenta activa por correo sin distinguir mayúsculas; genera el token, guarda su SHA-256 con `emitirToken` (UPDATE atómico; 0 filas por enfriamiento → no envía) y lanza el envío sin esperarlo.
+3. **Correo**: texto plano con saludo, enlace `{FRONTEND_URL}/restablecer#token=<43 caracteres>`, vencimiento de 30 min, "si no lo pediste, ignora este mensaje" y el contacto del administrador, más una versión HTML con el diseño de la página (encabezado con el logo circular en línea por `cid`, "Librería" y la etiqueta "Oskar"; botón "Restablecer contraseña" y el mismo enlace en texto debajo). El mensaje se construye dentro de la tarea de envío, así que un fallo al construirlo no cambia la respuesta. El aviso de cambio también lleva HTML, sin botón.
+4. **Restablecimiento**: `POST /api/auth/restablecer { token, password }` (público, límite 10 por 15 min por IP). Orden: formato → política → búsqueda por hash vigente y cuenta activa → distinta de la actual → bcrypt → `consumirToken` atómico (§4.5, §4.6).
+5. **Efectos**: nuevo `password_hash`, token y vencimiento en NULL y `password_cambiada_en` con el reloj de la app. El 2FA queda igual. Responde 200 `{ restablecido: true }` sin iniciar sesión y envía el correo de aviso.
+6. **Sesiones anteriores**: todo JWT de sesión o temporal del 2FA con `iat` anterior o igual (en segundos) al cambio recibe 401 "La sesión ya no es válida. Inicie sesión de nuevo.". El usuario inicia sesión de nuevo con la contraseña nueva (y su 2FA si lo tiene activo).
+7. **Pantallas**: en `/login`, "¿Olvidaste tu contraseña?" lleva a `/olvide-contrasena`, que llama a `/recuperar` y muestra el mensaje genérico del backend. El enlace del correo abre `/restablecer#token=…`: la vista lee el token del fragmento, lo borra de la URL y, tras validar la contraseña en el navegador, llama a `/restablecer`. Con 200 muestra "Contraseña actualizada" y un `<a href="/login">` (carga completa) que fuerza la revalidación de la sesión local; un enlace inválido, vencido o ya usado lleva a "Solicitar un enlace nuevo".
+
 ---
 
 ## 7. Infraestructura y DevOps
@@ -1407,7 +1489,7 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 - **Servicios declarados**:
   1. `db`: Imagen `postgres:15-alpine`. Expone puerto host `5434:5432`. Base `libreria_oskar`. Monta `./database/schema.sql` en `/docker-entrypoint-initdb.d/01_schema.sql` para inicialización automática. Volumen `pgdata`.
   2. `db-test`: Imagen `postgres:15-alpine`. Expone puerto host `5435:5432`. Perfil `["test"]`. Base `libreria_oskar_test`. Volumen `pgdata_test`.
-  3. `backend`: Construye desde `./backend/Dockerfile`. Expone puerto host `3000:8080`. Variables: `NODE_ENV=production`, `DB_HOST=db`, `DB_PORT=5432`, `PORT=8080`, `JWT_SECRET` (con valor por defecto de desarrollo), `TWO_FACTOR_ENFORCED` (por defecto `false`), `TWO_FACTOR_ENCRYPTION_KEY` (clave falsa de desarrollo por defecto) y `CORS_ORIGINS` (por defecto `http://localhost:5173,http://localhost:4173`; se sobreescribe desde la terminal). Como `NODE_ENV=production` exige `CORS_ORIGINS`, sin ella el backend no arranca (`security.config.js`). No define `TRUST_PROXY` ni `LOGIN_RATE_*`. Espera estado saludable de `db`.
+  3. `backend`: Construye desde `./backend/Dockerfile`. Expone puerto host `3000:8080`. Variables: `NODE_ENV=production`, `DB_HOST=db`, `DB_PORT=5432`, `PORT=8080`, `JWT_SECRET` (con valor por defecto de desarrollo), `TWO_FACTOR_ENFORCED` (por defecto `false`), `TWO_FACTOR_ENCRYPTION_KEY` (clave falsa de desarrollo por defecto) `CORS_ORIGINS` (por defecto `http://localhost:5173,http://localhost:4173`; se sobreescribe desde la terminal) y `FRONTEND_URL` (por defecto `http://localhost:5173`; base de los enlaces de recuperación de contraseña). Como `NODE_ENV=production` exige `CORS_ORIGINS`, sin ella el backend no arranca (`security.config.js`). No define `TRUST_PROXY` ni `LOGIN_RATE_*`. Espera estado saludable de `db`.
 - **Servicio Frontend en Compose**: No existe declarado en `docker-compose.yml`; el frontend corre en el host con `npm run frontend:dev` (proxy de `/api` a `localhost:3000`).
 - **Arranque y cierre del backend**: `server.js` verifica la BD con `testSequelizeConnection()` antes de escuchar y, ante `SIGINT`/`SIGTERM`, cierra el servidor HTTP y luego `sequelize.close()` (ver §4.2).
 
@@ -1444,6 +1526,8 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 | Ver Sedes y Nosotros | Vista `/nosotros` | Permitido | Permitido | Permitido | Permitido |
 | Iniciar Sesión | `POST /api/auth/login` | Permitido | Permitido | Permitido | Permitido |
 | Consultar Perfil | `GET /api/auth/me` | Denegado (401) | Permitido | Permitido | Permitido |
+| Solicitar enlace de recuperación de contraseña | `POST /api/auth/recuperar` | Permitido (5 por 15 min por IP) | Permitido | Permitido | Permitido (misma respuesta; solo cuentas activas reciben correo) |
+| Restablecer contraseña con enlace | `POST /api/auth/restablecer` | Permitido con token válido (10 por 15 min por IP) | Permitido | Permitido | Permitido |
 | Administrar Usuarios | `GET/POST/PUT/PATCH /api/usuarios...` | Denegado (401) | Denegado (403) | Permitido | Denegado (403) |
 | Alta y verificación 2FA | `POST /api/auth/2fa/configurar`, `/activar`, `/verificar` | Solo con el token temporal del scope correspondiente (401 sin él) | Permitido | Permitido | Permitido (solo `verificar` si lo tiene activo; nunca se le exige alta) |
 | Estado 2FA y regenerar respaldo | `GET /api/auth/2fa/estado`, `POST /api/auth/2fa/respaldo/regenerar` | Denegado (401) | Permitido | Permitido | Permitido |
@@ -1497,19 +1581,21 @@ Cada ítem cita su archivo como evidencia. Resueltos y retirados de esta secció
 | **`normalizarIsbn(0)` y `normalizarIsbnEstricto` con números** | `backend/src/utils/isbn.js` | `normalizarIsbn(0)` devuelve `''`; `normalizarIsbnEstricto` lanza `TypeError` con números. Fijado en `tests/utilsIsbnUuid.test.js`. |
 | **Ausencia de tests en Frontend** | `frontend/` | No hay pruebas ni Vitest/Jest/Testing Library en `frontend/package.json`. Se verifica con `npm run frontend:build` y prueba manual. |
 | **Bundle grande sin code splitting** | `frontend/vite.config.js` | `npm run frontend:build` (2026-10-24) genera `index-*.js` de 801.99 kB (~802 kB; 220.41 kB gzip) con el aviso de más de 500 kB de Vite; sin `manualChunks` ni carga diferida de vistas. Aparte, `zxing_reader-*.wasm` (946.86 kB) es el lector de respaldo del escáner. |
-| **Limitador de login por IP, en memoria y para toda petición** | `backend/src/middlewares/rateLimit.js`, `backend/src/config/security.config.js`, `backend/src/routes/auth.routes.js` | Solo cubre `POST /api/auth/login`. Cuenta por `req.ip` en un `Map` del proceso y suma TODAS las peticiones antes de `next()`, también las exitosas (10 por 15 min por defecto: `LOGIN_RATE_LIMIT`, `LOGIN_RATE_WINDOW_MS`). `TRUST_PROXY` vale 0 por defecto, así que detrás de un proxy de la nube `req.ip` sería la del proxy y todos los usuarios compartirían el contador. Con varias réplicas cada una cuenta por separado. Las pruebas 2FA lo reinician antes de cada login con `loginRateLimit.reset()` (`tests/helpers/dosFactores.js`). |
+| **Limitador de login por IP, en memoria y para toda petición** | `backend/src/middlewares/rateLimit.js`, `backend/src/config/security.config.js`, `backend/src/routes/auth.routes.js` | Cubre `POST /api/auth/login` (la recuperación tiene instancias propias, ver la fila de recuperación). Cuenta por `req.ip` en un `Map` del proceso y suma TODAS las peticiones antes de `next()`, también las exitosas (10 por 15 min por defecto: `LOGIN_RATE_LIMIT`, `LOGIN_RATE_WINDOW_MS`). `TRUST_PROXY` vale 0 por defecto, así que detrás de un proxy de la nube `req.ip` sería la del proxy y todos los usuarios compartirían el contador. Con varias réplicas cada una cuenta por separado. Las pruebas 2FA lo reinician antes de cada login con `loginRateLimit.reset()` (`tests/helpers/dosFactores.js`). |
 | **`version` obsoleta en Compose** | `docker-compose.yml` | Declara `version: '3.8'`, campo obsoleto en Docker Compose v2. |
 | **Monorepo sin `workspaces`** | `package.json` | Usa scripts con `--prefix`; no declara `"workspaces"`. |
 | **Sin Dockerfile de frontend** | `frontend/` | Solo existe `backend/Dockerfile`; el frontend corre en el host con `npm run frontend:dev`. |
 | **Escáner de cámara (visor 1:1 y mensaje debajo pendientes de prueba manual)** | `frontend/src/components/BarcodeScanner.jsx` | Se corrigieron formatos, resolución, zona de escaneo y reinicios de cámara por dependencias inestables. Después, la geometría del visor: el marco ya no recorta el recuadro con video vertical, el recorte analizado se agranda con un ancho lógico de 800 px y el apagado usa `getState()`. Después, retroalimentación durante el escaneo: texto por fase (iniciando, buscando, ayuda tras 8 s), vibración corta al leer y diagnóstico técnico oculto tras un botón y solo en desarrollo. Se añadió un lector de respaldo (`barcode-detector` 3.2.3 con `zxing-wasm`) que se carga solo si el navegador no trae `BarcodeDetector`, para laptops con Chromium/Firefox; con `BarcodeDetector` nativo el comportamiento no cambia. El comportamiento previo se verificó a mano el 2026-10-22 en un celular (Chrome, detector nativo) y en una laptop (lector de respaldo WASM). Después, `BarcodeScanner.jsx` se dividió sin cambiar comportamiento en tres hooks (`useCamaraEscaner`, `useGeometriaEscaner`, `useDiagnosticoEscaner`) y dos utilidades (`geometriaEscaner`, `errorCamara`); se eliminó la variable de módulo `lastQrbox`. El usuario verificó a mano el 2026-10-23 que, tras esa división en hooks, el escáner lee en un celular y en una laptop (dato aportado por el usuario, no verificado por el agente). Después, el alto visible máximo del visor pasó de 4:3 a 1:1 (`MAX_VISIBLE_RATIO` 0.75 → 1; el `qrbox` no cambia) y el texto de estado pasó de superponerse al visor a mostrarse debajo de él; ambos cambios están pendientes de prueba manual (aspecto real, tamaño en el celular, recuadro entero, que la cámara no se reinicie). |
 | **Reintentos de correo solo en memoria** | `backend/src/services/mail/fabrica.service.js` | Los reintentos pendientes viven en memoria y se pierden si el proceso se apaga; no hay cola persistente. En Cloud Run podrían pausarse sin peticiones activas (no verificado). El envío SMTP real y el puerto 587 desde Cloud Run tampoco se han verificado. |
-| **2FA: JWT emitidos no se revocan** | `backend/src/middlewares/auth.js` | Tras un restablecimiento (o al activar el 2FA) los JWT de sesión ya emitidos siguen válidos hasta 8 h (`JWT_EXPIRES_IN`, `8h` por defecto en `config/env.js`); no hay lista de revocación. |
+| **2FA: JWT emitidos no se revocan** | `backend/src/middlewares/auth.js` | Tras un restablecimiento (o al activar el 2FA) los JWT de sesión ya emitidos siguen válidos hasta 8 h (`JWT_EXPIRES_IN`, `8h` por defecto en `config/env.js`); no hay lista de revocación. Solo el restablecimiento de contraseña por correo los invalida (`password_cambiada_en`, §4.6). |
 | **2FA: restablecimiento sin confirmación** | `backend/src/services/dosFactores.service.js` | El Administrador no puede restablecerse a sí mismo (usa `npm run reset-2fa`) y el restablecimiento de otro usuario no le pide su propio código TOTP. |
 | **2FA: alta solo en el login** | `backend/src/config/twoFactor.config.js`, `frontend/src/features/seguridad/` | El alta solo ocurre en el login cuando `TWO_FACTOR_ENFORCED` está encendido (en producción por defecto; Compose lo fija en `false`); con la bandera apagada nadie puede activarla desde la interfaz. Quien conozca la contraseña de un usuario sin alta puede dar de alta su propio autenticador. Recargar la página durante el segundo paso vuelve a las credenciales (el token temporal solo vive en memoria). |
 | **2FA: sin gestión en la interfaz de usuarios** | `backend/src/repositories/usuario.repository.js` (`findActivosConRol`, `findConRol`), `frontend/src/features/usuarios/` | El listado de `GET /api/usuarios` no expone `dos_factores_activo` y la vista `/usuarios` no tiene botón de restablecer: el frontend no llama a `POST /api/auth/2fa/usuarios/:id/restablecer` (solo API o `npm run reset-2fa`). |
 | **2FA: sin límite por IP ni rotación de clave** | `backend/src/services/dosFactores/` | El contador es por usuario; `/2fa/*` no tiene límite por IP propio (el limitador por IP solo cubre `POST /api/auth/login`). Por ser por usuario, quien conozca la contraseña (obtiene el token temporal de `verificar`) puede bloquear a ese usuario 15 minutos enviando 5 códigos erróneos. La reserva atómica (`reservarIntento`) acota también los intentos concurrentes a 5 por ventana de bloqueo con una instancia; con varias instancias del backend debería valer igual porque la serialización la hace PostgreSQL, pero no está verificado. El prefijo `v1` permite rotar `TWO_FACTOR_ENCRYPTION_KEY`, pero no hay procedimiento de rotación: cambiar la clave invalida todos los secretos y códigos de respaldo. |
 | **2FA: índice redundante y alfabeto de 31 símbolos** | `database/migrations/010_dos_factores.sql`, `backend/src/services/dosFactores/respaldo.js` | `idx_codigos_respaldo_2fa_usuario_id` duplica el prefijo del UNIQUE (`usuario_id`, `codigo_hash`). El alfabeto sin 0/O/1/I/L tiene 31 símbolos (no 32): cada código tiene ≈49,5 bits. |
 | **2FA: no verificado** | — | Compatibilidad con apps TOTP reales, Node 22 en el contenedor (las pruebas corrieron con Node 24.18.0), varias instancias del backend, equivalencia `pg_dump` de `schema.sql` frente a BD anterior + 010 e interfaz: flujo contra el backend real, app de autenticación real, enlace `otpauth://` en un celular, copiado en HTTP por IP, descarga del `.txt`, aspecto y lectores de pantalla (solo se verificó que compila). |
+| **Recuperación de contraseña: límites conocidos** | `backend/src/services/recuperacion.service.js`, `backend/src/middlewares/rateLimitRecuperacion.js`, `backend/src/utils/sesionVigente.js` | (1) Tiempo de respuesta: el correo no se espera, pero si la cuenta existe y está activa hay un UPDATE extra, una diferencia pequeña y medible. (2) Relojes: `password_cambiada_en` usa el reloj de la app y el vencimiento del enlace el de la BD; con varias instancias desfasadas, un JWT emitido por una instancia atrasada justo después del cambio podría rechazarse (o uno anterior aceptarse) por el desfase. (3) Estricto: un JWT emitido en el mismo segundo del cambio se rechaza (falla cerrada). (4) Sin límite por cuenta: los límites son solo por IP, en memoria (por proceso; se pierden al reiniciar y cada réplica cuenta por separado) y con `TRUST_PROXY=0` detrás de un proxy todos compartirían el contador; el único freno por cuenta es el enfriamiento de 2 min. (5) Entrega real por Gmail/Cloud Run no verificada; sin `FRONTEND_URL` en producción no se envía nada. (6) No existe cambio de contraseña con sesión iniciada ni script de emergencia para fijarla. (7) Interfaz: `clasificarErrorRestablecer` distingue el enlace terminal por el texto exacto del backend (si cambia, se tratará como error de contraseña y el usuario reintentará); recargar `/restablecer` pierde el token por diseño (el fragmento se borra de la URL; el enlace del correo sigue vigente hasta usarse o vencer); si el navegador tiene sesión local de esa cuenta, tras el éxito la navegación completa a `/login` la revalida con `/api/auth/me`; la interfaz no limita por cuenta, y tras un 429 el formulario sigue usable. Sin prueba automática de estas pantallas. Prueba manual: dato aportado por el usuario, no verificado por el agente (2026-10-24: flujo completo, ver §6.12); sin verificar en otros navegadores, lectores de pantalla ni modo oscuro. |
+| **Correos HTML y logo en línea sin verificar en clientes reales** | `backend/src/services/mail/plantillas.js`, `backend/src/services/mail/logo.js`, `backend/src/assets/logo-correo.png` | El HTML solo se revisó en Chromium sin cabeza con la vista previa local (`npm run correo:vista-previa`), donde el logo va como `data:`. El usuario lo verificó a mano el 2026-10-24 en Gmail (logo circular y en línea, enlace con la IP de la red y correo de aviso) y que el enlace abre desde Gmail en su celular (Xiaomi, Android); dato aportado por el usuario, no verificado por el agente. No verificados: Outlook, otros clientes de correo y navegadores, lectores de pantalla, modo oscuro (se declara `color-scheme: light`, pero cada cliente decide), en Outlook, que el logo se muestre en línea sin aparecer como adjunto ni bloqueado, y la entrega por SMTP desde un entorno desplegado. El PNG (144×144, 8 782 bytes, paleta de 128 colores, esquinas con alfa 0) se generó a mano desde `frontend/src/assets/logo.jpg` con Pillow: recorte del disco (centro 193.6, 188.9; radio 193 px, con una franja superior de 8 px rellena replicando la fila del borde), máscara circular con borde suave de 1 px y cuantización con libimagequant; si cambia `logo.jpg` no se actualiza solo. |
 | **Placeholder del modal de salida desactualizado** | `frontend/src/features/inventario/components/ModalSalidaInventario.jsx` | El placeholder del motivo sugiere "Venta en mostrador" aunque ahora existe el módulo de ventas (que registra sus propias salidas). |
 
 ---
@@ -1518,12 +1604,12 @@ Cada ítem cita su archivo como evidencia. Resueltos y retirados de esta secció
 
 1. **Autenticación de Dos Factores (2FA)**:
    - AGENTS.md la da por implementada en «Seguridad»; diseño de referencia en `app/docs/roadmap/auth-2fa/`.
-   - **Estado real**: backend implementado (alta con QR, verificación TOTP y de respaldo, anti-reutilización, bloqueo, restablecimiento y script `reset-2fa`; ver §4.6 y §6.2). Interfaz implementada (login en dos pasos, alta con QR y códigos de respaldo, `/cuenta/seguridad`), pendiente de prueba manual; sin botón de restablecer. No hay recuperación por correo ni revocación de JWT emitidos.
+   - **Estado real**: backend implementado (alta con QR, verificación TOTP y de respaldo, anti-reutilización, bloqueo, restablecimiento y script `reset-2fa`; ver §4.6 y §6.2). Interfaz implementada (login en dos pasos, alta con QR y códigos de respaldo, `/cuenta/seguridad`), pendiente de prueba manual; sin botón de restablecer. El 2FA no se recupera por correo: se restablece por `POST /api/auth/2fa/usuarios/:id/restablecer` (Administrador, otro usuario) o con `npm run reset-2fa`, y ese restablecimiento no invalida los JWT ya emitidos (siguen válidos hasta que expiren; `dosFactores.repository.js#restablecer` no escribe `password_cambiada_en`). Lo que sí invalida los JWT anteriores (de sesión y temporales del 2FA) es restablecer la contraseña por correo (§6.12); no hay lista de revocación.
 2. **Notificaciones por Correo de Desabastecimiento y Libros Sin Precio**:
    - Roadmap; spec en `app/docs/roadmap/inventory-email-alerts/`.
-   - **Estado real**: Existe el módulo de correo `services/mail/` (`mail.service.js`, dependencia `nodemailer`), pero ningún código lo consume; las alertas de inventario siguen sin implementar y no hay tareas programadas.
+   - **Estado real**: Existe el módulo de correo `services/mail/` (`mail.service.js`, dependencia `nodemailer`); hoy solo lo consume la recuperación de contraseña (`recuperacion.service.js`). La plantilla HTML base (`services/mail/plantillas.js`) y el logo en línea (`services/mail/logo.js`) quedan disponibles para reutilizarlos. Las alertas de inventario siguen sin implementar y no hay tareas programadas.
 3. **CRUD Administrativo de Catálogo y Empleados**:
-   - Diseño en `app/docs/roadmap/catalog-employee-crud/` (su cabecera aún dice "NO IMPLEMENTADO"). Los CRUD de usuarios/categorías están integrados; la gestión administrativa de libros también cuenta con backend y vista protegida.
+   - Diseño en `app/docs/roadmap/catalog-employee-crud/` (su cabecera ya dice "IMPLEMENTADO", verificado el 2026-10-24). Los CRUD de usuarios/categorías están integrados; la gestión administrativa de libros también cuenta con backend y vista protegida.
    - **Estado real**: El CRUD administrativo de usuarios está disponible en `GET/POST/PUT/PATCH /api/usuarios` y la vista protegida `/usuarios`. La gestión de libros está disponible en `/libros/gestion`, respaldada por `GET /api/libros/admin`, `PUT /api/libros/:id` y `PATCH /api/libros/:id/activo`; el precio conserva su endpoint independiente `PATCH /api/libros/:id/precio`.
 4. **Ventas**:
    - Diseño en `app/docs/roadmap/ventas/SPEC.md`.
@@ -1600,7 +1686,7 @@ La prioridad de fuentes de información para agentes y desarrolladores se rige p
 | `app/.github/DEPLOYMENT_GUIDE.md` | Manual de despliegue en Google Cloud. | No revisado en esta actualización (fuera de alcance); el despliegue está planeado, no ejecutado. |
 | `app/docs/PROJECT_SPECS.md` | Fuente de verdad técnica. | Verificada contra el código el 2026-10-22; §2.1, §2.2, §4.9 y §9 reverificados por script el 2026-10-24. |
 | `app/docs/roadmap/auth-2fa/SKILL.md` | Spec de 2FA TOTP. | Implementado (cabecera verificada el 2026-10-24, remite a §4.6); el punto 6 recoge la política real y una sección anota las diferencias con lo planeado. |
-| `app/docs/roadmap/catalog-employee-crud/SKILL.md` | Spec de CRUD de catálogo y empleados. | Implementado (CRUD de usuarios y categorías; edición/baja de libros aparte, también implementada), pero el archivo aún se declara "NO IMPLEMENTADO" (pendiente de actualizar). |
+| `app/docs/roadmap/catalog-employee-crud/SKILL.md` | Spec de CRUD de catálogo y empleados. | Implementado (CRUD de usuarios y categorías; edición/baja de libros aparte, también implementada). La cabecera se actualizó el 2026-10-24 y anota las diferencias entre el diseño y el código. |
 | `app/docs/roadmap/inventory-email-alerts/SKILL.md` | Spec de alertas de inventario por correo. | No implementado. |
 | `app/docs/roadmap/ventas/SPEC.md` | Documento de diseño del módulo de ventas. | Esquema, API e interfaz creados; reportes en un módulo aparte. Incluye las secciones "API implementada (backend)" e "Interfaz implementada". |
 | `app/.agents/skills/*/SKILL.md` (7) | Directrices por dominio de ingeniería. | Revisadas el 2026-10-22; correcciones puntuales donde contradecían la estructura real (2FA implementado en `backend-engineer-nodejs` y `frontend-engineer-react`, 2026-10-24). |

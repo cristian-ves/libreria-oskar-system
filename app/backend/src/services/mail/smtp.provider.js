@@ -28,13 +28,20 @@ function crearProveedorSmtp(config, { crearTransporte = crearTransporteNodemaile
     nombre: 'smtp',
     async enviar(mensaje) {
       exigirConfig();
-      await transporter.sendMail({
+      const correo = {
         from,
         to: mensaje.para,
         subject: mensaje.asunto,
         text: mensaje.texto,
         html: mensaje.html,
-      });
+      };
+      // Imágenes en línea: Nodemailer las pone en multipart/related junto al html (por su cid).
+      if (mensaje.adjuntos && mensaje.adjuntos.length > 0) {
+        correo.attachments = mensaje.adjuntos.map((a) => ({
+          filename: a.nombre, content: a.contenido, contentType: a.tipo, cid: a.cid, contentDisposition: 'inline',
+        }));
+      }
+      await transporter.sendMail(correo);
     },
     async verificar() {
       exigirConfig();

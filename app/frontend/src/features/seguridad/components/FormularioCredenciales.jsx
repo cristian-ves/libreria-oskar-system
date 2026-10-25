@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Lock, Mail } from 'lucide-react';
 import AlertaError from './AlertaError';
 import BotonPrincipal from './BotonPrincipal';
@@ -68,6 +69,15 @@ export default function FormularioCredenciales({ enviando, error, aviso, onEnvia
       <BotonPrincipal type="submit" cargando={enviando} textoCargando="Iniciando sesión..." className="mt-2">
         <span>Ingresar al Sistema</span>
       </BotonPrincipal>
+
+      <p className="text-center">
+        <Link
+          to="/olvide-contrasena"
+          className="text-xs font-semibold text-[#b07c19] hover:underline rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-[#b07c19]"
+        >
+          ¿Olvidaste tu contraseña?
+        </Link>
+      </p>
     </form>
   );
 }

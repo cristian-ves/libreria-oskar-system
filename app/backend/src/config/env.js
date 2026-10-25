@@ -3,6 +3,7 @@ const path = require('path');
 const { leerConfigCorreo } = require('./mail.config');
 const { parseSecurityConfig } = require('./security.config');
 const { leerConfigDosFactores } = require('./twoFactor.config');
+const { leerConfigRecuperacion } = require('./recuperacion.config');
 
 // Cargar variables de entorno desde .env
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
@@ -32,6 +33,11 @@ if (twoFactor.claveDesarrollo && !isTest) {
   console.warn('[WARN CONFIG]: TWO_FACTOR_ENCRYPTION_KEY no está definida. Utilizando clave de desarrollo predeterminada.');
 }
 
+const recuperacion = leerConfigRecuperacion(process.env, nodeEnv);
+if (recuperacion.faltantes.length > 0) {
+  console.warn(`[WARN CONFIG]: falta ${recuperacion.faltantes.join(', ')}. La recuperación de contraseña no enviará enlaces hasta definirla.`);
+}
+
 const env = {
   NODE_ENV: nodeEnv,
   ...security,
@@ -55,6 +61,7 @@ const env = {
   },
   mail,
   twoFactor,
+  recuperacion,
   diasStockObsoleto: parseInt(process.env.DIAS_STOCK_OBSOLETO || '90', 10),
 };
 

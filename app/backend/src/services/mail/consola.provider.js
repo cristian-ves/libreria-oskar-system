@@ -13,12 +13,19 @@ function crearProveedorConsola({ nodeEnv = 'development', logger = console, from
       bandeja.length = 0;
     },
     async enviar(mensaje) {
-      bandeja.push({ ...mensaje, from, fecha: new Date() });
+      // De los adjuntos solo se guardan metadatos y tamaño, nunca el contenido.
+      const { adjuntos, ...resto } = mensaje;
+      const entrada = { ...resto, from, fecha: new Date() };
+      if (adjuntos) {
+        entrada.adjuntos = adjuntos.map(({ nombre, tipo, cid, contenido }) => ({ nombre, tipo, cid, bytes: contenido.length }));
+      }
+      bandeja.push(entrada);
       if (bandeja.length > MAX_BANDEJA) bandeja.shift();
       if (nodeEnv === 'test') return;
       const destinos = mensaje.para.map(enmascarar).join(', ');
       logger.log(`[MAIL] (consola) Para: ${destinos} | Asunto: ${mensaje.asunto}`);
-      if (nodeEnv === 'development') logger.log(`[MAIL] (consola) Cuerpo:\n${mensaje.texto || mensaje.html}`);
+      // Solo el texto plano: el html y los adjuntos nunca se imprimen.
+      if (nodeEnv === 'development' && mensaje.texto) logger.log(`[MAIL] (consola) Cuerpo:\n${mensaje.texto}`);
     },
     async verificar() {
       return true;

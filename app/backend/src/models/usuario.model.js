@@ -76,6 +76,14 @@ class Usuario extends Model {
           type: DataTypes.BIGINT,
           allowNull: true,
         },
+        token_recuperacion_expira: {
+          type: DataTypes.DATE,
+          allowNull: true,
+        },
+        password_cambiada_en: {
+          type: DataTypes.DATE,
+          allowNull: true,
+        },
       },
       {
         sequelize,

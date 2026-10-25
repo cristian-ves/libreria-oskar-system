@@ -12,6 +12,8 @@ import Ventas from './views/Ventas';
 import NuevaVenta from './views/NuevaVenta';
 import VentaDetalle from './views/VentaDetalle';
 import Login from './views/Login';
+import OlvideContrasena from './views/OlvideContrasena';
+import RestablecerContrasena from './views/RestablecerContrasena';
 import Usuarios from './views/Usuarios';
 import Categorias from './views/Categorias';
 import GestionLibros from './views/GestionLibros';
@@ -50,6 +52,8 @@ export default function App() {
           <Route path="/catalogo/:ref" element={<LibroDetalle />} />
           <Route path="/nosotros" element={<Nosotros />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/olvide-contrasena" element={<OlvideContrasena />} />
+          <Route path="/restablecer" element={<RestablecerContrasena />} />
           <Route
             path="/registrar"
             element={
