@@ -10,3 +10,7 @@ dist/
 
 
 .idea/
+
+# Firebase
+.firebase/
+firebase-debug.log*

@@ -108,6 +108,8 @@ app/
 ├── AGENTS.md (89)
 ├── .dockerignore (9)
 ├── docker-compose.yml (84)
+├── firebase.json (35)
+├── .firebaserc (5)
 ├── package.json (18)
 ├── .agents/
 │   └── skills/
@@ -1519,6 +1521,16 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
   - Configura Docker para Google Artifact Registry (`GAR_LOCATION`).
   - Construye la imagen Docker del backend con tags `:commit-sha` y `:latest`, y la publica en Artifact Registry.
   - Despliega en Google Cloud Run (`google-github-actions/deploy-cloudrun@v2`) con `--allow-unauthenticated`, conexión a Cloud SQL vía socket `/cloudsql/...` y variables de entorno productivas.
+
+### 7.4 Firebase Hosting (preparado, sin desplegar)
+- **Archivos**: `app/firebase.json` (bloque `hosting`) y `app/.firebaserc` (proyecto `default` = `libreria-oskar-seminario`). El `.gitignore` de la raíz del repo ignora `.firebase/` y `firebase-debug.log*`. No se ejecutó ningún comando de `firebase` ni `gcloud`.
+- **Contenido servido**: `public` = `frontend/dist` (salida por defecto de Vite; `vite.config.js` no define `build.outDir` ni `base`).
+- **Reescrituras (el orden importa)**: Hosting aplica la primera que coincide. 1) `/api/**` → servicio de Cloud Run `libreria-oskar-api`, región `us-central1`, sin `pinTag`; 2) `**` → `/index.html` (comodín del SPA para `react-router-dom`). Si el comodín fuera primero, capturaría también `/api/**` y devolvería el HTML del SPA en lugar de llegar al backend.
+- **Rutas relativas**: el frontend llama siempre a `/api/...` con `fetch` relativo (`services/api/client.js`) y no existe ningún `VITE_*` de URL de API, por lo que no necesita variables de entorno en el build: en desarrollo Vite proxea `/api` a `localhost:3000` y en producción lo hace la reescritura de Hosting.
+- **Cabeceras**: `**/*.wasm` con `Content-Type: application/wasm` (el lector de respaldo del escáner, `zxing_reader-*.wasm`, lo requiere para compilarse en streaming); `/assets/**` con `Cache-Control: public, max-age=31536000, immutable` (el build deja allí los archivos con hash, incluido el `.wasm`); `/index.html` con `Cache-Control: no-cache` para que cada despliegue se vea de inmediato. Comprobado con `npm run frontend:build` (2026-10-25): `dist/` contiene `index.html` y `assets/` con `index-*.js`, `index-*.css`, `polyfill-*.js`, `logo-*.jpg` y `zxing_reader-*.wasm`.
+- **Sin CSP ni otras cabeceras de seguridad**: se omitieron a propósito, porque podrían bloquear la cámara o el wasm. Queda como mejora futura.
+- **Requisito previo**: el servicio de Cloud Run `libreria-oskar-api` debe existir antes de desplegar el hosting; si no existe, el despliegue de la configuración falla.
+- **NO verificado**: el despliegue real a Firebase Hosting, que Hosting reenvíe correctamente las cabeceras de la API y el comportamiento del `.wasm` servido desde Hosting.
 
 ---
 
