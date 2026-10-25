@@ -164,7 +164,7 @@ app/
 │   │   │   └── venta.controller.js (70)
 │   │   ├── database/
 │   │   │   ├── migrate.js (74)
-│   │   │   └── seed.js (140)
+│   │   │   └── seed.js (200)
 │   │   ├── middlewares/
 │   │   │   ├── auth.js (86)
 │   │   │   ├── auth2fa.js (55)
@@ -340,6 +340,7 @@ app/
 │       ├── reportesExportacion.e2e.test.js (150)
 │       ├── reportesVentas.e2e.test.js (153)
 │       ├── repositories.test.js (180)
+│       ├── seedProduccion.test.js (168)
 │       ├── sequelize.test.js (96)
 │       ├── sugerenciaRelleno.test.js (80)
 │       ├── usuarioRepository.test.js (103)
@@ -785,6 +786,9 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `LOGIN_RATE_LIMIT` | Entero positivo | Intentos por IP permitidos en login | `10` |
 | `LOGIN_RATE_WINDOW_MS` | Entero positivo en milisegundos | Ventana del limitador de login | `900000` (15 minutos) |
 | `FRONTEND_URL` | Origen HTTP(S) sin ruta ni barra final | Base del enlace de recuperación de contraseña (`{FRONTEND_URL}/restablecer#token=…`). Valor inválido lanza Error sin mostrarlo. Con `NODE_ENV=test` se ignora | `http://localhost:5173` fuera de producción; en producción, si falta, `[WARN CONFIG]` y no se envían enlaces. Compose: `http://localhost:5173` (sobreescribible) |
+| `SEED_ADMIN_EMAIL` | String (correo, máx. 150) | Solo el seed y solo con `NODE_ENV=production`: correo del Administrador central. Obligatoria en producción, sin valor por defecto; se normaliza con `trim()` y minúsculas y, si falta o es inválida, el seed falla antes de abrir la transacción | Sin valor |
+| `SEED_ADMIN_PASSWORD` | String | Contraseña del Administrador. En producción solo se exige (y se valida con `utils/passwordPolicy.js`) cuando el usuario no existe; nunca se modifica uno existente. Fuera de producción es la contraseña de `admin@libreriaoskar.com` y se reinicia en cada ejecución | Fuera de producción: `Admin123!`; en producción: sin valor |
+| `SEED_EMPLEADO_PASSWORD` | String | Contraseña de `empleado@libreriaoskar.com` en el seed (sin cambios) | Fuera de producción: `Empleado123!`; en producción: sin valor (el seed solo avisa) |
 
 - **Correo (`src/config/mail.config.js`)**: `leerConfigCorreo(entorno, nodeEnv)` es una función pura; `env.js` la invoca y expone el resultado como `env.mail` (`proveedor`, `host`, `port`, `user`, `password`, `from`, `faltantes`). Con `smtp` y `MAIL_USER`/`MAIL_PASSWORD` ausentes no lanza: `env.js` emite un `[WARN CONFIG]` que nombra las variables faltantes (nunca valores) y los envíos fallan registrados.
 - **2FA (`src/config/twoFactor.config.js`)**: `leerConfigDosFactores(entorno, nodeEnv)` es una función pura (estilo `mail.config.js`); `env.js` expone `env.twoFactor` con `enforced`, `encryptionKey` (Buffer), `claveDesarrollo` y las constantes: emisor `Librería Oskar`, 6 dígitos, periodo 30 s, SHA-1, tolerancia ±1 paso, token temporal de 600 s, 5 intentos, bloqueo de 15 min y 10 códigos de respaldo. `enforced` se lee en cada login (las pruebas lo cambian y lo restauran).
@@ -1104,7 +1108,8 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 | `tests/recuperacionRestablecer.test.js` | 5 | End-to-End | `libreria_oskar_test` | `POST /api/auth/restablecer`: éxito y aviso, reuso, token mal formado/inexistente/vencido con el mismo mensaje, política o contraseña igual sin consumir el enlace, cuenta desactivada y concurrencia con el mismo enlace (un 200 y un 400; solo la ganadora inicia sesión). |
 | `tests/recuperacionCorreoHtml.test.js` | 3 | End-to-End | `libreria_oskar_test` | Correo de recuperación con `texto`, `html` y logo `image/png` cuyo `cid` aparece en el html, enlace `#token=` en botón y texto; aviso con `html` sin botón; si construir el mensaje lanza, respuesta idéntica (estado y cuerpo) a la de un correo inexistente y un solo registro `[RECUPERACION]` sin correo ni token. |
 | `tests/recuperacionSesiones.test.js` | 4 | End-to-End | `libreria_oskar_test` | JWT y token temporal 2FA anteriores → 401 en `/auth/me`, `/usuarios` y `/2fa/verificar`; sin cambio registrado siguen; login posterior con la nueva; 2FA intacto y `paso: 'verificar'`; token, hash, contraseñas y correo fuera de consola y respuestas. |
-| **Total** | **399** | | | `npm test`: 399 pasan, 0 fallan (ejecutado el 2026-10-24). |
+| `tests/seedProduccion.test.js` | 9 | End-to-End | `libreria_oskar_test` | Seed con `NODE_ENV=production`: crea el Administrador central (rol, activo, 2FA apagado, nombre fijo, hash bcrypt) solo si no existe, no modifica uno existente (otra contraseña, inactivo, rol Empleado), rechaza correo ausente/inválido y contraseña ausente/débil con correo nuevo (sin dejar usuario ni sucursal/bodega nuevos), normaliza el correo y no imprime contraseña ni hash. No importa `config/db`. |
+| **Total** | **408** | | | `npm test`: 408 pasan, 0 fallan (ejecutado el 2026-10-25). |
 
 - **Runner**: Node.js test runner nativo (`node --test --test-concurrency=1 tests/**/*.test.js`), lanzado por `src/run-tests.js`. La columna Tests usa el conteo del runner: una prueba con subpruebas `t.test` cuenta la prueba padre más cada subprueba.
 - **Aislamiento**: `src/run-tests.js` aborta si `NODE_ENV === 'production'` y comprueba con Sequelize (`SELECT current_database()`) que la conexión apunta a `libreria_oskar_test`. Requiere `db-test` levantado (puerto host 5435).
