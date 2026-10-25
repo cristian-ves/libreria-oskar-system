@@ -51,8 +51,8 @@ services:
   # --------------------------------------------------------------------------
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: libreria-backend-local
     restart: unless-stopped
     depends_on:

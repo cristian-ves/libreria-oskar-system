@@ -106,6 +106,7 @@ Generado con `find`/`os.walk` + conteo de saltos de línea (equivalente a `wc -l
 ```text
 app/
 ├── AGENTS.md (89)
+├── .dockerignore (9)
 ├── docker-compose.yml (84)
 ├── package.json (18)
 ├── .agents/
@@ -129,9 +130,8 @@ app/
 │   └── workflows/
 │       └── deploy.yml (150)
 ├── backend/
-│   ├── .dockerignore (10)
 │   ├── .env.example (55)
-│   ├── Dockerfile (53)
+│   ├── Dockerfile (61)
 │   ├── README.md (63)
 │   ├── package.json (47)
 │   ├── src/
@@ -367,7 +367,7 @@ app/
 │       ├── 010_dos_factores.sql (29)
 │       └── 011_recuperacion_contrasena.sql (18)
 ├── docs/
-│   ├── PROJECT_SPECS.md (1692)
+│   ├── PROJECT_SPECS.md (1693)
 │   └── roadmap/
 │       ├── auth-2fa/
 │       │   └── SKILL.md (20)
@@ -1476,9 +1476,10 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 
 ### 7.1 Dockerfiles
 - **Backend (`app/backend/Dockerfile`)**:
-  - Construcción multi-stage optimizada para producción.
-  - **Etapa 1 (`dependencies`)**: Base `node:22-alpine`, instala `libc6-compat`, copia `package.json` y `package-lock.json`, ejecuta `npm ci --omit=dev --ignore-scripts` y limpia caché npm.
-  - **Etapa 2 (`runner`)**: Base `node:22-alpine`, variables `NODE_ENV=production`, `PORT=8080`. Copia `node_modules` desde la etapa 1 y código fuente de `src/`.
+  - Construcción multi-stage optimizada para producción. El contexto de build es `app/` (no `backend/`); se construye desde `app/` con `docker build -f backend/Dockerfile .`.
+  - **`.dockerignore`** (`app/.dockerignore`): lista blanca; ignora todo (`*`) salvo `backend/package.json`, `backend/package-lock.json`, `backend/src` y `database/migrations`.
+  - **Etapa 1 (`dependencies`)**: Base `node:22-alpine`, instala `libc6-compat`, copia `backend/package.json` y `backend/package-lock.json`, ejecuta `npm ci --omit=dev --ignore-scripts` y limpia caché npm.
+  - **Etapa 2 (`runner`)**: Base `node:22-alpine`, variables `NODE_ENV=production`, `PORT=8080`. Copia `node_modules` desde la etapa 1, `backend/package.json`, `backend/src/` (a `./src/`) y `database/migrations/` (a `./database/migrations/`), y define `ENV MIGRATIONS_DIR=/usr/src/app/database/migrations`, la variable que `src/database/migrate.js` lee en lugar de su ruta por defecto. Así un Job de Cloud Run con la misma imagen puede ejecutar `node src/database/migrate.js` y `node src/database/seed.js`. `schema.sql` y `package-lock.json` no entran a la imagen final (la BD nueva se inicializa aparte con `psql`).
   - **Seguridad**: Ejecuta bajo usuario no privilegiado `USER node`.
   - **Healthcheck**: Sondeo cada 30s al endpoint `/api/health` mediante `node -e fetch(...)`.
   - **Puerto expuesto**: `8080` (estándar de Cloud Run). Comando de inicio: `CMD ["node", "src/server.js"]`.
@@ -1489,12 +1490,12 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 - **Servicios declarados**:
   1. `db`: Imagen `postgres:15-alpine`. Expone puerto host `5434:5432`. Base `libreria_oskar`. Monta `./database/schema.sql` en `/docker-entrypoint-initdb.d/01_schema.sql` para inicialización automática. Volumen `pgdata`.
   2. `db-test`: Imagen `postgres:15-alpine`. Expone puerto host `5435:5432`. Perfil `["test"]`. Base `libreria_oskar_test`. Volumen `pgdata_test`.
-  3. `backend`: Construye desde `./backend/Dockerfile`. Expone puerto host `3000:8080`. Variables: `NODE_ENV=production`, `DB_HOST=db`, `DB_PORT=5432`, `PORT=8080`, `JWT_SECRET` (con valor por defecto de desarrollo), `TWO_FACTOR_ENFORCED` (por defecto `false`), `TWO_FACTOR_ENCRYPTION_KEY` (clave falsa de desarrollo por defecto) `CORS_ORIGINS` (por defecto `http://localhost:5173,http://localhost:4173`; se sobreescribe desde la terminal) y `FRONTEND_URL` (por defecto `http://localhost:5173`; base de los enlaces de recuperación de contraseña). Como `NODE_ENV=production` exige `CORS_ORIGINS`, sin ella el backend no arranca (`security.config.js`). No define `TRUST_PROXY` ni `LOGIN_RATE_*`. Espera estado saludable de `db`.
+  3. `backend`: Construye con `context: .` (`app/`) y `dockerfile: backend/Dockerfile`. Expone puerto host `3000:8080`. Variables: `NODE_ENV=production`, `DB_HOST=db`, `DB_PORT=5432`, `PORT=8080`, `JWT_SECRET` (con valor por defecto de desarrollo), `TWO_FACTOR_ENFORCED` (por defecto `false`), `TWO_FACTOR_ENCRYPTION_KEY` (clave falsa de desarrollo por defecto) `CORS_ORIGINS` (por defecto `http://localhost:5173,http://localhost:4173`; se sobreescribe desde la terminal) y `FRONTEND_URL` (por defecto `http://localhost:5173`; base de los enlaces de recuperación de contraseña). Como `NODE_ENV=production` exige `CORS_ORIGINS`, sin ella el backend no arranca (`security.config.js`). No define `TRUST_PROXY` ni `LOGIN_RATE_*`. Espera estado saludable de `db`.
 - **Servicio Frontend en Compose**: No existe declarado en `docker-compose.yml`; el frontend corre en el host con `npm run frontend:dev` (proxy de `/api` a `localhost:3000`).
 - **Arranque y cierre del backend**: `server.js` verifica la BD con `testSequelizeConnection()` antes de escuchar y, ante `SIGINT`/`SIGTERM`, cierra el servidor HTTP y luego `sequelize.close()` (ver §4.2).
 
 ### 7.3 Workflows CI/CD (`app/.github/workflows/deploy.yml`)
-- **Estado**: el archivo está en `app/.github/workflows/deploy.yml`, pero GitHub solo ejecuta workflows ubicados en `.github/workflows` en la raíz del repositorio, por lo que hoy NO se ejecuta. Además sus rutas (`backend/`, `database/`) suponen que `app/` es la raíz. Su funcionamiento no está verificado y será rehecho. Lo que sigue describe el contenido del archivo, no un comportamiento comprobado.
+- **Estado**: ese workflow construye la imagen con contexto `backend` (`--file backend/Dockerfile backend`), por lo que quedará obsoleto frente al Dockerfile actual (contexto `app/`) al rehacerlo. El archivo está en `app/.github/workflows/deploy.yml`, pero GitHub solo ejecuta workflows ubicados en `.github/workflows` en la raíz del repositorio, por lo que hoy NO se ejecuta. Además sus rutas (`backend/`, `database/`) suponen que `app/` es la raíz. Su funcionamiento no está verificado y será rehecho. Lo que sigue describe el contenido del archivo, no un comportamiento comprobado.
 - **Disparadores declarados**: `push` a la rama `main` o ejecución manual `workflow_dispatch` (sin efecto mientras el archivo siga en esa ubicación).
 - **Variables y Secretos**: `GCP_PROJECT_ID`, `GCP_SA_KEY`, `CLOUD_SQL_CONNECTION_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `GOOGLE_BOOKS_API_KEY`.
 - **Job 1: `test-and-verify` (CI)**:

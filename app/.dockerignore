@@ -1,0 +1,9 @@
+# Lista blanca: se ignora todo el contexto (app/) salvo lo indicado abajo
+*
+# Manifiestos de paquetes del backend
+!backend/package.json
+!backend/package-lock.json
+# Código fuente del backend
+!backend/src
+# Migraciones que ejecuta migrate.js dentro del contenedor
+!database/migrations

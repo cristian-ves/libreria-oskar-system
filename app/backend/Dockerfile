@@ -2,6 +2,9 @@
 # DOCKERFILE MULTI-STAGE OPTIMIZADO PARA PRODUCCIÓN (Google Cloud Run)
 # Perfil: devops-gcp-automation
 # Servicio: API RESTful Librería Oskar (Node.js + Express)
+# Contexto de build: la carpeta app/ (no backend/), para poder copiar también
+# database/migrations. Construir desde app/ con:
+#   docker build -f backend/Dockerfile .
 # ============================================================================
 
 # ----------------------------------------------------------------------------
@@ -14,8 +17,8 @@ WORKDIR /usr/src/app
 # Instalar herramientas básicas si fuera necesario para compilación nativa
 RUN apk add --no-cache libc6-compat
 
-# Copiar manifiestos de paquetes
-COPY package.json package-lock.json ./
+# Copiar manifiestos de paquetes (rutas relativas al contexto app/)
+COPY backend/package.json backend/package-lock.json ./
 
 # Instalar exclusivamente dependencias de producción de forma reproducible y limpia
 RUN npm ci --omit=dev --ignore-scripts && \
@@ -35,9 +38,14 @@ ENV PORT=8080
 # Copiar dependencias de producción desde la etapa anterior
 COPY --from=dependencies --chown=node:node /usr/src/app/node_modules ./node_modules
 
-# Copiar código fuente de la aplicación
-COPY --chown=node:node package.json ./
-COPY --chown=node:node src/ ./src/
+# Copiar código fuente de la aplicación (rutas relativas al contexto app/)
+COPY --chown=node:node backend/package.json ./
+COPY --chown=node:node backend/src/ ./src/
+
+# Copiar las migraciones para que el Job de Cloud Run (misma imagen) pueda
+# ejecutar `node src/database/migrate.js`. schema.sql no se incluye en la imagen.
+COPY --chown=node:node database/migrations/ ./database/migrations/
+ENV MIGRATIONS_DIR=/usr/src/app/database/migrations
 
 # Verificación de salud del contenedor para orquestadores y Cloud Run
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
