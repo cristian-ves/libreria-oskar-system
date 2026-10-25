@@ -41,7 +41,7 @@ npm run frontend:dev
 
 Notas:
 - El backend también puede correr en el host con `npm run dev`; `npm run seed` siempre corre en el host y ambos usan `backend/.env`.
-- Las contraseñas del seed se leen de `SEED_ADMIN_PASSWORD` y `SEED_EMPLEADO_PASSWORD` (ver `backend/src/database/seed.js`).
+- Las contraseñas del seed se leen de `SEED_ADMIN_PASSWORD` y `SEED_EMPLEADO_PASSWORD` (ver `backend/src/database/seed.js`). Con `NODE_ENV=production` el seed solo crea el Administrador central desde `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD` si no existe, y falla si los datos son inválidos.
 - Compilar el frontend: `npm run frontend:build`.
 
 ## Pruebas
