@@ -108,7 +108,7 @@ app/
 ├── AGENTS.md (89)
 ├── .dockerignore (9)
 ├── docker-compose.yml (84)
-├── firebase.json (35)
+├── firebase.json (36)
 ├── .firebaserc (5)
 ├── package.json (18)
 ├── .agents/
@@ -1537,7 +1537,8 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 - **Contenido servido**: `public` = `frontend/dist` (salida por defecto de Vite; `vite.config.js` no define `build.outDir` ni `base`).
 - **Reescrituras (el orden importa)**: Hosting aplica la primera que coincide. 1) `/api/**` → servicio de Cloud Run `libreria-oskar-api`, región `us-central1`, sin `pinTag`; 2) `**` → `/index.html` (comodín del SPA para `react-router-dom`). Si el comodín fuera primero, capturaría también `/api/**` y devolvería el HTML del SPA en lugar de llegar al backend.
 - **Rutas relativas**: el frontend llama siempre a `/api/...` con `fetch` relativo (`services/api/client.js`) y no existe ningún `VITE_*` de URL de API, por lo que no necesita variables de entorno en el build: en desarrollo Vite proxea `/api` a `localhost:3000` y en producción lo hace la reescritura de Hosting.
-- **Cabeceras**: `**/*.wasm` con `Content-Type: application/wasm` (el lector de respaldo del escáner, `zxing_reader-*.wasm`, lo requiere para compilarse en streaming); `/assets/**` con `Cache-Control: public, max-age=31536000, immutable` (el build deja allí los archivos con hash, incluido el `.wasm`); `/index.html` con `Cache-Control: no-cache` para que cada despliegue se vea de inmediato. Comprobado con `npm run frontend:build` (2026-10-25): `dist/` contiene `index.html` y `assets/` con `index-*.js`, `index-*.css`, `polyfill-*.js`, `logo-*.jpg` y `zxing_reader-*.wasm`.
+- **Sitio**: `hosting.site` = `libreria-oskar` (URL `https://libreria-oskar.web.app`, sitio adicional del proyecto `libreria-oskar-seminario`, dato aportado por el usuario y no verificado aquí). El sitio por defecto `libreria-oskar-seminario` no se puede borrar ni renombrar y deja de usarse; por eso el despliegue apunta explícitamente al adicional.
+- **Cabeceras (el orden importa)**: 1) `**` con `Cache-Control: no-cache`; 2) `/assets/**` con `Cache-Control: public, max-age=31536000, immutable` (el build deja allí los archivos con hash, incluido el `.wasm`); 3) `**/*.wasm` con `Content-Type: application/wasm` (el lector de respaldo del escáner, `zxing_reader-*.wasm`, lo requiere para compilarse en streaming). Firebase compara la `source` con la ruta ORIGINAL de la petición, sin considerar las reescrituras, así que la antigua regla `/index.html` no cubría las rutas del SPA (`/`, `/catalogo`), que se servían con `cache-control: max-age=3600` (medido por el usuario en producción); esa regla se eliminó por redundante. `**` va primera para que, si gana la última regla coincidente, `/assets/**` la reemplace. **NO verificado**: la precedencia entre reglas que coinciden con la misma clave no está documentada (un reporte en firebase-tools sugiere que gana la última); se comprobará con `curl -sI` sobre `/`, `/catalogo` y un archivo de `/assets/` tras desplegar. Comprobado con `npm run frontend:build` (2026-10-25): `dist/` contiene `index.html` y `assets/` con `index-*.js`, `index-*.css`, `polyfill-*.js`, `logo-*.jpg` y `zxing_reader-*.wasm`.
 - **Sin CSP ni otras cabeceras de seguridad**: se omitieron a propósito, porque podrían bloquear la cámara o el wasm. Queda como mejora futura.
 - **Requisito previo**: el servicio de Cloud Run `libreria-oskar-api` debe existir antes de desplegar el hosting; si no existe, el despliegue de la configuración falla.
 - **NO verificado**: el despliegue real a Firebase Hosting, que Hosting reenvíe correctamente las cabeceras de la API y el comportamiento del `.wasm` servido desde Hosting.
