@@ -1,0 +1,190 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_transferencia_bodegas" targetNamespace="https://libreria-oskar.example/procesos/futuros">
+  <bpmn:process id="Process_transferencia_bodegas" name="BPMN 01 · Transferencia de libros entre bodegas (propuesta futura)" isExecutable="false">
+    <bpmn:documentation>Flujo futuro. El despacho y la recepción son transacciones separadas con seguimiento; no se afirma que exista una transferencia atómica durante el transporte.</bpmn:documentation>
+    <bpmn:laneSet id="LaneSet_transferencia_bodegas">
+      <bpmn:lane id="Lane_transferencia_bodegas_0" name="Operador de origen">
+        <bpmn:flowNodeRef>Node_transferencia_bodegas_i</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_transferencia_bodegas_sol</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_transferencia_bodegas_aut</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_transferencia_bodegas_cer</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_transferencia_bodegas_fin</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_transferencia_bodegas_1" name="Sistema / PostgreSQL">
+        <bpmn:flowNodeRef>Node_transferencia_bodegas_val</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_transferencia_bodegas_g1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_transferencia_bodegas_sal</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_transferencia_bodegas_ent</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_transferencia_bodegas_2" name="Encargado de destino">
+        <bpmn:flowNodeRef>Node_transferencia_bodegas_rej</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_transferencia_bodegas_fno</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_transferencia_bodegas_rec</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Node_transferencia_bodegas_i" name="Necesidad de traslado">
+      <bpmn:outgoing>Flow_transferencia_bodegas_0</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Node_transferencia_bodegas_sol" name="Registrar solicitud origen / destino / cantidad">
+      <bpmn:incoming>Flow_transferencia_bodegas_0</bpmn:incoming>
+      <bpmn:outgoing>Flow_transferencia_bodegas_1</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Node_transferencia_bodegas_val" name="Validar sedes y existencias disponibles">
+      <bpmn:incoming>Flow_transferencia_bodegas_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_transferencia_bodegas_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Node_transferencia_bodegas_g1" name="¿Solicitud válida?">
+      <bpmn:incoming>Flow_transferencia_bodegas_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_transferencia_bodegas_3</bpmn:outgoing>
+      <bpmn:outgoing>Flow_transferencia_bodegas_5</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Node_transferencia_bodegas_rej" name="Informar rechazo sin alterar existencias">
+      <bpmn:incoming>Flow_transferencia_bodegas_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_transferencia_bodegas_4</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="Node_transferencia_bodegas_fno" name="Solicitud rechazada">
+      <bpmn:incoming>Flow_transferencia_bodegas_4</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:task id="Node_transferencia_bodegas_aut" name="Autorizar traslado y responsable">
+      <bpmn:incoming>Flow_transferencia_bodegas_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_transferencia_bodegas_6</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Node_transferencia_bodegas_sal" name="Despachar: salida auditada en Kardex">
+      <bpmn:incoming>Flow_transferencia_bodegas_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_transferencia_bodegas_7</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Node_transferencia_bodegas_rec" name="Confirmar recepción en destino">
+      <bpmn:incoming>Flow_transferencia_bodegas_7</bpmn:incoming>
+      <bpmn:outgoing>Flow_transferencia_bodegas_8</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Node_transferencia_bodegas_ent" name="Registrar ingreso idempotente en Kardex">
+      <bpmn:incoming>Flow_transferencia_bodegas_8</bpmn:incoming>
+      <bpmn:outgoing>Flow_transferencia_bodegas_9</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Node_transferencia_bodegas_cer" name="Cerrar traslado y consultar seguimiento">
+      <bpmn:incoming>Flow_transferencia_bodegas_9</bpmn:incoming>
+      <bpmn:outgoing>Flow_transferencia_bodegas_10</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="Node_transferencia_bodegas_fin" name="Traslado completado">
+      <bpmn:incoming>Flow_transferencia_bodegas_10</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_transferencia_bodegas_0" sourceRef="Node_transferencia_bodegas_i" targetRef="Node_transferencia_bodegas_sol"/>
+    <bpmn:sequenceFlow id="Flow_transferencia_bodegas_1" sourceRef="Node_transferencia_bodegas_sol" targetRef="Node_transferencia_bodegas_val"/>
+    <bpmn:sequenceFlow id="Flow_transferencia_bodegas_2" sourceRef="Node_transferencia_bodegas_val" targetRef="Node_transferencia_bodegas_g1"/>
+    <bpmn:sequenceFlow id="Flow_transferencia_bodegas_3" sourceRef="Node_transferencia_bodegas_g1" targetRef="Node_transferencia_bodegas_rej" name="No"/>
+    <bpmn:sequenceFlow id="Flow_transferencia_bodegas_4" sourceRef="Node_transferencia_bodegas_rej" targetRef="Node_transferencia_bodegas_fno"/>
+    <bpmn:sequenceFlow id="Flow_transferencia_bodegas_5" sourceRef="Node_transferencia_bodegas_g1" targetRef="Node_transferencia_bodegas_aut" name="Sí"/>
+    <bpmn:sequenceFlow id="Flow_transferencia_bodegas_6" sourceRef="Node_transferencia_bodegas_aut" targetRef="Node_transferencia_bodegas_sal"/>
+    <bpmn:sequenceFlow id="Flow_transferencia_bodegas_7" sourceRef="Node_transferencia_bodegas_sal" targetRef="Node_transferencia_bodegas_rec"/>
+    <bpmn:sequenceFlow id="Flow_transferencia_bodegas_8" sourceRef="Node_transferencia_bodegas_rec" targetRef="Node_transferencia_bodegas_ent"/>
+    <bpmn:sequenceFlow id="Flow_transferencia_bodegas_9" sourceRef="Node_transferencia_bodegas_ent" targetRef="Node_transferencia_bodegas_cer"/>
+    <bpmn:sequenceFlow id="Flow_transferencia_bodegas_10" sourceRef="Node_transferencia_bodegas_cer" targetRef="Node_transferencia_bodegas_fin"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="Diagram_transferencia_bodegas">
+    <bpmndi:BPMNPlane id="Plane_transferencia_bodegas" bpmnElement="Process_transferencia_bodegas">
+      <bpmndi:BPMNShape id="LaneShape_transferencia_bodegas_0" bpmnElement="Lane_transferencia_bodegas_0" isHorizontal="true">
+        <dc:Bounds x="65" y="85" width="3290" height="195"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="LaneShape_transferencia_bodegas_1" bpmnElement="Lane_transferencia_bodegas_1" isHorizontal="true">
+        <dc:Bounds x="65" y="305" width="3290" height="195"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="LaneShape_transferencia_bodegas_2" bpmnElement="Lane_transferencia_bodegas_2" isHorizontal="true">
+        <dc:Bounds x="65" y="525" width="3290" height="195"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_transferencia_bodegas_i" bpmnElement="Node_transferencia_bodegas_i">
+        <dc:Bounds x="478" y="153" width="64" height="64"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_transferencia_bodegas_sol" bpmnElement="Node_transferencia_bodegas_sol">
+        <dc:Bounds x="690" y="138" width="250" height="94"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_transferencia_bodegas_val" bpmnElement="Node_transferencia_bodegas_val">
+        <dc:Bounds x="995" y="358" width="250" height="94"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_transferencia_bodegas_g1" bpmnElement="Node_transferencia_bodegas_g1">
+        <dc:Bounds x="1393" y="373" width="64" height="64"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_transferencia_bodegas_rej" bpmnElement="Node_transferencia_bodegas_rej">
+        <dc:Bounds x="1605" y="578" width="250" height="94"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_transferencia_bodegas_fno" bpmnElement="Node_transferencia_bodegas_fno">
+        <dc:Bounds x="2003" y="593" width="64" height="64"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_transferencia_bodegas_aut" bpmnElement="Node_transferencia_bodegas_aut">
+        <dc:Bounds x="1605" y="138" width="250" height="94"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_transferencia_bodegas_sal" bpmnElement="Node_transferencia_bodegas_sal">
+        <dc:Bounds x="1910" y="358" width="250" height="94"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_transferencia_bodegas_rec" bpmnElement="Node_transferencia_bodegas_rec">
+        <dc:Bounds x="2215" y="578" width="250" height="94"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_transferencia_bodegas_ent" bpmnElement="Node_transferencia_bodegas_ent">
+        <dc:Bounds x="2520" y="358" width="250" height="94"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_transferencia_bodegas_cer" bpmnElement="Node_transferencia_bodegas_cer">
+        <dc:Bounds x="2825" y="138" width="250" height="94"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_transferencia_bodegas_fin" bpmnElement="Node_transferencia_bodegas_fin">
+        <dc:Bounds x="3223" y="153" width="64" height="64"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_transferencia_bodegas_0" bpmnElement="Flow_transferencia_bodegas_0">
+        <di:waypoint x="542" y="185"/>
+        <di:waypoint x="690" y="185"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_transferencia_bodegas_1" bpmnElement="Flow_transferencia_bodegas_1">
+        <di:waypoint x="940" y="185"/>
+        <di:waypoint x="968" y="185"/>
+        <di:waypoint x="968" y="405"/>
+        <di:waypoint x="995" y="405"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_transferencia_bodegas_2" bpmnElement="Flow_transferencia_bodegas_2">
+        <di:waypoint x="1245" y="405"/>
+        <di:waypoint x="1393" y="405"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_transferencia_bodegas_3" bpmnElement="Flow_transferencia_bodegas_3">
+        <di:waypoint x="1457" y="405"/>
+        <di:waypoint x="1531" y="405"/>
+        <di:waypoint x="1531" y="625"/>
+        <di:waypoint x="1605" y="625"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_transferencia_bodegas_4" bpmnElement="Flow_transferencia_bodegas_4">
+        <di:waypoint x="1855" y="625"/>
+        <di:waypoint x="2003" y="625"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_transferencia_bodegas_5" bpmnElement="Flow_transferencia_bodegas_5">
+        <di:waypoint x="1457" y="405"/>
+        <di:waypoint x="1531" y="405"/>
+        <di:waypoint x="1531" y="185"/>
+        <di:waypoint x="1605" y="185"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_transferencia_bodegas_6" bpmnElement="Flow_transferencia_bodegas_6">
+        <di:waypoint x="1855" y="185"/>
+        <di:waypoint x="1882" y="185"/>
+        <di:waypoint x="1882" y="405"/>
+        <di:waypoint x="1910" y="405"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_transferencia_bodegas_7" bpmnElement="Flow_transferencia_bodegas_7">
+        <di:waypoint x="2160" y="405"/>
+        <di:waypoint x="2188" y="405"/>
+        <di:waypoint x="2188" y="625"/>
+        <di:waypoint x="2215" y="625"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_transferencia_bodegas_8" bpmnElement="Flow_transferencia_bodegas_8">
+        <di:waypoint x="2465" y="625"/>
+        <di:waypoint x="2492" y="625"/>
+        <di:waypoint x="2492" y="405"/>
+        <di:waypoint x="2520" y="405"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_transferencia_bodegas_9" bpmnElement="Flow_transferencia_bodegas_9">
+        <di:waypoint x="2770" y="405"/>
+        <di:waypoint x="2798" y="405"/>
+        <di:waypoint x="2798" y="185"/>
+        <di:waypoint x="2825" y="185"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_transferencia_bodegas_10" bpmnElement="Flow_transferencia_bodegas_10">
+        <di:waypoint x="3075" y="185"/>
+        <di:waypoint x="3223" y="185"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

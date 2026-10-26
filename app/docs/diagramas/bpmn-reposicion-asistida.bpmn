@@ -1,0 +1,212 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_reposicion_asistida" targetNamespace="https://libreria-oskar.example/procesos/futuros">
+  <bpmn:process id="Process_reposicion_asistida" name="BPMN 03 · Reposición asistida y recepción de pedido (propuesta futura)" isExecutable="false">
+    <bpmn:documentation>Proceso futuro: las órdenes, proveedores y recepciones documentadas requieren nueva estructura de datos. No existe hoy compra automatizada.</bpmn:documentation>
+    <bpmn:laneSet id="LaneSet_reposicion_asistida">
+      <bpmn:lane id="Lane_reposicion_asistida_0" name="Motor de análisis">
+        <bpmn:flowNodeRef>Node_reposicion_asistida_i</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_reposicion_asistida_met</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_reposicion_asistida_cal</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_reposicion_asistida_g1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_reposicion_asistida_ord</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_reposicion_asistida_reg</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_reposicion_asistida_fin</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_reposicion_asistida_1" name="Administrador">
+        <bpmn:flowNodeRef>Node_reposicion_asistida_rev</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_reposicion_asistida_g2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_reposicion_asistida_rej</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_reposicion_asistida_fno2</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_reposicion_asistida_2" name="Almacén">
+        <bpmn:flowNodeRef>Node_reposicion_asistida_no</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_reposicion_asistida_fno</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_reposicion_asistida_rec</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Node_reposicion_asistida_i" name="Revisión de abastecimiento">
+      <bpmn:outgoing>Flow_reposicion_asistida_0</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Node_reposicion_asistida_met" name="Combinar ventas, existencias y mínimos">
+      <bpmn:incoming>Flow_reposicion_asistida_0</bpmn:incoming>
+      <bpmn:outgoing>Flow_reposicion_asistida_1</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Node_reposicion_asistida_cal" name="Sugerir cantidades con datos disponibles">
+      <bpmn:incoming>Flow_reposicion_asistida_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_reposicion_asistida_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Node_reposicion_asistida_g1" name="¿Se requiere reposición?">
+      <bpmn:incoming>Flow_reposicion_asistida_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_reposicion_asistida_3</bpmn:outgoing>
+      <bpmn:outgoing>Flow_reposicion_asistida_5</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Node_reposicion_asistida_no" name="Conservar nivel sin propuesta">
+      <bpmn:incoming>Flow_reposicion_asistida_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_reposicion_asistida_4</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="Node_reposicion_asistida_fno" name="Sin pedido generado">
+      <bpmn:incoming>Flow_reposicion_asistida_4</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:task id="Node_reposicion_asistida_rev" name="Revisar propuesta y proveedor">
+      <bpmn:incoming>Flow_reposicion_asistida_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_reposicion_asistida_6</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Node_reposicion_asistida_g2" name="¿Aprobar pedido?">
+      <bpmn:incoming>Flow_reposicion_asistida_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_reposicion_asistida_7</bpmn:outgoing>
+      <bpmn:outgoing>Flow_reposicion_asistida_9</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Node_reposicion_asistida_rej" name="Registrar rechazo con motivo">
+      <bpmn:incoming>Flow_reposicion_asistida_7</bpmn:incoming>
+      <bpmn:outgoing>Flow_reposicion_asistida_8</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="Node_reposicion_asistida_fno2" name="Pedido no aprobado">
+      <bpmn:incoming>Flow_reposicion_asistida_8</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:task id="Node_reposicion_asistida_ord" name="Emitir orden de compra identificada">
+      <bpmn:incoming>Flow_reposicion_asistida_9</bpmn:incoming>
+      <bpmn:outgoing>Flow_reposicion_asistida_10</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Node_reposicion_asistida_rec" name="Cotejar entrega y cantidades">
+      <bpmn:incoming>Flow_reposicion_asistida_10</bpmn:incoming>
+      <bpmn:outgoing>Flow_reposicion_asistida_11</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Node_reposicion_asistida_reg" name="Registrar ingreso y actualizar Kardex">
+      <bpmn:incoming>Flow_reposicion_asistida_11</bpmn:incoming>
+      <bpmn:outgoing>Flow_reposicion_asistida_12</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="Node_reposicion_asistida_fin" name="Recepción contabilizada">
+      <bpmn:incoming>Flow_reposicion_asistida_12</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_reposicion_asistida_0" sourceRef="Node_reposicion_asistida_i" targetRef="Node_reposicion_asistida_met"/>
+    <bpmn:sequenceFlow id="Flow_reposicion_asistida_1" sourceRef="Node_reposicion_asistida_met" targetRef="Node_reposicion_asistida_cal"/>
+    <bpmn:sequenceFlow id="Flow_reposicion_asistida_2" sourceRef="Node_reposicion_asistida_cal" targetRef="Node_reposicion_asistida_g1"/>
+    <bpmn:sequenceFlow id="Flow_reposicion_asistida_3" sourceRef="Node_reposicion_asistida_g1" targetRef="Node_reposicion_asistida_no" name="No"/>
+    <bpmn:sequenceFlow id="Flow_reposicion_asistida_4" sourceRef="Node_reposicion_asistida_no" targetRef="Node_reposicion_asistida_fno"/>
+    <bpmn:sequenceFlow id="Flow_reposicion_asistida_5" sourceRef="Node_reposicion_asistida_g1" targetRef="Node_reposicion_asistida_rev" name="Sí"/>
+    <bpmn:sequenceFlow id="Flow_reposicion_asistida_6" sourceRef="Node_reposicion_asistida_rev" targetRef="Node_reposicion_asistida_g2"/>
+    <bpmn:sequenceFlow id="Flow_reposicion_asistida_7" sourceRef="Node_reposicion_asistida_g2" targetRef="Node_reposicion_asistida_rej" name="No"/>
+    <bpmn:sequenceFlow id="Flow_reposicion_asistida_8" sourceRef="Node_reposicion_asistida_rej" targetRef="Node_reposicion_asistida_fno2"/>
+    <bpmn:sequenceFlow id="Flow_reposicion_asistida_9" sourceRef="Node_reposicion_asistida_g2" targetRef="Node_reposicion_asistida_ord" name="Sí"/>
+    <bpmn:sequenceFlow id="Flow_reposicion_asistida_10" sourceRef="Node_reposicion_asistida_ord" targetRef="Node_reposicion_asistida_rec"/>
+    <bpmn:sequenceFlow id="Flow_reposicion_asistida_11" sourceRef="Node_reposicion_asistida_rec" targetRef="Node_reposicion_asistida_reg"/>
+    <bpmn:sequenceFlow id="Flow_reposicion_asistida_12" sourceRef="Node_reposicion_asistida_reg" targetRef="Node_reposicion_asistida_fin"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="Diagram_reposicion_asistida">
+    <bpmndi:BPMNPlane id="Plane_reposicion_asistida" bpmnElement="Process_reposicion_asistida">
+      <bpmndi:BPMNShape id="LaneShape_reposicion_asistida_0" bpmnElement="Lane_reposicion_asistida_0" isHorizontal="true">
+        <dc:Bounds x="65" y="85" width="3290" height="195"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="LaneShape_reposicion_asistida_1" bpmnElement="Lane_reposicion_asistida_1" isHorizontal="true">
+        <dc:Bounds x="65" y="305" width="3290" height="195"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="LaneShape_reposicion_asistida_2" bpmnElement="Lane_reposicion_asistida_2" isHorizontal="true">
+        <dc:Bounds x="65" y="525" width="3290" height="195"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_reposicion_asistida_i" bpmnElement="Node_reposicion_asistida_i">
+        <dc:Bounds x="478" y="153" width="64" height="64"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_reposicion_asistida_met" bpmnElement="Node_reposicion_asistida_met">
+        <dc:Bounds x="690" y="138" width="250" height="94"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_reposicion_asistida_cal" bpmnElement="Node_reposicion_asistida_cal">
+        <dc:Bounds x="995" y="138" width="250" height="94"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_reposicion_asistida_g1" bpmnElement="Node_reposicion_asistida_g1">
+        <dc:Bounds x="1393" y="153" width="64" height="64"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_reposicion_asistida_no" bpmnElement="Node_reposicion_asistida_no">
+        <dc:Bounds x="1605" y="578" width="250" height="94"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_reposicion_asistida_fno" bpmnElement="Node_reposicion_asistida_fno">
+        <dc:Bounds x="2003" y="593" width="64" height="64"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_reposicion_asistida_rev" bpmnElement="Node_reposicion_asistida_rev">
+        <dc:Bounds x="1605" y="358" width="250" height="94"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_reposicion_asistida_g2" bpmnElement="Node_reposicion_asistida_g2">
+        <dc:Bounds x="2003" y="373" width="64" height="64"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_reposicion_asistida_rej" bpmnElement="Node_reposicion_asistida_rej">
+        <dc:Bounds x="2215" y="358" width="250" height="94"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_reposicion_asistida_fno2" bpmnElement="Node_reposicion_asistida_fno2">
+        <dc:Bounds x="2613" y="373" width="64" height="64"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_reposicion_asistida_ord" bpmnElement="Node_reposicion_asistida_ord">
+        <dc:Bounds x="2215" y="138" width="250" height="94"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_reposicion_asistida_rec" bpmnElement="Node_reposicion_asistida_rec">
+        <dc:Bounds x="2520" y="578" width="250" height="94"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_reposicion_asistida_reg" bpmnElement="Node_reposicion_asistida_reg">
+        <dc:Bounds x="2825" y="138" width="250" height="94"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_reposicion_asistida_fin" bpmnElement="Node_reposicion_asistida_fin">
+        <dc:Bounds x="3223" y="153" width="64" height="64"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_reposicion_asistida_0" bpmnElement="Flow_reposicion_asistida_0">
+        <di:waypoint x="542" y="185"/>
+        <di:waypoint x="690" y="185"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_reposicion_asistida_1" bpmnElement="Flow_reposicion_asistida_1">
+        <di:waypoint x="940" y="185"/>
+        <di:waypoint x="995" y="185"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_reposicion_asistida_2" bpmnElement="Flow_reposicion_asistida_2">
+        <di:waypoint x="1245" y="185"/>
+        <di:waypoint x="1393" y="185"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_reposicion_asistida_3" bpmnElement="Flow_reposicion_asistida_3">
+        <di:waypoint x="1457" y="185"/>
+        <di:waypoint x="1531" y="185"/>
+        <di:waypoint x="1531" y="625"/>
+        <di:waypoint x="1605" y="625"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_reposicion_asistida_4" bpmnElement="Flow_reposicion_asistida_4">
+        <di:waypoint x="1855" y="625"/>
+        <di:waypoint x="2003" y="625"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_reposicion_asistida_5" bpmnElement="Flow_reposicion_asistida_5">
+        <di:waypoint x="1457" y="185"/>
+        <di:waypoint x="1531" y="185"/>
+        <di:waypoint x="1531" y="405"/>
+        <di:waypoint x="1605" y="405"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_reposicion_asistida_6" bpmnElement="Flow_reposicion_asistida_6">
+        <di:waypoint x="1855" y="405"/>
+        <di:waypoint x="2003" y="405"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_reposicion_asistida_7" bpmnElement="Flow_reposicion_asistida_7">
+        <di:waypoint x="2067" y="405"/>
+        <di:waypoint x="2215" y="405"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_reposicion_asistida_8" bpmnElement="Flow_reposicion_asistida_8">
+        <di:waypoint x="2465" y="405"/>
+        <di:waypoint x="2613" y="405"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_reposicion_asistida_9" bpmnElement="Flow_reposicion_asistida_9">
+        <di:waypoint x="2067" y="405"/>
+        <di:waypoint x="2141" y="405"/>
+        <di:waypoint x="2141" y="185"/>
+        <di:waypoint x="2215" y="185"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_reposicion_asistida_10" bpmnElement="Flow_reposicion_asistida_10">
+        <di:waypoint x="2465" y="185"/>
+        <di:waypoint x="2492" y="185"/>
+        <di:waypoint x="2492" y="625"/>
+        <di:waypoint x="2520" y="625"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_reposicion_asistida_11" bpmnElement="Flow_reposicion_asistida_11">
+        <di:waypoint x="2770" y="625"/>
+        <di:waypoint x="2798" y="625"/>
+        <di:waypoint x="2798" y="185"/>
+        <di:waypoint x="2825" y="185"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_reposicion_asistida_12" bpmnElement="Flow_reposicion_asistida_12">
+        <di:waypoint x="3075" y="185"/>
+        <di:waypoint x="3223" y="185"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
