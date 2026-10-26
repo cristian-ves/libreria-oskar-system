@@ -54,7 +54,7 @@ class Sucursal extends Model {
     Sucursal.hasMany(models.Bodega, {
       foreignKey: 'sucursal_id',
       as: 'bodegas',
-      onDelete: 'CASCADE',
+      onDelete: 'RESTRICT',
     });
   }
 }

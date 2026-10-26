@@ -28,7 +28,7 @@ class Inventario extends Model {
             model: 'bodegas',
             key: 'id',
           },
-          onDelete: 'CASCADE',
+          onDelete: 'RESTRICT',
         },
         stock_actual: {
           type: DataTypes.INTEGER,
@@ -79,7 +79,7 @@ class Inventario extends Model {
     Inventario.belongsTo(models.Bodega, {
       foreignKey: 'bodega_id',
       as: 'bodega',
-      onDelete: 'CASCADE',
+      onDelete: 'RESTRICT',
     });
 
     Inventario.hasMany(models.MovimientoInventario, {

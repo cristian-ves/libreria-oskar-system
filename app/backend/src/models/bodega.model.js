@@ -18,7 +18,7 @@ class Bodega extends Model {
             model: 'sucursales',
             key: 'id',
           },
-          onDelete: 'CASCADE',
+          onDelete: 'RESTRICT',
         },
         nombre: {
           type: DataTypes.STRING(100),
@@ -61,13 +61,13 @@ class Bodega extends Model {
     Bodega.belongsTo(models.Sucursal, {
       foreignKey: 'sucursal_id',
       as: 'sucursal',
-      onDelete: 'CASCADE',
+      onDelete: 'RESTRICT',
     });
 
     Bodega.hasMany(models.Inventario, {
       foreignKey: 'bodega_id',
       as: 'inventarios',
-      onDelete: 'CASCADE',
+      onDelete: 'RESTRICT',
     });
 
     Bodega.belongsToMany(models.Libro, {

@@ -1,4 +1,5 @@
-const { sequelize, Bodega, Categoria } = require('../../models');
+const { sequelize, Categoria } = require('../../models');
+const bodegaRepository = require('../../repositories/bodega.repository');
 const libroRepository = require('../../repositories/libro.repository');
 const inventarioRepository = require('../../repositories/inventario.repository');
 const googleBooksService = require('../googleBooks.service');
@@ -52,9 +53,9 @@ module.exports = {
     return await sequelize.transaction(async (transaction) => {
       const txOptions = { transaction };
       // Validar bodega
-      const bodegaCheck = await Bodega.findByPk(bodegaId, { attributes: ['id'], transaction });
+      const bodegaCheck = await bodegaRepository.findActivaById(bodegaId, txOptions);
       if (!bodegaCheck) {
-        throw new NotFoundError(`La bodega indicada (ID: ${bodegaId}) no existe.`);
+        throw new NotFoundError(`La bodega indicada (ID: ${bodegaId}) no existe o está inactiva.`);
       }
 
       // Validar categoría si viene
