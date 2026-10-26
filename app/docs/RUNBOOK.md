@@ -310,7 +310,7 @@ Alternativa segura y probada: volver el repositorio al commit anterior en `~/osk
 
 ## 6. Migraciones
 
-Una **migración** es un archivo SQL que cambia la estructura de la base de datos (crear tablas, agregar columnas). Viven en `database/migrations/` (hoy: `002`, `003`, `004`, `010`, `011`).
+Una **migración** es un archivo SQL que cambia la estructura de la base de datos. Viven en `database/migrations/` (hoy: `002`, `003`, `004`, `010`, `011`, `020`, `021`).
 
 **Cómo funcionan** (`backend/src/database/migrate.js`):
 
@@ -334,6 +334,7 @@ Después de migrar, el Job corre `seed.js`, que es el sembrado de datos básicos
 
 - Si una migración falla, el Job termina con error y el servicio **no** se debe actualizar (sección 4.2). Corrige el SQL y vuelve a construir.
 - Una migración ya aplicada **no se vuelve a ejecutar aunque cambies el archivo**: crea otra con número nuevo.
+- `021_gestion_sucursales.sql` cambia las FK de `sucursales → bodegas` y `bodegas → inventarios` de CASCADE a RESTRICT. No borra datos. Aplicarla mediante el procedimiento de despliegue existente, nunca directamente sobre Cloud SQL fuera de la ventana acordada.
 Marca: el Job de migraciones **Ejecutado en producción**.
 
 ### Cargar el esquema base en una base nueva

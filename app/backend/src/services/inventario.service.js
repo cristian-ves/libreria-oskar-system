@@ -2,6 +2,7 @@ const env = require('../config/env');
 const { sequelize } = require('../models');
 const inventarioRepository = require('../repositories/inventario.repository');
 const movimientoRepository = require('../repositories/movimiento.repository');
+const bodegaRepository = require('../repositories/bodega.repository');
 const { ValidationError, NotFoundError, ConflictError } = require('../utils/errors');
 
 class InventarioService {
@@ -59,6 +60,11 @@ class InventarioService {
     return await sequelize.transaction(async (transaction) => {
       // 1. Bloquear y verificar el registro de inventario
       const txOptions = { transaction };
+      const referencia = await inventarioRepository.findById(inventarioId, txOptions);
+      if (!referencia) throw new NotFoundError('El registro de inventario indicado no existe.');
+      if (!await bodegaRepository.findActivaById(referencia.bodega_id, txOptions)) {
+        throw new NotFoundError('La bodega indicada no existe o está inactiva.');
+      }
       const inventario = await inventarioRepository.findByIdForUpdate(inventarioId, txOptions);
       if (!inventario) {
         throw new NotFoundError('El registro de inventario indicado no existe.');
@@ -129,6 +135,11 @@ class InventarioService {
     return await sequelize.transaction(async (transaction) => {
       // 1. Bloquear y verificar el registro de inventario
       const txOptions = { transaction };
+      const referencia = await inventarioRepository.findById(inventarioId, txOptions);
+      if (!referencia) throw new NotFoundError('El registro de inventario indicado no existe.');
+      if (!await bodegaRepository.findActivaById(referencia.bodega_id, txOptions)) {
+        throw new NotFoundError('La bodega indicada no existe o está inactiva.');
+      }
       const inventario = await inventarioRepository.findByIdForUpdate(inventarioId, txOptions);
       if (!inventario) {
         throw new NotFoundError('El registro de inventario indicado no existe.');

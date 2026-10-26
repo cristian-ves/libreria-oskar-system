@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS sucursales (
 
 CREATE TABLE IF NOT EXISTS bodegas (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    sucursal_id UUID NOT NULL REFERENCES sucursales(id) ON DELETE CASCADE,
+    sucursal_id UUID NOT NULL REFERENCES sucursales(id) ON DELETE RESTRICT,
     nombre VARCHAR(100) NOT NULL,
     descripcion TEXT,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
@@ -123,7 +123,7 @@ CREATE TABLE IF NOT EXISTS libros (
 CREATE TABLE IF NOT EXISTS inventarios (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     libro_id UUID NOT NULL REFERENCES libros(id) ON DELETE CASCADE,
-    bodega_id UUID NOT NULL REFERENCES bodegas(id) ON DELETE CASCADE,
+    bodega_id UUID NOT NULL REFERENCES bodegas(id) ON DELETE RESTRICT,
     stock_actual INT NOT NULL DEFAULT 0 CHECK (stock_actual >= 0),
     stock_minimo INT NOT NULL DEFAULT 5 CHECK (stock_minimo >= 0), -- Umbral para alertas automáticas
     ultima_auditoria TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,

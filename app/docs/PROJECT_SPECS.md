@@ -572,6 +572,7 @@ app/
             ├── Reportes.jsx (71)
             ├── RestablecerContrasena.jsx (44)
             ├── Seguridad.jsx (25)
+            ├── Sucursales.jsx
             ├── Usuarios.jsx (141)
             ├── VentaDetalle.jsx (88)
             └── Ventas.jsx (55)
@@ -610,7 +611,7 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
   - `schema.sql` siembra las **20 categorías** (las 6 originales y las 14 de la migración `003_categorias_adicionales.sql`, con `ON CONFLICT (nombre) DO NOTHING`). Una BD creada desde cero con `schema.sql` ya equivale a aplicar `schema.sql + 002 + 003`. Las migraciones 002 y 003 permanecen como scripts idempotentes válidos para BDs ya existentes.
   - La migración `004_ventas.sql` (secuencia `ventas_numero_seq`, tablas `ventas` y `venta_detalles`, columna `movimientos_inventario.venta_id` e índices) es idempotente y su DDL es el mismo que `schema.sql`: una BD nueva equivale a la BD anterior + 004. La API de ventas (crear, listar, consultar y anular) existe desde el segundo commit de la serie y la interfaz (`/ventas`, `/ventas/nueva`, `/ventas/:id`) desde el tercero.
   - La migración `010_dos_factores.sql` (columnas `dos_factores_intentos`, `dos_factores_bloqueado_hasta` y `dos_factores_ultimo_paso` al final de `usuarios`, tabla `codigos_respaldo_2fa` e índice `idx_codigos_respaldo_2fa_usuario_id`) es idempotente y su DDL es el mismo que `schema.sql`, con las columnas en el mismo orden. Aplicada dos veces a `libreria_oskar_test` sin errores (la segunda la omite `schema_migrations`; re-ejecutar su SQL dentro de una transacción revertida tampoco falla). La equivalencia por `pg_dump --schema-only` no está verificada. El rango 010-019 queda reservado para el 2FA.
-  - La migración `011_recuperacion_contrasena.sql` (columnas `token_recuperacion_expira` y `password_cambiada_en` al final de `usuarios`, después de las de 010 y en el mismo orden, e índice único parcial `idx_usuarios_token_recuperacion`) es idempotente y su DDL es el mismo que `schema.sql`. Reutiliza la columna existente `token_recuperacion` para el SHA-256 del token (64 hexadecimales en `VARCHAR(255)`). La migración `020_alertas_stock_minimo.sql` agrega las tablas de reportes y entregas diarios; el DDL equivalente está en `schema.sql`.
+  - La migración `011_recuperacion_contrasena.sql` (columnas `token_recuperacion_expira` y `password_cambiada_en` al final de `usuarios`, después de las de 010 y en el mismo orden, e índice único parcial `idx_usuarios_token_recuperacion`) es idempotente y su DDL es el mismo que `schema.sql`. Reutiliza la columna existente `token_recuperacion` para el SHA-256 del token (64 hexadecimales en `VARCHAR(255)`). La migración `020_alertas_stock_minimo.sql` agrega las tablas de reportes y entregas diarios; el DDL equivalente está en `schema.sql`. La migración `021_gestion_sucursales.sql` cambia a `ON DELETE RESTRICT` las FK sucursal→bodega y bodega→inventario para impedir borrados en cascada del inventario histórico; no añade tablas, columnas ni índices.
   - La tabla `schema_migrations` es creada exclusivamente en runtime por `migrate.js` y no forma parte del `schema.sql` estático.
 
 ### 3.2 Catálogo de Tablas y Columnas Clave
@@ -624,8 +625,8 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `sucursales` | `activo` | `BOOLEAN` | NOT NULL, DEFAULT TRUE |
 | `sucursales` | `creado_en` / `actualizado_en` | `TIMESTAMPTZ` | NOT NULL, DEFAULT CURRENT_TIMESTAMP |
 | `bodegas` | `id` | `UUID` | PK, `DEFAULT uuid_generate_v4()` |
-| `bodegas` | `sucursal_id` | `UUID` | FK -> `sucursales(id)` ON DELETE CASCADE, NOT NULL |
-| `bodegas` | `nombre` | `VARCHAR(100)` | NOT NULL, UNIQUE con `sucursal_id` (`uq_sucursal_bodega`) |
+| `bodegas` | `sucursal_id` | `UUID` | FK -> `sucursales(id)` ON DELETE RESTRICT, NOT NULL desde migración 021 |
+| `bodegas` | `nombre` | `VARCHAR(100)` | NOT NULL, UNIQUE por `sucursal_id` (`uq_sucursal_bodega`, comparación sensible a mayúsculas en BD); API compara nombres sin distinguir mayúsculas |
 | `bodegas` | `descripcion` | `TEXT` | Nullable |
 | `bodegas` | `activo` | `BOOLEAN` | NOT NULL, DEFAULT TRUE |
 | `roles` | `id` | `UUID` | PK, `DEFAULT uuid_generate_v4()` |
@@ -670,7 +671,7 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `libros` | `activo` | `BOOLEAN` | NOT NULL, DEFAULT TRUE |
 | `inventarios` | `id` | `UUID` | PK, `DEFAULT uuid_generate_v4()` |
 | `inventarios` | `libro_id` | `UUID` | FK -> `libros(id)` ON DELETE CASCADE, NOT NULL |
-| `inventarios` | `bodega_id` | `UUID` | FK -> `bodegas(id)` ON DELETE CASCADE, NOT NULL |
+| `inventarios` | `bodega_id` | `UUID` | FK -> `bodegas(id)` ON DELETE RESTRICT, NOT NULL desde migración 021 |
 | `inventarios` | `stock_actual` | `INT` | NOT NULL, DEFAULT 0, CHECK (`stock_actual >= 0`) |
 | `inventarios` | `stock_minimo` | `INT` | NOT NULL, DEFAULT 5, CHECK (`stock_minimo >= 0`) |
 | `inventarios` | `ultima_auditoria` | `TIMESTAMPTZ` | NOT NULL, DEFAULT CURRENT_TIMESTAMP |
@@ -827,12 +828,23 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 
 ### 4.3 Tabla Completa de Endpoints
 
-`src/routes/index.js` solo cablea rutas (sin lógica) y monta `auth.routes.js`, `libro.routes.js`, `inventario.routes.js`, `movimiento.routes.js` y `venta.routes.js`. `auth.routes.js` monta `dosFactores.routes.js` en `/api/auth/2fa` y declara `/recuperar` y `/restablecer`. Todos los handlers viven en controladores.
+`src/routes/index.js` solo cablea rutas (sin lógica) y monta `auth.routes.js`, `libro.routes.js`, `inventario.routes.js`, `movimiento.routes.js`, `venta.routes.js`, `sucursal.routes.js` y `bodega.routes.js`. `auth.routes.js` monta `dosFactores.routes.js` en `/api/auth/2fa` y declara `/recuperar` y `/restablecer`. Todos los handlers viven en controladores.
 
 | Método | Ruta | Middlewares (Auth / Rol) | Controller.Función | Service.Función | Repository.Función | Descripción |
 |---|---|---|---|---|---|---|
 | `GET` | `/api/health` | Ninguno (Público) | `healthController.check` | No aplica | No aplica (usa `testSequelizeConnection()`) | Monitoreo de salud para Cloud Run / Docker. Responde 200 `healthy` o 503 `degraded` (formato propio, sin envoltorio `status: 'success'`). |
-| `GET` | `/api/bodegas` | Ninguno (Público) | `bodegaController.listar` | `bodegaService.listarActivas` | `bodegaRepository.findActivas` | Listado de bodegas activas con su sucursal. |
+| `GET` | `/api/bodegas` | Ninguno (Público) | `bodegaController.listar` | `bodegaService.listarActivas` | `bodegaRepository.findActivas` | Conserva `{id,nombre,descripcion,sucursal_nombre}` y excluye bodegas o sucursales inactivas. |
+| `GET` | `/api/sucursales` | `authenticate`, `authorize('Administrador')` | `sucursalController.listar` | `sucursalService.listar` | `sucursalRepository.findAll` | Lista activas e inactivas; admite `activo=true|false` y búsqueda `q`; incluye resumen de bodegas. |
+| `POST` | `/api/sucursales` | `authenticate`, `authorize('Administrador')` | `sucursalController.crear` | `sucursalService.crear` | `sucursalRepository.findByNombreNormalizado`, `create` | Crea sucursal; nombre único sin distinguir mayúsculas/espacios exteriores y dirección obligatoria. |
+| `GET` | `/api/sucursales/:id` | `authenticate`, `authorize('Administrador')` | `sucursalController.detalle` | `sucursalService.detalle` | `sucursalRepository.findById` | Detalle de sucursal con bodegas activas e inactivas. |
+| `GET` | `/api/sucursales/:id/bodegas` | `authenticate`, `authorize('Administrador')` | `sucursalController.bodegas` | `sucursalService.bodegas` | `bodegaRepository.findBySucursal` | Lista bodegas de la sucursal; admite `activo` y búsqueda `q`. |
+| `POST` | `/api/sucursales/:sucursalId/bodegas` | `authenticate`, `authorize('Administrador')` | `bodegaAdminController.crear` | `bodegaGestionService.crear` | `bodegaRepository.findByNombreNormalizado`, `create` | Crea bodega solo bajo sucursal activa; nombre único por sucursal ignorando mayúsculas. |
+| `PUT` | `/api/sucursales/:id` | `authenticate`, `authorize('Administrador')` | `sucursalController.actualizar` | `sucursalService.actualizar` | `findByIdForUpdate`, `update` | Edita datos en transacción y bloquea nombres duplicados concurrentes. |
+| `PATCH` | `/api/sucursales/:id/activo` | `authenticate`, `authorize('Administrador')` | `sucursalController.cambiarActivo` | `sucursalService.cambiarActivo` | `findByIdForUpdate`, `findBodegasForUpdate`, `contarStockPositivo` | Baja lógica/reactivación; no desactiva si tiene bodegas activas o existencias positivas. |
+| `GET` | `/api/bodegas/sucursal/:sucursalId` | `authenticate`, `authorize('Administrador')` | `bodegaAdminController.listarPorSucursal` | `bodegaGestionService.listarPorSucursal` | `bodegaRepository.findBySucursal` | Lista bodegas administrativas por sucursal, incluidas inactivas con filtro. |
+| `GET` | `/api/bodegas/:id` | `authenticate`, `authorize('Administrador')` | `bodegaAdminController.detalle` | `bodegaGestionService.detalle` | `bodegaRepository.findById` | Detalle de bodega y sucursal asociada. |
+| `PUT` | `/api/bodegas/:id` | `authenticate`, `authorize('Administrador')` | `bodegaAdminController.actualizar` | `bodegaGestionService.actualizar` | `findByIdForUpdate`, `countInventarios`, `countVentas`, `update` | Edita nombre/descripción; trasladar requiere sucursal activa y ningún inventario o venta histórico. |
+| `PATCH` | `/api/bodegas/:id/activo` | `authenticate`, `authorize('Administrador')` | `bodegaAdminController.cambiarActivo` | `bodegaGestionService.cambiarActivo` | `findSucursalId`, `findByIdForUpdate`, `countConStock`, `update` | Baja lógica/reactivación; impide baja con stock positivo y reactivación bajo sucursal inactiva. |
 | `GET` | `/api/categorias`| Ninguno (Público) | `categoriaController.listar` | `categoriaService.listar` | `categoriaRepository.findAll` | Catálogo de categorías temáticas ordenadas. |
 | `GET` | `/api/categorias/admin` | `authenticate`, `authorize('Administrador')` | `categoriaController.listarAdministracion` | `categoriaService.listarAdministracion` | `categoriaRepository.findAllWithLibroCount` | Listado administrativo ordenado con `id`, `nombre` y `libros_count` entero, obtenido en una consulta agrupada. No cambia el GET público. |
 | `POST` | `/api/categorias` | `authenticate`, `authorize('Administrador')` | `categoriaController.crear` | `categoriaService.crear` | `categoriaRepository.findByNombre`, `create` | Crea una categoría; recorta nombre, exige valor no vacío y rechaza duplicados sin distinguir mayúsculas (409). |
@@ -901,7 +913,7 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 
 | Modelo | Archivo | Tabla | Asociaciones Definidas | Hooks |
 |---|---|---|---|---|
-| `Sucursal` | `sucursal.model.js` | `sucursales` | `hasMany(models.Bodega, { as: 'bodegas', foreignKey: 'sucursal_id', onDelete: 'CASCADE' })` | No existe |
+| `Sucursal` | `sucursal.model.js` | `sucursales` | `hasMany(models.Bodega, { as: 'bodegas', foreignKey: 'sucursal_id', onDelete: 'RESTRICT' })` | No existe |
 | `Bodega` | `bodega.model.js` | `bodegas` | `belongsTo(models.Sucursal, { as: 'sucursal', foreignKey: 'sucursal_id' })`, `hasMany(models.Inventario, { as: 'inventarios', foreignKey: 'bodega_id' })`, `belongsToMany(models.Libro, { through: models.Inventario, as: 'libros', foreignKey: 'bodega_id', otherKey: 'libro_id' })` | No existe |
 | `Rol` | `rol.model.js` | `roles` | `hasMany(models.Usuario, { as: 'usuarios', foreignKey: 'rol_id', onDelete: 'RESTRICT' })` | No existe |
 | `Usuario` | `usuario.model.js` | `usuarios` | `belongsTo(models.Rol, { as: 'rol', foreignKey: 'rol_id' })`, `hasMany(models.MovimientoInventario, { as: 'movimientos', foreignKey: 'usuario_id' })`, `hasMany(models.CodigoRespaldo, { as: 'codigosRespaldo', foreignKey: 'usuario_id', onDelete: 'CASCADE' })`. `dos_factores_ultimo_paso` es `BIGINT` (llega como string; el repositorio 2FA lo convierte a número). | No existe |
@@ -1108,6 +1120,7 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 | `tests/ventasEsquema.test.js` | 7 | Integración | `libreria_oskar_test` | Esquema de ventas: correlativo `numero`, valores por defecto, CHECK, `uq_venta_libro`, FK RESTRICT, Salida con `venta_id` (trigger) y asociaciones. No importa `config/db`. |
 | `tests/ventasUtils.test.js` | 9 | Unitaria | No requiere | `utils/ventas.js`: centavos, redondeo exacto, rechazos, código `V-xxxxxx`, desbordamiento y rango de fechas de Guatemala. |
 | `tests/ventasServicio.test.js` | 11 | Integración | `libreria_oskar_test` | Crear venta: importes, precio de BD, actor, defaults, rechazos sin persistir (precio 0, stock, 404, descuento, desborde NUMERIC) y rollback con fallo en la segunda línea. No importa `config/db`. |
+| `tests/sucursalesBodegasCrud.test.js` | 6 grupos | End-to-End / Integración | `libreria_oskar_test` | RBAC, validaciones, duplicados incluso concurrentes, edición y filtros, contrato público de bodegas, baja/reactivación, protección por existencias, preservación de Kardex y ventas, ubicación inactiva, reasignación y baja/ajuste concurrentes. Limpia sus fixtures. |
 | `tests/ventasConcurrencia.test.js` | 6 | Integración | `libreria_oskar_test` | Última unidad vendida a la vez (409), 20 ventas simultáneas [A,B]/[B,A] sin deadlock, anulación (stock, doble anulación, anulaciones simultáneas, rollback). No importa `config/db`. |
 | `tests/ventasApi.test.js` | 7 | End-to-End | `libreria_oskar_test` | `POST /api/ventas` y `POST /api/ventas/:id/anular` por HTTP: 401/403, validaciones 400, errores 404/409 y anulación del Administrador. No importa `config/db`. |
 | `tests/ventasApiConsulta.test.js` | 5 | End-to-End | `libreria_oskar_test` | `GET /api/ventas` y `/:id`: roles, filtros por estado y fechas (venta a las 23:30 de Guatemala), paginación, `lineas`/`unidades`, parámetros inválidos y compatibilidad de `GET /api/movimientos`. No importa `config/db`. |
@@ -1187,12 +1200,18 @@ Reglas de la estructura: las llamadas HTTP salen solo de `services/api/`; las vi
 | `/ventas/:id` | `VentaDetalle` | `ROLES_OPERATIVOS` | Detalle de la venta; el Administrador puede anularla (`ProtectedRoute`) |
 | `/usuarios` | `Usuarios` | `ROLES_POR_RUTA.usuarios` (`Administrador`) | Gestión de cuentas, búsqueda, filtros, alta, edición y activación/desactivación (`ProtectedRoute`) |
 | `/categorias` | `Categorias` | `ROLES_POR_RUTA.categorias` (`Administrador`) | Gestión de categorías, búsqueda, conteo de libros, alta, renombrado y eliminación protegida (`ProtectedRoute`) |
+| `/sucursales` | `Sucursales` | `ROLES_POR_RUTA.sucursales` (`Administrador`) | Gestión de sucursales y bodegas con búsqueda, filtros, edición, baja y reactivación (`ProtectedRoute`) |
 | `/libros/gestion` | `GestionLibros` | `ROLES_POR_RUTA.gestionLibros` (`Administrador`) | Listado paginado de libros activos e inactivos, edición bibliográfica y baja/reactivación lógica (`ProtectedRoute`) |
 | `/reportes` | `Reportes` | `ROLES_POR_RUTA.reportes` (`Administrador`) | Consulta de siete reportes, filtros, paginación backend y descargas XLSX/PDF (`ProtectedRoute`) |
 | `/cuenta/seguridad` | `Seguridad` | Cualquier sesión (`ProtectedRoute` sin `roles`) | Estado del 2FA, códigos de respaldo restantes y regeneración |
 | `*` | `Navigate` | Público | Redirige cualquier ruta desconocida a `/catalogo` |
 
-La navegación muestra Catálogo y Nosotros para público y cualquier rol; Registrar, Inventario y Ventas solo para Administrador y Empleado; Usuarios, Categorías, Gestión de libros y Reportes aparecen en Administración solo para Administrador. Mi cuenta / Seguridad sigue pendiente. Las capacidades y roles de las rutas se centralizan en `utils/roles.js`.
+La navegación muestra Catálogo y Nosotros para público y cualquier rol; Registrar, Inventario y Ventas solo para Administrador y Empleado; Usuarios, Categorías, Sucursales y bodegas, Gestión de libros y Reportes aparecen en Administración solo para Administrador. Mi cuenta / Seguridad está en `/cuenta/seguridad`. Las capacidades y roles de las rutas se centralizan en `utils/roles.js`.
+
+#### Gestión de sucursales y bodegas (`Sucursales.jsx`)
+- `views/Sucursales.jsx` orquesta `features/sucursales/hooks/useSucursales.js`, búsqueda y estado, carga de bodegas de la ubicación seleccionada y formularios administrativos; `TablaSucursales.jsx` y `TablaBodegas.jsx` conservan presentación adaptable, `FormularioSucursal.jsx` y `FormularioBodega.jsx` validan campos y previenen envíos duplicados.
+- `services/api/sucursales.api.js` usa `apiFetch`; rutas protegidas tanto por `ProtectedRoute`/`ROLES_POR_RUTA.sucursales` como por `authenticate` y `authorize('Administrador')` en backend. El enlace aparece dentro de Administración.
+- Solo se usan bajas lógicas. Desactivar sucursal requiere cero bodegas activas y cero stock positivo; desactivar bodega requiere cero stock positivo. No se puede reactivar bodega con sucursal inactiva ni trasladar una bodega que tenga inventarios o ventas. Los escritores de inventario y ventas bloquean sucursal y bodega activas dentro de su transacción.
 
 ### 5.2 Análisis Detallado por Vista
 

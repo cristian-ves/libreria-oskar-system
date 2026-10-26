@@ -1,4 +1,5 @@
-const { sequelize, Bodega } = require('../../models');
+const { sequelize } = require('../../models');
+const bodegaRepository = require('../../repositories/bodega.repository');
 const libroRepository = require('../../repositories/libro.repository');
 const inventarioRepository = require('../../repositories/inventario.repository');
 const { ValidationError, NotFoundError, ConflictError } = require('../../utils/errors');
@@ -25,18 +26,15 @@ module.exports = {
 
     return await sequelize.transaction(async (transaction) => {
       const txOptions = { transaction };
+      const bodegaCheck = await bodegaRepository.findActivaById(bodegaId, txOptions);
+      if (!bodegaCheck) throw new NotFoundError(`La bodega indicada (ID: ${bodegaId}) no existe o está inactiva.`);
+      // Bloquea sucursal y bodega antes de cualquier modificación de existencias.
       // Validar libro
       const libro = await libroRepository.findByIdForUpdate(libroId, txOptions);
       if (!libro) {
         throw new NotFoundError(`El libro con ID ${libroId} no existe.`);
       }
       if (!libro.activo) throw new ConflictError('No se pueden ingresar existencias de un libro inactivo.');
-
-      // Validar bodega
-      const bodegaCheck = await Bodega.findByPk(bodegaId, { attributes: ['id'], transaction });
-      if (!bodegaCheck) {
-        throw new NotFoundError(`La bodega indicada (ID: ${bodegaId}) no existe.`);
-      }
 
       // Obtener o crear inventario
       const inventario = await inventarioRepository.findOrCreate(txOptions, libroId, bodegaId);

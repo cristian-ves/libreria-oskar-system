@@ -1,4 +1,5 @@
-const { sequelize, Bodega, Usuario } = require('../../models');
+const { sequelize, Usuario } = require('../../models');
+const bodegaRepository = require('../../repositories/bodega.repository');
 const libroRepository = require('../../repositories/libro.repository');
 const inventarioRepository = require('../../repositories/inventario.repository');
 const movimientoRepository = require('../../repositories/movimiento.repository');
@@ -41,12 +42,12 @@ module.exports = {
     // Validar referencias antes de la consulta externa y repetir dentro de la
     // transacción para conservar la validación junto a las escrituras.
     const [bodegaPrevia, usuarioPrevio, libroPrevio] = await Promise.all([
-      Bodega.findByPk(bodegaId, { attributes: ['id'] }),
+      bodegaRepository.findActivaById(bodegaId),
       Usuario.findByPk(usuarioId, { attributes: ['id'] }),
       libroRepository.findByIsbn(cleanIsbn),
     ]);
     if (!bodegaPrevia) {
-      throw new NotFoundError(`La bodega indicada (ID: ${bodegaId}) no existe.`);
+      throw new NotFoundError(`La bodega indicada (ID: ${bodegaId}) no existe o está inactiva.`);
     }
     if (!usuarioPrevio) {
       throw new NotFoundError(`El usuario indicado (ID: ${usuarioId}) no existe en el sistema.`);
@@ -66,9 +67,9 @@ module.exports = {
     return await sequelize.transaction(async (transaction) => {
       const txOptions = { transaction };
       // 1. Validar existencia de bodega
-      const bodegaCheck = await Bodega.findByPk(bodegaId, { attributes: ['id', 'nombre'], transaction });
+      const bodegaCheck = await bodegaRepository.findActivaById(bodegaId, txOptions);
       if (!bodegaCheck) {
-        throw new NotFoundError(`La bodega indicada (ID: ${bodegaId}) no existe.`);
+        throw new NotFoundError(`La bodega indicada (ID: ${bodegaId}) no existe o está inactiva.`);
       }
 
       // 2. Validar existencia de usuario que realiza la operación
