@@ -1,0 +1,10 @@
+# Directorio de trabajo de Terraform (proveedores descargados)
+.terraform/
+
+# El estado vive en GCS; una copia local podría contener datos sensibles
+*.tfstate*
+
+crash.log
+crash.*.log
+
+# .terraform.lock.hcl SÍ se versiona: fija las versiones del proveedor
