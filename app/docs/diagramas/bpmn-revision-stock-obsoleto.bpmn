@@ -1,0 +1,215 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_revision_stock_obsoleto" targetNamespace="https://libreria-oskar.example/procesos/futuros">
+  <bpmn:process id="Process_revision_stock_obsoleto" name="BPMN 02 · Revisión periódica de stock obsoleto (evolución propuesta)" isExecutable="false">
+    <bpmn:documentation>Reporte, ajuste de precio y salida auditada tienen bases funcionales existentes en la rama de stock obsoleto; evaluación y aviso periódico son ampliaciones futuras.</bpmn:documentation>
+    <bpmn:laneSet id="LaneSet_revision_stock_obsoleto">
+      <bpmn:lane id="Lane_revision_stock_obsoleto_0" name="Motor / tarea programada">
+        <bpmn:flowNodeRef>Node_revision_stock_obsoleto_i</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_revision_stock_obsoleto_cal</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_revision_stock_obsoleto_g1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_revision_stock_obsoleto_rep</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_revision_stock_obsoleto_pre</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_revision_stock_obsoleto_1" name="Administrador">
+        <bpmn:flowNodeRef>Node_revision_stock_obsoleto_rev</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_revision_stock_obsoleto_g2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_revision_stock_obsoleto_cerr</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_revision_stock_obsoleto_fin</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_revision_stock_obsoleto_2" name="Inventario / Kardex">
+        <bpmn:flowNodeRef>Node_revision_stock_obsoleto_no</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_revision_stock_obsoleto_fno</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_revision_stock_obsoleto_baj</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Node_revision_stock_obsoleto_aud</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Node_revision_stock_obsoleto_i" name="Evaluación programada">
+      <bpmn:outgoing>Flow_revision_stock_obsoleto_0</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Node_revision_stock_obsoleto_cal" name="Calcular rotación por libro y bodega">
+      <bpmn:incoming>Flow_revision_stock_obsoleto_0</bpmn:incoming>
+      <bpmn:outgoing>Flow_revision_stock_obsoleto_1</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Node_revision_stock_obsoleto_g1" name="¿Hay libros sin ventas?">
+      <bpmn:incoming>Flow_revision_stock_obsoleto_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_revision_stock_obsoleto_2</bpmn:outgoing>
+      <bpmn:outgoing>Flow_revision_stock_obsoleto_4</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Node_revision_stock_obsoleto_no" name="Registrar resultado sin candidatos">
+      <bpmn:incoming>Flow_revision_stock_obsoleto_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_revision_stock_obsoleto_3</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="Node_revision_stock_obsoleto_fno" name="Evaluación finalizada">
+      <bpmn:incoming>Flow_revision_stock_obsoleto_3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:task id="Node_revision_stock_obsoleto_rep" name="Crear reporte y aviso idempotente">
+      <bpmn:incoming>Flow_revision_stock_obsoleto_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_revision_stock_obsoleto_5</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Node_revision_stock_obsoleto_rev" name="Revisar existencias y contexto comercial">
+      <bpmn:incoming>Flow_revision_stock_obsoleto_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_revision_stock_obsoleto_6</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Node_revision_stock_obsoleto_g2" name="¿Qué acción?">
+      <bpmn:incoming>Flow_revision_stock_obsoleto_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_revision_stock_obsoleto_7</bpmn:outgoing>
+      <bpmn:outgoing>Flow_revision_stock_obsoleto_8</bpmn:outgoing>
+      <bpmn:outgoing>Flow_revision_stock_obsoleto_9</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Node_revision_stock_obsoleto_pre" name="Actualizar precio global del libro">
+      <bpmn:incoming>Flow_revision_stock_obsoleto_7</bpmn:incoming>
+      <bpmn:outgoing>Flow_revision_stock_obsoleto_10</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Node_revision_stock_obsoleto_baj" name="Registrar salida con motivo">
+      <bpmn:incoming>Flow_revision_stock_obsoleto_8</bpmn:incoming>
+      <bpmn:outgoing>Flow_revision_stock_obsoleto_11</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Node_revision_stock_obsoleto_aud" name="Conservar historial y responsable">
+      <bpmn:incoming>Flow_revision_stock_obsoleto_10</bpmn:incoming>
+      <bpmn:incoming>Flow_revision_stock_obsoleto_11</bpmn:incoming>
+      <bpmn:outgoing>Flow_revision_stock_obsoleto_12</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Node_revision_stock_obsoleto_cerr" name="Verificar resultado y seguimiento">
+      <bpmn:incoming>Flow_revision_stock_obsoleto_9</bpmn:incoming>
+      <bpmn:incoming>Flow_revision_stock_obsoleto_12</bpmn:incoming>
+      <bpmn:outgoing>Flow_revision_stock_obsoleto_13</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="Node_revision_stock_obsoleto_fin" name="Revisión concluida">
+      <bpmn:incoming>Flow_revision_stock_obsoleto_13</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_revision_stock_obsoleto_0" sourceRef="Node_revision_stock_obsoleto_i" targetRef="Node_revision_stock_obsoleto_cal"/>
+    <bpmn:sequenceFlow id="Flow_revision_stock_obsoleto_1" sourceRef="Node_revision_stock_obsoleto_cal" targetRef="Node_revision_stock_obsoleto_g1"/>
+    <bpmn:sequenceFlow id="Flow_revision_stock_obsoleto_2" sourceRef="Node_revision_stock_obsoleto_g1" targetRef="Node_revision_stock_obsoleto_no" name="No"/>
+    <bpmn:sequenceFlow id="Flow_revision_stock_obsoleto_3" sourceRef="Node_revision_stock_obsoleto_no" targetRef="Node_revision_stock_obsoleto_fno"/>
+    <bpmn:sequenceFlow id="Flow_revision_stock_obsoleto_4" sourceRef="Node_revision_stock_obsoleto_g1" targetRef="Node_revision_stock_obsoleto_rep" name="Sí"/>
+    <bpmn:sequenceFlow id="Flow_revision_stock_obsoleto_5" sourceRef="Node_revision_stock_obsoleto_rep" targetRef="Node_revision_stock_obsoleto_rev"/>
+    <bpmn:sequenceFlow id="Flow_revision_stock_obsoleto_6" sourceRef="Node_revision_stock_obsoleto_rev" targetRef="Node_revision_stock_obsoleto_g2"/>
+    <bpmn:sequenceFlow id="Flow_revision_stock_obsoleto_7" sourceRef="Node_revision_stock_obsoleto_g2" targetRef="Node_revision_stock_obsoleto_pre" name="Precio"/>
+    <bpmn:sequenceFlow id="Flow_revision_stock_obsoleto_8" sourceRef="Node_revision_stock_obsoleto_g2" targetRef="Node_revision_stock_obsoleto_baj" name="Baja"/>
+    <bpmn:sequenceFlow id="Flow_revision_stock_obsoleto_9" sourceRef="Node_revision_stock_obsoleto_g2" targetRef="Node_revision_stock_obsoleto_cerr" name="Sin acción"/>
+    <bpmn:sequenceFlow id="Flow_revision_stock_obsoleto_10" sourceRef="Node_revision_stock_obsoleto_pre" targetRef="Node_revision_stock_obsoleto_aud"/>
+    <bpmn:sequenceFlow id="Flow_revision_stock_obsoleto_11" sourceRef="Node_revision_stock_obsoleto_baj" targetRef="Node_revision_stock_obsoleto_aud"/>
+    <bpmn:sequenceFlow id="Flow_revision_stock_obsoleto_12" sourceRef="Node_revision_stock_obsoleto_aud" targetRef="Node_revision_stock_obsoleto_cerr"/>
+    <bpmn:sequenceFlow id="Flow_revision_stock_obsoleto_13" sourceRef="Node_revision_stock_obsoleto_cerr" targetRef="Node_revision_stock_obsoleto_fin"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="Diagram_revision_stock_obsoleto">
+    <bpmndi:BPMNPlane id="Plane_revision_stock_obsoleto" bpmnElement="Process_revision_stock_obsoleto">
+      <bpmndi:BPMNShape id="LaneShape_revision_stock_obsoleto_0" bpmnElement="Lane_revision_stock_obsoleto_0" isHorizontal="true">
+        <dc:Bounds x="65" y="85" width="3290" height="195"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="LaneShape_revision_stock_obsoleto_1" bpmnElement="Lane_revision_stock_obsoleto_1" isHorizontal="true">
+        <dc:Bounds x="65" y="305" width="3290" height="195"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="LaneShape_revision_stock_obsoleto_2" bpmnElement="Lane_revision_stock_obsoleto_2" isHorizontal="true">
+        <dc:Bounds x="65" y="525" width="3290" height="195"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_revision_stock_obsoleto_i" bpmnElement="Node_revision_stock_obsoleto_i">
+        <dc:Bounds x="478" y="153" width="64" height="64"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_revision_stock_obsoleto_cal" bpmnElement="Node_revision_stock_obsoleto_cal">
+        <dc:Bounds x="690" y="138" width="250" height="94"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_revision_stock_obsoleto_g1" bpmnElement="Node_revision_stock_obsoleto_g1">
+        <dc:Bounds x="1088" y="153" width="64" height="64"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_revision_stock_obsoleto_no" bpmnElement="Node_revision_stock_obsoleto_no">
+        <dc:Bounds x="1300" y="578" width="250" height="94"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_revision_stock_obsoleto_fno" bpmnElement="Node_revision_stock_obsoleto_fno">
+        <dc:Bounds x="1698" y="593" width="64" height="64"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_revision_stock_obsoleto_rep" bpmnElement="Node_revision_stock_obsoleto_rep">
+        <dc:Bounds x="1300" y="138" width="250" height="94"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_revision_stock_obsoleto_rev" bpmnElement="Node_revision_stock_obsoleto_rev">
+        <dc:Bounds x="1605" y="358" width="250" height="94"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_revision_stock_obsoleto_g2" bpmnElement="Node_revision_stock_obsoleto_g2">
+        <dc:Bounds x="2003" y="373" width="64" height="64"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_revision_stock_obsoleto_pre" bpmnElement="Node_revision_stock_obsoleto_pre">
+        <dc:Bounds x="2215" y="138" width="250" height="94"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_revision_stock_obsoleto_baj" bpmnElement="Node_revision_stock_obsoleto_baj">
+        <dc:Bounds x="2215" y="578" width="250" height="94"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_revision_stock_obsoleto_aud" bpmnElement="Node_revision_stock_obsoleto_aud">
+        <dc:Bounds x="2520" y="578" width="250" height="94"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_revision_stock_obsoleto_cerr" bpmnElement="Node_revision_stock_obsoleto_cerr">
+        <dc:Bounds x="2825" y="358" width="250" height="94"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_revision_stock_obsoleto_fin" bpmnElement="Node_revision_stock_obsoleto_fin">
+        <dc:Bounds x="3223" y="373" width="64" height="64"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_revision_stock_obsoleto_0" bpmnElement="Flow_revision_stock_obsoleto_0">
+        <di:waypoint x="542" y="185"/>
+        <di:waypoint x="690" y="185"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_revision_stock_obsoleto_1" bpmnElement="Flow_revision_stock_obsoleto_1">
+        <di:waypoint x="940" y="185"/>
+        <di:waypoint x="1088" y="185"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_revision_stock_obsoleto_2" bpmnElement="Flow_revision_stock_obsoleto_2">
+        <di:waypoint x="1152" y="185"/>
+        <di:waypoint x="1226" y="185"/>
+        <di:waypoint x="1226" y="625"/>
+        <di:waypoint x="1300" y="625"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_revision_stock_obsoleto_3" bpmnElement="Flow_revision_stock_obsoleto_3">
+        <di:waypoint x="1550" y="625"/>
+        <di:waypoint x="1698" y="625"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_revision_stock_obsoleto_4" bpmnElement="Flow_revision_stock_obsoleto_4">
+        <di:waypoint x="1152" y="185"/>
+        <di:waypoint x="1300" y="185"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_revision_stock_obsoleto_5" bpmnElement="Flow_revision_stock_obsoleto_5">
+        <di:waypoint x="1550" y="185"/>
+        <di:waypoint x="1578" y="185"/>
+        <di:waypoint x="1578" y="405"/>
+        <di:waypoint x="1605" y="405"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_revision_stock_obsoleto_6" bpmnElement="Flow_revision_stock_obsoleto_6">
+        <di:waypoint x="1855" y="405"/>
+        <di:waypoint x="2003" y="405"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_revision_stock_obsoleto_7" bpmnElement="Flow_revision_stock_obsoleto_7">
+        <di:waypoint x="2067" y="405"/>
+        <di:waypoint x="2141" y="405"/>
+        <di:waypoint x="2141" y="185"/>
+        <di:waypoint x="2215" y="185"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_revision_stock_obsoleto_8" bpmnElement="Flow_revision_stock_obsoleto_8">
+        <di:waypoint x="2067" y="405"/>
+        <di:waypoint x="2141" y="405"/>
+        <di:waypoint x="2141" y="625"/>
+        <di:waypoint x="2215" y="625"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_revision_stock_obsoleto_9" bpmnElement="Flow_revision_stock_obsoleto_9">
+        <di:waypoint x="2067" y="405"/>
+        <di:waypoint x="2825" y="405"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_revision_stock_obsoleto_10" bpmnElement="Flow_revision_stock_obsoleto_10">
+        <di:waypoint x="2465" y="185"/>
+        <di:waypoint x="2492" y="185"/>
+        <di:waypoint x="2492" y="625"/>
+        <di:waypoint x="2520" y="625"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_revision_stock_obsoleto_11" bpmnElement="Flow_revision_stock_obsoleto_11">
+        <di:waypoint x="2465" y="625"/>
+        <di:waypoint x="2520" y="625"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_revision_stock_obsoleto_12" bpmnElement="Flow_revision_stock_obsoleto_12">
+        <di:waypoint x="2770" y="625"/>
+        <di:waypoint x="2798" y="625"/>
+        <di:waypoint x="2798" y="405"/>
+        <di:waypoint x="2825" y="405"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_revision_stock_obsoleto_13" bpmnElement="Flow_revision_stock_obsoleto_13">
+        <di:waypoint x="3075" y="405"/>
+        <di:waypoint x="3223" y="405"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
