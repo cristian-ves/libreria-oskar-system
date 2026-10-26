@@ -9,7 +9,7 @@ Este documento explica cómo está publicado el sistema en Google Cloud y cómo 
 - **Cloud Shell**: una terminal que Google ofrece dentro del navegador, con `gcloud`, `git` y `node` ya instalados. Usa `bash`.
 - **Laptop (zsh)**: la terminal de la computadora personal.
 
-**Dónde se pega cada comando.** Cada bloque de comandos empieza con una línea que dice **Cloud Shell (bash)** o **Laptop (zsh)**. Pégalo solo ahí. Los despliegues se hacen hoy desde Cloud Shell; el repositorio está clonado en `~/oskar` (rama `develop`) y la carpeta de trabajo es `~/oskar/app`.
+**Dónde se pega cada comando.** Cada bloque de comandos empieza con una línea que dice **Cloud Shell (bash)** o **Laptop (zsh)**. Pégalo solo ahí. Los despliegues los hace hoy **GitHub Actions** de forma automática en cada push a `main` (sección 12); Cloud Shell queda para el despliegue manual de contingencia (sección 4), la operación diaria y Terraform. El repositorio está clonado en `~/oskar` (rama `develop`) y la carpeta de trabajo es `~/oskar/app`.
 
 **Marcas de estado.** Cada procedimiento lleva una de estas marcas (el detalle está en la sección 11):
 
@@ -34,10 +34,10 @@ flowchart LR
     SQL[("Cloud SQL<br/>oskar-db PostgreSQL 15")]
     SEC["Secret Manager<br/>db-password, jwt-secret,<br/>two-factor-key, mail-password,<br/>admin-password"]
     AR["Artifact Registry<br/>oskar/api (imagen Docker)"]
-    CB["Cloud Build<br/>construye la imagen"]
+    CB["Cloud Build<br/>construye la imagen<br/>(solo despliegue manual)"]
     MAIL["Gmail SMTP<br/>puerto 587"]
-    DEV["Cloud Shell / desarrollador<br/>~/oskar/app"]
-    GH["GitHub Actions CI, solo pruebas y builds (no despliega)"]
+    DEV["Cloud Shell / desarrollador<br/>~/oskar/app<br/>contingencia y Terraform"]
+    GH["GitHub Actions<br/>workflow Despliegue<br/>push a main (camino normal)"]
 
     NAV -->|"HTTPS"| HOST
     HOST -->|"reescritura /api/**"| RUN
@@ -46,6 +46,10 @@ flowchart LR
     RUN -.->|"lee al arrancar"| SEC
     JOB -.->|"lee al arrancar"| SEC
     RUN -->|"correos de recuperación"| MAIL
+    GH -->|"docker push"| AR
+    GH -->|"run jobs update y execute"| JOB
+    GH -->|"run services update --image"| RUN
+    GH -->|"firebase deploy (frontend)"| HOST
     DEV -->|"gcloud builds submit"| CB
     CB -->|"publica la imagen"| AR
     DEV -->|"run services update --image"| RUN
@@ -55,7 +59,17 @@ flowchart LR
     AR -.->|"misma imagen"| JOB
 ```
 
-Las flechas punteadas son lecturas o relaciones, no acciones manuales. El nodo de GitHub Actions no tiene ninguna flecha: no participa en el despliegue y solo valida el código (`.github/workflows/ci.yml` en la raíz del repositorio, líneas 1-3).
+### Cómo leer el diagrama
+
+- **Línea sólida**: una comunicación o una acción (alguien llama o publica algo). **Línea punteada**: algo que se lee al arrancar o que "usa la misma imagen".
+- **"socket /cloudsql/..."** no es una conexión por Internet. Es como un buzón dentro de la propia casa: Cloud Run coloca dentro del contenedor un archivo especial (un *socket*) en la ruta `/cloudsql/NOMBRE_DE_CONEXIÓN`, y la aplicación lo usa como dirección de la base de datos (variable `DB_HOST`) en lugar de una IP.
+- El nombre de conexión tiene la forma `proyecto:región:instancia`; aquí es `libreria-oskar-seminario:us-central1:oskar-db` (`infra/cloud_run.tf:8`).
+- Dónde se configura: el volumen de Cloud SQL `cloudsql` montado en `/cloudsql`, en el servicio (`infra/cloud_run.tf:114-117, 121-126`) y en el Job (`infra/cloud_run.tf:194-205`), y `DB_HOST = /cloudsql/...` en el entorno común de ambos (`infra/cloud_run.tf:12`).
+- La instancia no tiene redes autorizadas: nadie entra a la base por una IP. Según la documentación de Google, el socket aparece en `/cloudsql/INSTANCE_CONNECTION_NAME` y, en instancias con IP pública, la conexión va cifrada mediante el Cloud SQL Auth Proxy (https://docs.cloud.google.com/run/docs/configuring/connect-cloudsql).
+
+Versión en imagen del mismo diagrama, para documentos Word o PDF: [diagrama-despliegue.png](diagramas/diagrama-despliegue.png). El Mermaid de arriba es la fuente: si cambia, hay que regenerar la imagen.
+
+Las flechas que salen de GitHub Actions son el camino normal: el workflow "Despliegue" (`.github/workflows/deploy.yml` en la raíz del repositorio) las ejecuta solo en cada push a `main` (sección 12). Las que salen de Cloud Shell son el mismo proceso hecho a mano, para contingencias (sección 4). Las flechas punteadas son lecturas o relaciones, no acciones.
 
 ### Tabla de recursos
 
@@ -63,14 +77,17 @@ Las flechas punteadas son lecturas o relaciones, no acciones manuales. El nodo d
 |---|---|---|
 | Proyecto | `libreria-oskar-seminario` | Contenedor de todo lo demás. Región `us-central1`. |
 | Cloud Run servicio | `libreria-oskar-api` | Ejecuta el backend. Cuenta de servicio `oskar-api` (la identidad con la que el servicio pide permisos). `--min-instances 0 --max-instances 1`. Se conecta a la BD por el socket `/cloudsql/libreria-oskar-seminario:us-central1:oskar-db`. |
-| Cloud Run Job | `oskar-migrar` | Misma imagen que el servicio. Ejecuta `node src/database/migrate.js && node src/database/seed.js`. Se lanza a mano. |
+| Cloud Run Job | `oskar-migrar` | Misma imagen que el servicio. Ejecuta `node src/database/migrate.js && node src/database/seed.js`. Lo actualiza y lo ejecuta el CD en cada despliegue, antes de tocar el servicio; también se puede lanzar a mano. |
 | Cloud SQL | `oskar-db` | PostgreSQL 15, máquina `db-f1-micro`, base `libreria_oskar`, usuario `oskar_app`. Respaldo automático diario (ventana de 4 h desde las 08:00 UTC), se conservan 7. |
 | Secret Manager | `db-password`, `jwt-secret`, `two-factor-key`, `mail-password`, `admin-password` | Guarda las claves; ver sección 3. |
-| Artifact Registry | `us-central1-docker.pkg.dev/libreria-oskar-seminario/oskar/api` | Almacén de imágenes. La etiqueta (tag) es el hash corto del commit; la vigente hoy es `c5f0cba`. |
-| Cloud Build | (servicio de Google) | Construye la imagen desde `~/oskar/app` en Cloud Shell. |
+| Artifact Registry | `us-central1-docker.pkg.dev/libreria-oskar-seminario/oskar/api` | Almacén de imágenes. La etiqueta (tag) son los 7 primeros caracteres del commit (`.github/workflows/deploy.yml:53-54`). La vigente cambia con cada despliegue: cómo consultarla en la sección 12.2. |
+| Cloud Build | (servicio de Google) | Construye la imagen desde `~/oskar/app` en Cloud Shell, solo en el despliegue manual. El CD construye con Docker dentro de GitHub Actions (`deploy.yml:57-62`). |
 | Firebase Hosting | sitio `libreria-oskar` (https://libreria-oskar.web.app) | Sirve el frontend y reenvía `/api/**` al servicio. |
 | Correo | Gmail SMTP, puerto 587 | Contraseña de aplicación (clave especial de Google para programas). La cuenta remitente es también el Administrador central. |
-| GitHub Actions | `.github/workflows/ci.yml` (raíz del repo) | Solo pruebas y builds. **No despliega.** |
+| GitHub Actions | `.github/workflows/ci.yml` y `.github/workflows/deploy.yml` (raíz del repo) | `ci.yml`: pruebas y builds en cada push a cualquier rama. `deploy.yml` ("Despliegue"): en cada push a `main` (o a mano) corre el CI y despliega backend y frontend (sección 12). |
+| Workload Identity Federation | pool `github`, proveedor `github-oskar` | Deja que GitHub Actions entre a Google Cloud **sin llaves** guardadas. Solo acepta tokens de este repositorio en `refs/heads/main` (`infra/identidad_github.tf:20`). |
+| Cuenta de servicio de despliegue | `oskar-deployer` | La identidad del CD. Roles: Cloud Run Developer, Firebase Hosting Admin, Service Usage Consumer (`infra/permisos.tf:16-18`), Artifact Registry Writer solo sobre el repositorio `oskar` (`permisos.tf:51-56`) y Service Account User sobre `oskar-api` (`permisos.tf:68-72`). |
+| Terraform | carpeta `infra/` (estado en el bucket `libreria-oskar-seminario-tfstate`) | Describe la infraestructura como código. Se corre a mano desde Cloud Shell; el CD no lo ejecuta (sección 12.3). |
 
 **Por qué solo una instancia.** El limitador de intentos de login guarda sus contadores en la memoria de cada proceso (`backend/src/middlewares/rateLimit.js:8`). Con varias instancias, cada una contaría por separado; con `--max-instances 1` el conteo es consistente. Con `--min-instances 0` el servicio se apaga si nadie lo usa y la primera visita tarda unos segundos más ("arranque en frío").
 
@@ -95,7 +112,9 @@ Una **variable de entorno** es un valor que el programa lee al arrancar. Un **se
 | `mail-password` | `MAIL_PASSWORD` | sí | sí | El proceso arranca, pero con `MAIL_PROVIDER=smtp` (valor por defecto en producción) los correos fallan: solo se imprime un aviso (`backend/src/config/mail.config.js:41-42`, `backend/src/config/env.js:26-28`). Afecta a "olvidé mi contraseña". |
 | `admin-password` | `SEED_ADMIN_PASSWORD` | no | sí | Solo la usa el Job, y solo si el Administrador central **aún no existe**: sin ella (o si no cumple la política de contraseñas) `seed.js` falla (`backend/src/database/seed.js:35-38`). |
 
-> **Nota: el Job necesita el mismo entorno que el servicio.** Tanto `migrate.js` como `seed.js` y `reset-2fa.js` importan la configuración (`backend/src/config/sequelize.js:2` carga `./env`), y `env.js` lanza error en producción si faltan `JWT_SECRET` (`env.js:15-18`), `TWO_FACTOR_ENCRYPTION_KEY` (`twoFactor.config.js:36`) o `CORS_ORIGINS` (`security.config.js:17`). Por eso el Job no basta con sus propios secretos: debe tener también `JWT_SECRET`, `TWO_FACTOR_ENCRYPTION_KEY`, `CORS_ORIGINS` y las variables `DB_*` (`DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_PORT`), además de `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD`.
+> **Nota: el Job necesita el mismo entorno que el servicio.** Tanto `migrate.js` como `seed.js` y `reset-2fa.js` importan la configuración (`backend/src/config/sequelize.js:2` carga `./env`), y `env.js` lanza error en producción si faltan `JWT_SECRET` (`env.js:15-18`), `TWO_FACTOR_ENCRYPTION_KEY` (`twoFactor.config.js:36`) o `CORS_ORIGINS` (`security.config.js:17`). Por eso el Job no basta con sus propios secretos: debe tener también `JWT_SECRET`, `TWO_FACTOR_ENCRYPTION_KEY`, `CORS_ORIGINS` y las variables `DB_*` (`DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_PORT`), además de `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD`. En la configuración actual el Job recibe **todo** el entorno común del servicio (`DB_*`, `CORS_ORIGINS`, `FRONTEND_URL`, `MAIL_USER`, `TRUST_PROXY`, `LOGIN_RATE_LIMIT` y los secretos `DB_PASSWORD`, `JWT_SECRET`, `TWO_FACTOR_ENCRYPTION_KEY`, `MAIL_PASSWORD`) más `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD` (`infra/cloud_run.tf:11-38`).
+
+> **Nota: el entorno lo manda Terraform.** Las variables y secretos del servicio y del Job están declarados en `infra/cloud_run.tf`. Un cambio hecho a mano (consola o `gcloud ... --update-env-vars`) aparecerá como diferencia en el siguiente `terraform plan`, y un `apply` lo revertiría (`infra/README.md`, "Relación con el despliegue continuo"). Cambia el `.tf` y aplícalo (sección 12.3).
 
 ### Variables solo del Job (siembra del Administrador central)
 
@@ -111,11 +130,11 @@ Una **variable de entorno** es un valor que el programa lee al arrancar. Un **se
 | `NODE_ENV=production` y `PORT=8080` | Dockerfile (`backend/Dockerfile:35-36`) | Vienen en la imagen. |
 | `MIGRATIONS_DIR` | Dockerfile (`backend/Dockerfile:48`) | Viene en la imagen; apunta a `/usr/src/app/database/migrations`. |
 | `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PORT` | Configuración del servicio y del Job | `DB_HOST` es el socket de Cloud SQL. Si faltan se usan valores locales (`localhost`, `libreria_oskar`, `postgres`, 5432) y la conexión falla (`backend/src/config/env.js:46-50`). |
-| `CORS_ORIGINS` | Configuración del servicio **y del Job** | En producción el proceso **no arranca** sin ella (`backend/src/config/security.config.js:17`). Como el Job carga la misma configuración, también la necesita. |
-| `FRONTEND_URL` | Configuración del servicio | Solo aviso: sin ella la recuperación de contraseña no envía enlaces (`backend/src/config/recuperacion.config.js:34`, `env.js:36-39`). |
-| `MAIL_USER` (y opcionalmente `MAIL_FROM`, `MAIL_HOST`, `MAIL_PORT`) | Configuración del servicio | Sin `MAIL_USER` los correos fallan (`mail.config.js:41`). Por defecto `smtp.gmail.com` y 587 (`mail.config.js:5-6`). |
+| `CORS_ORIGINS` | Configuración del servicio **y del Job** (`infra/cloud_run.tf:16`) | En producción el proceso **no arranca** sin ella (`backend/src/config/security.config.js:17`). Como el Job carga la misma configuración, también la necesita. |
+| `FRONTEND_URL` | Configuración del servicio y del Job (`infra/cloud_run.tf:17`) | Solo aviso: sin ella la recuperación de contraseña no envía enlaces (`backend/src/config/recuperacion.config.js:34`, `env.js:36-39`). |
+| `MAIL_USER` (y opcionalmente `MAIL_FROM`, `MAIL_HOST`, `MAIL_PORT`) | `MAIL_USER`: configuración del servicio y del Job (`infra/cloud_run.tf:18`); los opcionales no están definidos | Sin `MAIL_USER` los correos fallan (`mail.config.js:41`). Por defecto `smtp.gmail.com` y 587 (`mail.config.js:5-6`). |
 | `SEED_EMPLEADO_PASSWORD` | Opcional (Job) | Si falta, en producción solo se avisa y no se crea el empleado de ejemplo (`seed.js:164-165`). |
-| `TRUST_PROXY`, `LOGIN_RATE_LIMIT` | Configuración del servicio | Provisionales: `1` y `100`. Sin ellas: 0 y 10 (`security.config.js:33-34`); con 0 el limitador vería la IP del proxy de Google y todos los usuarios compartirían el mismo contador. |
+| `TRUST_PROXY`, `LOGIN_RATE_LIMIT` | Configuración del servicio y del Job (`infra/cloud_run.tf:19-20`) | Provisionales: `1` y `100`. Sin ellas: 0 y 10 (`security.config.js:33-34`); con 0 el limitador vería la IP del proxy de Google y todos los usuarios compartirían el mismo contador. |
 | `TWO_FACTOR_ENFORCED` | Opcional | Por defecto está **activo** en producción: el segundo factor es obligatorio para Administrador y Empleado (`twoFactor.config.js:25`). |
 | `DB_CONNECT_MAX_WAIT_MS` | Opcional | Por defecto, en producción, el servidor y los scripts reintentan conectar hasta 120 000 ms (`backend/src/database/esperarBaseDatos.js:17, 26-28`). |
 
@@ -131,7 +150,11 @@ Marca: **Ejecutado en producción**.
 
 ## 4. Desplegar una versión nueva
 
-Orden obligatorio: **1) construir la imagen → 2) actualizar el Job y correr migraciones → 3) actualizar el servicio → 4) frontend (si cambió) → 5) prueba de humo.** Las migraciones van antes que el servicio para que el código nuevo nunca encuentre una base de datos vieja.
+Orden obligatorio: **1) construir la imagen → 2) actualizar el Job y correr migraciones → 3) actualizar el servicio → 4) frontend → 5) prueba de humo.** Las migraciones van antes que el servicio para que el código nuevo nunca encuentre una base de datos vieja.
+
+**Camino principal: el despliegue continuo (CD).** Basta con llevar el cambio a `main` (push o merge acordado): GitHub Actions corre el CI y, si pasa, hace los cinco pasos en ese mismo orden, backend y frontend siempre, sin intervención (sección 12). Marca: **Ejecutado en producción** (primera corrida con el commit `a29735a`, sección 12.1).
+
+**Despliegue manual (contingencia).** Las subsecciones 4.1 a 4.5 son el mismo proceso hecho a mano desde Cloud Shell. Úsalas solo si GitHub Actions no está disponible o si una corrida del CD falló y hay que terminarla a mano. No las mezcles con una corrida del CD en curso.
 
 ### 4.1 Preparar y construir la imagen
 
@@ -179,7 +202,7 @@ Cloud Shell (bash)
 gcloud run jobs update oskar-migrar --region us-central1 --image $IMG
 gcloud run jobs execute oskar-migrar --region us-central1 --wait
 ```
-Marca: `jobs execute ... --wait` **Ejecutado en producción**; `jobs update --image` **No probado** (de memoria). Si el Job termina con error, **no sigas**: revisa la sección 9 (logs) y la sección 6.
+Marca: **Ejecutado en producción** (los dos comandos los corre el CD en cada despliegue, `deploy.yml:76-80`; en la primera corrida el Job quedó con la imagen `:a29735a`). Si el Job termina con error, **no sigas**: revisa la sección 9 (logs) y la sección 6.
 
 ### 4.3 Actualizar el servicio
 
@@ -187,7 +210,7 @@ Cloud Shell (bash)
 ```bash
 gcloud run services update libreria-oskar-api --region us-central1 --image $IMG
 ```
-Marca: **No probado** como actualización de imagen (el servicio se creó y desplegó con otro comando). Cada actualización crea una **revisión** (una versión inmutable del servicio) y le manda el 100 % del tráfico, salvo que antes se haya movido el tráfico a mano (ver advertencia en la sección 5).
+Marca: **Ejecutado en producción** (lo corre el CD, `deploy.yml:82-84`; la primera corrida creó la revisión `libreria-oskar-api-00003-6kw` con la imagen `:a29735a`). Cada actualización crea una **revisión** (una versión inmutable del servicio) y le manda el 100 % del tráfico, salvo que antes se haya movido el tráfico a mano (ver advertencia en la sección 5). El CD, además, ejecuta siempre `update-traffic --to-latest` después de actualizar (`deploy.yml:87-88`).
 
 Para ver las revisiones:
 
@@ -199,7 +222,7 @@ Marca: **No probado**.
 
 ### 4.4 Publicar el frontend
 
-Solo hace falta si cambió algo en `frontend/`. Firebase Hosting es el servicio que sirve las páginas.
+A mano solo hace falta si cambió algo en `frontend/` (el CD lo publica siempre). Firebase Hosting es el servicio que sirve las páginas. El CD publica con el mismo `firebase-tools deploy` usando la cuenta `oskar-deployer` (`deploy.yml:144-148`), así que no necesita el inicio de sesión de abajo.
 
 Primera vez (o si caducó la sesión), iniciar sesión en Firebase:
 
@@ -233,7 +256,7 @@ curl -s https://libreria-oskar.web.app/api/health
 ```
 Debe responder con `"status":"healthy"` y `"connected":true` (HTTP 200, `backend/src/controllers/health.controller.js:12-13`). Si la base de datos no responde, el estado es `degraded` con HTTP 503 (`health.controller.js:23-24`). La primera llamada tras un rato sin uso puede tardar unos segundos (arranque en frío). Después abre https://libreria-oskar.web.app e inicia sesión.
 
-Marca: **Ejecutado en producción** (comprobación de salud).
+Marca: **Ejecutado en producción** (comprobación de salud). El CD hace esta misma comprobación dos veces: contra la URL directa de Cloud Run al terminar el backend (`deploy.yml:91-96`) y contra el sitio al terminar el frontend (`deploy.yml:151-155`).
 
 ---
 
@@ -241,7 +264,9 @@ Marca: **Ejecutado en producción** (comprobación de salud).
 
 ### 5.1 Backend (Cloud Run)
 
-Volver atrás es mover el 100 % del tráfico a una revisión anterior. Primero lista las revisiones (sección 4.3) y elige el nombre de la que funcionaba.
+**Automático (CD).** El job `backend` guarda el nombre de la revisión vigente antes de cambiar nada (`deploy.yml:67-72`). Si algún paso falla **después** de actualizar el servicio (por ejemplo, la prueba de humo), devuelve el 100 % del tráfico a esa revisión con `update-traffic --to-revisions` (`deploy.yml:98-103`) y el job queda marcado como fallido; el frontend no se publica porque depende del backend (`deploy.yml:109`). Si el fallo ocurre antes (imagen o migraciones), el servicio no se tocó y no hay nada que revertir. Marca: **No probado** (la única corrida verificada fue exitosa; el paso nunca se ha visto dispararse). Limitación: guarda `latestReadyRevisionName`, que no es la revisión que servía si el tráfico estaba fijado a mano a otra (`deploy.yml:64-66`).
+
+**Manual.** Volver atrás es mover el 100 % del tráfico a una revisión anterior. Primero lista las revisiones (sección 4.3) y elige el nombre de la que funcionaba.
 
 Cloud Shell (bash)
 ```bash
@@ -249,23 +274,25 @@ gcloud run services update-traffic libreria-oskar-api --region us-central1 --to-
 ```
 Marca: **No probado**.
 
-> **ADVERTENCIA — el reparto de tráfico se queda fijo.** Después de mover el tráfico a una revisión anterior, los despliegues siguientes **mantienen ese reparto**: una imagen nueva quedará creada pero sin recibir tráfico. Para volver a recibir siempre lo más nuevo:
+> **ADVERTENCIA — el reparto de tráfico se queda fijo.** Después de mover el tráfico a una revisión anterior (a mano o por el rollback automático), los despliegues **manuales** siguientes **mantienen ese reparto**: una imagen nueva quedará creada pero sin recibir tráfico. El CD sí lo corrige, porque ejecuta `--to-latest` en cada despliegue (`deploy.yml:87-88`): el siguiente push a `main` vuelve a mandar el tráfico a lo más nuevo. Para hacerlo a mano:
 >
 > Cloud Shell (bash)
 > ```bash
 > gcloud run services update-traffic libreria-oskar-api --region us-central1 --to-latest
 > ```
-> Marca: **No probado**.
+> Marca: **Ejecutado en producción** (lo corre el CD en cada despliegue).
 
-> **ADVERTENCIA — las migraciones NO se revierten.** El sistema no tiene migraciones "hacia atrás" (`backend/src/database/migrate.js:43-65` solo aplica archivos nuevos). Si la versión nueva ya cambió la base de datos (columnas o tablas nuevas) y vuelves a código viejo, el código viejo corre contra un esquema más nuevo: normalmente sigue funcionando si los cambios solo agregaron cosas, pero puede fallar si se renombró o eliminó algo. Antes de volver atrás tras una migración, haz un respaldo a demanda (sección 7) y revisa qué cambió el archivo SQL nuevo.
+> **ADVERTENCIA — las migraciones NO se revierten.** El sistema no tiene migraciones "hacia atrás" (`backend/src/database/migrate.js:43-65` solo aplica archivos nuevos). Si la versión nueva ya cambió la base de datos (columnas o tablas nuevas) y vuelves a código viejo, el código viejo corre contra un esquema más nuevo: normalmente sigue funcionando si los cambios solo agregaron cosas, pero puede fallar si se renombró o eliminó algo. Antes de volver atrás tras una migración, haz un respaldo a demanda (sección 7) y revisa qué cambió el archivo SQL nuevo. Esto vale también para el rollback automático: el CD corre las migraciones antes del servicio y no las deshace.
 
 ### 5.2 Frontend (Firebase Hosting)
+
+**El CD no vuelve atrás el frontend.** Si falla el job `frontend` (por ejemplo, la prueba de humo del sitio), el backend nuevo ya quedó publicado y el sitio queda con lo último que se haya alcanzado a publicar; el rollback de Hosting se hace a mano (`deploy.yml:105-106`).
 
 Firebase guarda el historial de versiones publicadas. Por la consola web: https://console.firebase.google.com → proyecto → **Hosting** → historial de versiones del sitio `libreria-oskar` → menú de la versión anterior → **"Roll back"**. Marca: **No probado**.
 
 Por línea de comandos: `POR VERIFICAR` (no hay un comando confirmado en este documento).
 
-Alternativa segura y probada: volver el repositorio al commit anterior en `~/oskar/app` y repetir la sección 4.4.
+Alternativa segura y probada: volver el repositorio al commit anterior en `~/oskar/app` y repetir la sección 4.4. Otra opción es llevar a `main` un commit que revierta el cambio: el CD vuelve a desplegar todo, backend incluido (**No probado**).
 
 ---
 
@@ -421,7 +448,7 @@ gcloud run services update libreria-oskar-api --region us-central1 --update-secr
 # ...y al Job
 gcloud run jobs update oskar-migrar --region us-central1 --update-secrets=VARIABLE=NOMBRE:N
 ```
-Marca: **No probado** (`--data-file=-` y `--update-secrets` por documentación; `openssl` y `jobs update --update-secrets` de memoria). `openssl rand -hex 32` solo sirve para llaves aleatorias (`two-factor-key`, `jwt-secret`); las contraseñas de base de datos y de correo no se generan así.
+Marca: **No probado** (`--data-file=-` y `--update-secrets` por documentación; `openssl` y `jobs update --update-secrets` de memoria). **Ojo con Terraform:** `infra/cloud_run.tf:108` y `:188` declaran los secretos con `version = "latest"`; fijar un número con `--update-secrets` aparecerá como diferencia en el siguiente `terraform plan`, y un `apply` lo devolvería a `latest`. Cómo conciliar la rotación con Terraform: `POR VERIFICAR`. `openssl rand -hex 32` solo sirve para llaves aleatorias (`two-factor-key`, `jwt-secret`); las contraseñas de base de datos y de correo no se generan así.
 
 **Leer la clave inicial del Administrador central** (guardada en `admin-password`):
 
@@ -513,10 +540,13 @@ Reemplaza `CORREO` por el correo real (sin escribirlo en documentos compartidos)
 - **`admin-password` se desactualiza** si el Administrador cambia su clave (`seed.js:21, 59`).
 - **La clave 2FA es un punto único**: rotarla obliga a restablecer a todos los usuarios con 2FA (sección 8).
 - **Esquema base fuera de la imagen**: `schema.sql` no está en la imagen y no hay migración `001`; el procedimiento de la sección 6 para crear una base nueva sigue `POR VERIFICAR`.
-- **El YAML de Cloud Build no está versionado**: se reconstruye a mano (sección 4.1).
+- **El YAML de Cloud Build no está versionado**: se reconstruye a mano (sección 4.1). Solo afecta al despliegue manual.
 - **`reset-2fa` en la nube depende de reutilizar el Job** y su sintaxis no está probada (sección 9.4).
 - **Datos de prueba en producción**: fuera del alcance de este documento.
-- Pendientes: despliegue automático e infraestructura como código.
+- **Todo push a `main` lanza el despliegue completo** (CI, imagen, migraciones, servicio y frontend), incluso si solo cambia documentación. Mejora pendiente: filtrar por rutas.
+- **Sin rollback automático del frontend**: si falla el job `frontend`, se vuelve atrás a mano (sección 5.2).
+- **El rollback automático del backend usa `latestReadyRevisionName`**: si el tráfico estaba fijado a mano a otra revisión, no vuelve a la que servía (sección 5.1).
+- **Terraform se ejecuta a mano** y no administra usuarios de la BD, valores de secretos, la base `postgres`, las APIs, las cuentas por defecto, los roles de las personas, el sitio de Hosting ni el escaneo de vulnerabilidades (`infra/README.md`, "Qué NO se gestiona").
 
 ---
 
@@ -525,10 +555,16 @@ Reemplaza `CORREO` por el correo real (sin escribirlo en documentos compartidos)
 **Ejecutado en producción:**
 
 - Construir con Cloud Build, crear y desplegar el servicio, crear y ejecutar el Job, desplegar Hosting, respaldo a demanda y su listado, leer secretos.
+- Despliegue continuo completo (primera corrida: push de `a29735a` a `main`). Verificado en la nube: revisión nueva `libreria-oskar-api-00003-6kw`, servicio y Job con la imagen `:a29735a`, `/api/health` `healthy` con la base conectada. El estado verde de los jobs lo reportó el usuario. Con eso quedan ejecutados por el CD: actualizar la imagen del Job y del servicio y mandar el tráfico a la última revisión (`--to-latest`).
+- Terraform: importación de los 27 recursos con `apply` y `plan` en `No changes`, también después de ese despliegue.
+- Instalar Terraform 1.17.0 en Cloud Shell (`~/bin`, suma SHA256 verificada) y crear el bucket del estado versionado (sección 12.3).
+- Configurar la identidad de GitHub: cuenta `oskar-deployer`, pool `github`, proveedor `github-oskar` y permisos (sección 12.4).
+- `terraform plan` y `terraform apply` desde Cloud Shell, y despliegue por GitHub Actions (sección 12).
 
 **No probado (solo documentación):**
 
-- Rollback de Cloud Run y de Hosting, restauración, exportar/importar, rotación de secretos, `reset-2fa` por Job, actualizar la imagen del Job.
+- Rollback manual de Cloud Run y de Hosting, restauración de un respaldo, exportar/importar, rotación de secretos, `reset-2fa` por Job.
+- Rollback automático del backend en el CD (nunca se ha visto dispararse) y ejecución manual del CD (`workflow_dispatch`).
 
 **Detalles por verificar (marcados en el texto):**
 
@@ -538,3 +574,155 @@ Reemplaza `CORREO` por el correo real (sin escribirlo en documentos compartidos)
 - Sintaxis de `--args` para `reset-2fa` y comando base del Job (`POR PROBAR`).
 - Cómo se cargó el esquema base en producción (`schema.sql` en `oskar-db`; procedimiento de la sección 6, todo `POR VERIFICAR`), incluida la creación de la base `libreria_oskar` y del usuario `oskar_app`.
 - Formato `--format="value(serviceAccountEmailAddress)"` (de memoria, sección 7.3).
+- Comandos para ver la imagen vigente del servicio y del Job, y `gh run list` (sección 12.2).
+- Que `workflow_dispatch` desde una rama distinta de `main` falle al autenticar (sección 12.2).
+- Cómo conciliar la rotación de secretos (versión fija) con Terraform (`version = "latest"`, sección 8).
+
+---
+
+## 12. Despliegue automático y Terraform
+
+El **despliegue continuo** (CD, *continuous deployment*) es un proceso que publica solo cada versión nueva, sin pasos a mano. **Terraform** es un programa de **infraestructura como código**: describe en archivos de texto los recursos de Google Cloud (servicio, Job, base de datos, permisos) para poder revisarlos y recrearlos. Archivos: [`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml) y [`infra/README.md`](../../infra/README.md).
+
+### 12.1 Cómo funciona el despliegue continuo
+
+- **Cuándo corre**: el workflow se llama "Despliegue" y se dispara con cada push a `main` y a mano (`workflow_dispatch`) (`deploy.yml:5-10`). No corre en otras ramas; en ellas solo corre el CI (`ci.yml`).
+- **Uno a la vez**: grupo de concurrencia `despliegue-produccion` sin cancelar (`deploy.yml:13-15`); si llega otro push mientras uno corre, el nuevo espera en vez de cortar el anterior a medias.
+- **Tres jobs encadenados**: `ci` → `backend` → `frontend` (`deploy.yml:21-23, 29, 109`). Si uno falla, los siguientes no corren.
+  1. **`ci` ("Integración continua")**: reutiliza `.github/workflows/ci.yml` (que acepta `workflow_call`, `ci.yml:10`): pruebas del backend, build del frontend y build de la imagen.
+  2. **`backend` ("Backend (Cloud Run)")**: construye y publica la imagen con el tag de 7 caracteres del commit (`deploy.yml:53-62`), guarda la revisión vigente (`:67-72`), actualiza el Job de migraciones y lo ejecuta (`:76-80`), actualiza el servicio (`:82-84`), manda el tráfico a la revisión nueva (`:87-88`) y hace la prueba de humo contra la URL directa de Cloud Run (`:91-96`). Si falla después de actualizar el servicio, vuelve solo a la revisión previa (`:98-103`, sección 5.1).
+  3. **`frontend` ("Frontend (Firebase Hosting)")**: construye el frontend, lo publica en Firebase Hosting y hace la prueba de humo por el sitio (`deploy.yml:126-155`). Si falla **no** hay rollback automático (sección 5.2).
+- **Sin llaves**: cada job se autentica con Workload Identity Federation como `oskar-deployer` (`deploy.yml:40-44, 135-141`). El proveedor `github-oskar` solo acepta tokens de este repositorio en `refs/heads/main` (`infra/identidad_github.tf:20`). En GitHub no hay ningún secreto guardado para esto.
+- **Primera corrida**: push de `a29735a` a `main`. Verificado en la nube: revisión nueva `libreria-oskar-api-00003-6kw`, servicio y Job con la imagen `:a29735a`, `/api/health` `healthy` con la base conectada y `terraform plan` en `No changes` después del despliegue. El estado verde de los jobs lo reportó el usuario.
+
+Marca: **Ejecutado en producción**.
+
+### 12.2 Consultar una corrida y lo que está desplegado
+
+**En GitHub (navegador):** pestaña **Actions** del repositorio → workflow **Despliegue** → la corrida (una por push a `main`) → cada job muestra sus pasos y sus registros. Así se vio el estado verde de la primera corrida (dato del usuario). Para lanzarlo a mano: la misma página → **Run workflow** → rama `main`. Marca del lanzamiento a mano: **No probado**. Desde otra rama debería fallar al autenticar, porque el proveedor solo acepta `refs/heads/main`: `POR VERIFICAR`.
+
+Desde la terminal, con la CLI de GitHub (`gh`), si está instalada y con sesión:
+
+Laptop (zsh) — `POR VERIFICAR`
+```bash
+gh run list --workflow deploy.yml --limit 5
+```
+
+**En Google Cloud:** la última revisión lista del servicio (el mismo comando que usa el CD para el rollback, `deploy.yml:70`):
+
+Cloud Shell (bash)
+```bash
+gcloud run services describe libreria-oskar-api --region us-central1 --format="value(status.latestReadyRevisionName)"
+```
+Marca: **Ejecutado en producción** (lo corre el CD). Ojo: si el tráfico está fijado a otra revisión, la que sirve no es esta; mira el listado de revisiones de la sección 4.3.
+
+La imagen (y por tanto el commit) que usan el servicio y el Job:
+
+Cloud Shell (bash) — `POR VERIFICAR` (ruta de `--format` de memoria)
+```bash
+gcloud run services describe libreria-oskar-api --region us-central1 --format="value(spec.template.spec.containers[0].image)"
+gcloud run jobs describe oskar-migrar --region us-central1 --format="value(spec.template.spec.template.spec.containers[0].image)"
+```
+
+### 12.3 Terraform
+
+- **Qué es aquí**: la carpeta `infra/` (14 archivos, incluido `.terraform.lock.hcl`) describe el servicio y el Job de Cloud Run, la base de datos, los secretos (solo el contenedor, sin valores), el repositorio de imágenes, las cuentas de servicio, la identidad de GitHub (WIF) y los permisos. Terraform 1.17.0; proveedor `hashicorp/google ~> 8.0`, fijado en 8.8.1 por `.terraform.lock.hcl`. El **estado** (el registro de qué recursos reales corresponden a cada bloque) vive en el bucket `libreria-oskar-seminario-tfstate` (versionado), prefijo `libreria-oskar` (`infra/terraform.tf:15-18`).
+- **Situación**: los 27 recursos que ya existían se importaron con un `apply` (el único cambio fue `deletion_policy = "PREVENT"` en la base, un atributo propio de Terraform) y el `plan` siguiente dio `No changes`. Marca: **Ejecutado en producción**.
+- **Qué NO administra**: usuarios de la BD, valores de los secretos, la base `postgres`, las APIs, las cuentas por defecto, los roles de las personas, el sitio de Hosting (solo existe en el proveedor `google-beta`) y el escaneo de vulnerabilidades (`infra/README.md`, "Qué NO se gestiona y por qué").
+
+**Cómo correrlo.** Siempre a mano, desde Cloud Shell, donde ya están tus credenciales pero Terraform **no** viene instalado: requiere Terraform instalado (ver la subsección siguiente). El CD **no** ejecuta Terraform.
+
+Cloud Shell (bash)
+```bash
+cd ~/oskar && git pull
+cd ~/oskar/infra
+terraform init              # descarga el proveedor y conecta con el estado en GCS
+terraform fmt -check        # formato
+terraform validate          # sintaxis y esquema
+terraform plan              # esperado: "No changes"
+```
+Marca: **Ejecutado en producción**. Si `plan` muestra cambios que no vienen de un `.tf` editado a propósito, **no hagas `apply`**: alguien cambió algo en la consola o el HCL no refleja la nube. `terraform apply` solo se corre cuando se editó un `.tf` a propósito y el `plan` muestra exactamente ese cambio. Los bloques `import` de `infra/imports.tf` se quedan como registro de los IDs y ya no hacen nada.
+
+**Por qué no se pelea con el CD.** Cada uno tiene su parte:
+
+- **Del CD**: la imagen del servicio y del Job, el reparto de tráfico y los campos `client`/`client_version` que rellena `gcloud`. Terraform los ignora (`ignore_changes` en `infra/cloud_run.tf:134-141` y `:209-215`), así que un despliegue no deja diferencias en el `plan`.
+- **De Terraform**: todo lo demás (entorno, secretos referenciados, recursos, sondeo, escalado, cuentas, permisos). Un cambio hecho a mano en la consola aparece como diferencia en el siguiente `plan`, y un `apply` lo revertiría.
+- Por eso el `plan` dio `No changes` después de la primera corrida del CD. La excepción a vigilar es la rotación de secretos con versión fija (sección 8).
+
+#### Instalar Terraform y crear el bucket del estado (una sola vez)
+
+Terraform **no** viene instalado en Cloud Shell: se instaló a mano el binario oficial 1.17.0, con su suma SHA256 verificada, en `~/bin`. El directorio `~/bin` está en tu carpeta personal, que persiste entre sesiones de Cloud Shell (de memoria), así que basta con hacerlo una vez.
+
+Comprobar que la máquina es de 64 bits Intel/AMD (el binario descargado es `linux_amd64`):
+
+Cloud Shell (bash)
+```bash
+uname -m   # debe decir x86_64
+```
+
+Descargar el binario y su lista de sumas, verificar la suma (debe decir `OK`) y descomprimirlo en `~/bin`:
+
+Cloud Shell (bash)
+```bash
+cd /tmp && curl -sSLO https://releases.hashicorp.com/terraform/1.17.0/terraform_1.17.0_linux_amd64.zip && curl -sSLO https://releases.hashicorp.com/terraform/1.17.0/terraform_1.17.0_SHA256SUMS && sha256sum -c --ignore-missing terraform_1.17.0_SHA256SUMS && mkdir -p ~/bin && unzip -o terraform_1.17.0_linux_amd64.zip -d ~/bin && cd ~
+```
+
+Agregar `~/bin` al `PATH` (la lista de carpetas donde la terminal busca programas) en las sesiones futuras, solo si aún no está:
+
+Cloud Shell (bash)
+```bash
+grep -q 'HOME/bin' ~/.bashrc || echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
+```
+
+Agregarlo también en la sesión actual y comprobar la versión (debe decir `Terraform v1.17.0`):
+
+Cloud Shell (bash)
+```bash
+export PATH="$HOME/bin:$PATH"; terraform version
+```
+
+Crear el bucket del estado (con acceso uniforme a nivel de bucket) y activar el versionado, para poder recuperar un estado anterior si uno se daña:
+
+Cloud Shell (bash)
+```bash
+gcloud storage buckets create gs://libreria-oskar-seminario-tfstate --project=libreria-oskar-seminario --location=us-central1 --uniform-bucket-level-access
+gcloud storage buckets update gs://libreria-oskar-seminario-tfstate --versioning
+```
+Marca de toda la subsección: **Ejecutado en producción**. El bucket ya existe: no vuelvas a crearlo.
+
+### 12.4 Preparar la identidad de GitHub (una sola vez, ya hecho)
+
+Es la identidad con la que GitHub Actions entra a Google Cloud **sin llaves**: GitHub presenta un token de corta duración, el proveedor `github-oskar` del pool `github` lo valida y le deja actuar como la cuenta de servicio `oskar-deployer`, con solo los permisos del despliegue. Se creó a mano con los comandos de abajo y después quedó descrita también en `infra/` (cuentas en `cuentas_servicio.tf`, pool y proveedor en `identidad_github.tf`, permisos en `permisos.tf`). **No hay que repetirlo**; queda como registro y para un proyecto nuevo.
+
+Quien lo corre necesita poder administrar IAM del proyecto. Reemplaza `TU_CORREO` por la cuenta de Google de esa persona (sin escribirla en documentos compartidos).
+
+**Bloque 1**: variables, permiso para crear pools, APIs, cuenta `oskar-deployer` y sus roles:
+
+Cloud Shell (bash)
+```bash
+PROJECT=libreria-oskar-seminario; NUM=916083567697; REPO=cristian-ves/libreria-oskar-system; SA=oskar-deployer@$PROJECT.iam.gserviceaccount.com
+gcloud config set project $PROJECT
+gcloud projects add-iam-policy-binding $PROJECT --member=user:TU_CORREO --role=roles/iam.workloadIdentityPoolAdmin --condition=None --format=none
+gcloud services enable iamcredentials.googleapis.com sts.googleapis.com
+gcloud iam service-accounts create oskar-deployer --display-name="Despliegue desde GitHub Actions"
+gcloud projects add-iam-policy-binding $PROJECT --member=serviceAccount:$SA --role=roles/run.developer --condition=None --format=none
+gcloud projects add-iam-policy-binding $PROJECT --member=serviceAccount:$SA --role=roles/firebasehosting.admin --condition=None --format=none
+gcloud projects add-iam-policy-binding $PROJECT --member=serviceAccount:$SA --role=roles/serviceusage.serviceUsageConsumer --condition=None --format=none
+gcloud artifacts repositories add-iam-policy-binding oskar --location=us-central1 --member=serviceAccount:$SA --role=roles/artifactregistry.writer --format=none
+gcloud iam service-accounts add-iam-policy-binding oskar-api@$PROJECT.iam.gserviceaccount.com --member=serviceAccount:$SA --role=roles/iam.serviceAccountUser --format=none
+```
+
+> **Nota — el permiso tarda en llegar.** Según la documentación de Google, un cambio de política de IAM tarda típicamente 2 minutos en aplicarse y puede tardar 7 o más. Por eso el bloque 2 reintenta crear el pool cada 60 s, hasta 8 veces, en vez de fallar a la primera.
+
+**Bloque 2**: pool, proveedor (con la condición de repositorio y rama), permiso para que GitHub actúe como `oskar-deployer` y comprobación. Si es otra sesión de Cloud Shell, repite antes la primera línea del bloque 1 (las variables):
+
+Cloud Shell (bash)
+```bash
+for i in 1 2 3 4 5 6 7 8; do if gcloud iam workload-identity-pools create github --location=global --display-name="GitHub Actions" 2>/dev/null; then echo "OK pool creado"; break; fi; echo "Aún sin permiso, reintento $i/8 en 60 s"; sleep 60; done
+gcloud iam workload-identity-pools providers create-oidc github-oskar --location=global --workload-identity-pool=github --issuer-uri="https://token.actions.githubusercontent.com" --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" --attribute-condition="assertion.repository == '$REPO' && assertion.ref == 'refs/heads/main'"
+gcloud iam service-accounts add-iam-policy-binding $SA --role=roles/iam.workloadIdentityUser --member="principalSet://iam.googleapis.com/projects/$NUM/locations/global/workloadIdentityPools/github/attribute.repository/$REPO" --format=none
+gcloud iam workload-identity-pools providers describe github-oskar --location=global --workload-identity-pool=github --format="value(name)"
+```
+Marca de los dos bloques: **Ejecutado en producción**. El último comando imprime el nombre completo del proveedor, que es el valor de `workload_identity_provider` en `.github/workflows/deploy.yml`.
+
+> **ADVERTENCIA — solo este repositorio y solo `main`.** La condición del proveedor (`--attribute-condition`, igual que `infra/identidad_github.tf:20`) solo acepta tokens del repositorio `cristian-ves/libreria-oskar-system` en la rama `refs/heads/main`. Un workflow de otra rama, de un fork o de otro repositorio no puede autenticarse. Si cambian el nombre o el dueño del repositorio, habría que actualizar la condición (`POR VERIFICAR`).

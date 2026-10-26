@@ -1,6 +1,8 @@
 # Infraestructura como código — Librería Oskar
 
-Terraform que describe lo que **ya existe** en Google Cloud (proyecto `libreria-oskar-seminario`, región `us-central1`). Se escribió a mano para importarlo sin cambiar nada: la meta del primer `plan` es "0 to add, 0 to change, 0 to destroy" más las importaciones.
+Terraform que describe lo que **ya existe** en Google Cloud (proyecto `libreria-oskar-seminario`, región `us-central1`). Se escribió a mano para importarlo sin cambiar nada. **Ya se importó**: un `apply` registró los 27 recursos en el estado (el único cambio fue `deletion_policy = "PREVENT"` en la base, un atributo propio de Terraform) y el `plan` siguiente, también tras la primera corrida del despliegue continuo, dio `No changes`.
+
+**El CD no ejecuta Terraform.** Se corre a mano desde Cloud Shell (abajo).
 
 | Archivo | Contenido |
 |---|---|
@@ -13,30 +15,33 @@ Terraform que describe lo que **ya existe** en Google Cloud (proyecto `libreria-
 | `base_datos.tf` | Instancia `oskar-db` y base `libreria_oskar` |
 | `cloud_run.tf` | Servicio `libreria-oskar-api` y Job `oskar-migrar` |
 | `permisos.tf` | Permisos IAM, todos `*_iam_member` (no autoritativos) |
-| `imports.tf` | Un bloque `import` por recurso existente |
+| `imports.tf` | Un bloque `import` por recurso existente (ya aplicados; quedan como registro de IDs) |
 | `outputs.tf` | URL del servicio, conexión de Cloud SQL, datos del CD |
+| `.terraform.lock.hcl` | Versión exacta del proveedor (`hashicorp/google` 8.8.1); se versiona |
+| `.gitignore` | Excluye `.terraform/`, el estado local y los `crash.log` |
 
 ## Cómo correrlo (Cloud Shell)
 
-Cloud Shell ya trae Terraform (1.17.0) y las credenciales de tu usuario. El estado vive en el bucket `libreria-oskar-seminario-tfstate` (prefijo `libreria-oskar`), que ya existe y no lo gestiona esta configuración.
+En Cloud Shell ya están las credenciales de tu usuario, pero Terraform **no** viene instalado: requiere Terraform instalado (1.17.0, binario oficial en `~/bin`; ver `app/docs/RUNBOOK.md` §12.3, "Instalar Terraform y crear el bucket del estado (una sola vez)"). El estado vive en el bucket `libreria-oskar-seminario-tfstate` (prefijo `libreria-oskar`), que ya existe y no lo gestiona esta configuración.
 
 ```bash
 cd ~/oskar/infra            # o donde esté clonado el repo
 terraform init              # descarga el proveedor y conecta con el estado en GCS
 terraform fmt -check        # formato
 terraform validate          # sintaxis y esquema
-terraform plan              # esperado: "27 to import, 0 to add, 1 to change, 0 to destroy"
-terraform apply             # registra en el estado lo importado
+terraform plan              # esperado: "No changes. Your infrastructure matches the configuration."
 ```
 
+`terraform apply` solo se corre cuando se cambió un `.tf` a propósito y el `plan` muestra exactamente ese cambio y nada más.
+
 - Si `plan` muestra cambios (`~`), **no hagas `apply`**: el HCL no refleja la nube. Ajusta el `.tf` (o lleva la salida del plan a quien lo mantiene) y repite.
-- El único cambio esperado es `deletion_policy` de la base `libreria_oskar` (ver "Diferencias conocidas"); cualquier otro `~` es una diferencia real.
+- Con el estado ya importado no se espera ningún cambio: cualquier `+`, `~` o `-` que no venga de un `.tf` editado es una diferencia real (alguien tocó la consola o el HCL no refleja la nube).
 - `.terraform.lock.hcl` lo genera `terraform init` y se versiona: fija la versión exacta del proveedor.
-- Tras el primer `apply`, los bloques de `imports.tf` ya no hacen nada; se pueden borrar o dejar como registro.
+- Los bloques de `imports.tf` se quedan como documentación de los IDs de importación: con los recursos ya en el estado, Terraform los ignora y no importan, cambian ni borran nada. Solo hay que quitarlos al reconstruir desde cero (paso 3 de abajo).
 
 ## Relación con el despliegue continuo
 
-El CD (`.github/workflows/deploy.yml`) sigue siendo el que despliega versiones. Terraform no se pelea con él:
+El CD (`.github/workflows/deploy.yml`) es el que despliega versiones y **no ejecuta Terraform** (ningún paso del workflow lo invoca); Terraform se corre a mano. No se pelean:
 
 - **Imagen** del servicio y del Job: la cambia el CD en cada despliegue (`gcloud run jobs update --image` y `gcloud run services update --image`). Terraform la ignora (`ignore_changes`); `var.imagen_inicial` solo cuenta al crear desde cero.
 - **Tráfico** del servicio: el CD lo manda a la última revisión o lo fija a la anterior en un rollback. Terraform lo ignora.
@@ -73,8 +78,8 @@ Solo para un proyecto nuevo o tras perder los recursos. **Advertencia: los valor
 
 ## Diferencias conocidas y puntos por verificar
 
-El primer `plan` real (Terraform 1.17.0, proveedor google 8.x) confirmó sin diferencias el volumen `cloudsql`, el nombre del contenedor, el escalado (incluido el tope de 3 del servicio), el sondeo de arranque, el entorno y su orden, y el nombre visible de `oskar-api`. Queda:
+El primer `plan` real (Terraform 1.17.0, proveedor google 8.8.1) confirmó sin diferencias el volumen `cloudsql`, el nombre del contenedor, el escalado (incluido el tope de 3 del servicio), el sondeo de arranque, el entorno y su orden, y el nombre visible de `oskar-api`. Queda:
 
-- **`deletion_policy = "PREVENT"` en la base `libreria_oskar`**: es un atributo solo de Terraform. Tras importar, el estado trae `DELETE`, así que el primer `apply` muestra `1 to change`: solo actualiza ese valor en el estado y no cambia nada en la nube.
+- **`deletion_policy = "PREVENT"` en la base `libreria_oskar`**: es un atributo solo de Terraform. Tras importar, el estado traía `DELETE`, así que el `apply` de la importación mostró `1 to change`: solo actualizó ese valor en el estado, sin cambiar nada en la nube. Ya está aplicado y no vuelve a aparecer.
 - **`deletion_protection` en Cloud SQL** está en `true` (guarda de Terraform) mientras `settings.deletion_protection_enabled` refleja la nube (`false`); activarla en GCP es otra tarea.
 - **Cloud SQL**: no se declaran ventana de mantenimiento, `point_in_time_recovery_enabled` ni flags. El plan no mostró diferencias, pero la doc del recurso advierte que algunos campos no muestran diferencia si faltan en el HCL; antes de reconstruir desde cero conviene revisarlos.

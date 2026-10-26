@@ -11,7 +11,7 @@ Sistema web de inventario interno + catálogo informativo de libros. Sin carrito
 - Utilidades compartidas: `utils/isbn.js`, `utils/uuid.js`, `utils/slug.js`, `utils/errors.js`. No reimplementes validación de ISBN/UUID.
 - BD: PostgreSQL con UUID. `app/database/schema.sql` es la fuente de verdad; migraciones en `app/database/migrations/`.
 - Pruebas del backend: runner nativo de Node, `npm test` desde `app/`, BD aislada `libreria_oskar_test` (puerto 5435, servicio `db-test`). El frontend no tiene pruebas: se verifica con `npm run frontend:build` y prueba manual.
-- Docker Compose: `db`, `db-test`, `backend`. El frontend corre en el host con `npm run frontend:dev`. Despliegue en Google Cloud: planeado, no ejecutado.
+- Docker Compose: `db`, `db-test`, `backend`. El frontend corre en el host con `npm run frontend:dev`. Producción en Google Cloud (Cloud Run + Cloud SQL + Firebase Hosting), desplegada por GitHub Actions al hacer push a `main` (`.github/workflows/deploy.yml` en la raíz del repo); infraestructura en Terraform (`infra/`), que se aplica a mano. Detalle en `docs/RUNBOOK.md`.
 
 ## Roles
 - Administrador: todo.
@@ -68,7 +68,7 @@ Sistema web de inventario interno + catálogo informativo de libros. Sin carrito
 Índice: §3 BD, §4 backend (4.3 endpoints, 4.5 capas y transacciones, 4.6 auth/RBAC, 4.9 tests), §5 frontend, §6 flujos, §7 infraestructura, §8 permisos, §9 deuda técnica, §10 lo ausente, §11 convenciones, §12 docs y agentes.
 
 ## Trabajo en equipo
-- Ramas nuevas desde `develop`; se integran en `develop`. El workflow de despliegue está en `app/.github/workflows/deploy.yml`, pero GitHub no lo ejecuta desde esa ubicación (solo lee `.github/workflows` en la raíz del repo), sus rutas suponen que `app/` es la raíz, no está verificado y será rehecho. No fusionar ni empujar a `main` sin acuerdo.
+- Ramas nuevas desde `develop`; se integran en `develop`. Todo push a `main` despliega a producción (Cloud Run y Firebase Hosting) con `.github/workflows/deploy.yml` (raíz del repo), incluso si solo cambia documentación; por eso no se fusiona ni se empuja a `main` sin acuerdo. Cómo funciona y cómo volver atrás: `app/docs/RUNBOOK.md` §4, §5 y §12; infraestructura en `infra/` (Terraform, ver `infra/README.md`).
 - Migraciones: existen 002, 003, 004 (ventas), 010 (2FA) y 011 (recuperación de contraseña). Reparto de números nuevos: 005-009 para el otro desarrollador y 010-019 para seguridad. Todo cambio de esquema se refleja también en `database/schema.sql` y en los modelos, siempre con autorización explícita.
 - Archivos compartidos con riesgo de conflicto: `backend/src/routes/index.js`, `backend/src/models/index.js`, `frontend/src/App.jsx`, `frontend/src/components/Navbar.jsx`, `database/schema.sql`, `docs/PROJECT_SPECS.md`. Trae `develop` antes de editarlos y mantén el cambio mínimo.
 - Todo endpoint, servicio o repositorio nuevo trae pruebas en `backend/tests/` (con `db-test` arriba) y no debe romper las existentes.
@@ -83,7 +83,7 @@ Alertas de inventario por correo (existe `services/mail/`, que hoy solo usan la 
 | backend-engineer-nodejs | Capas, Express, errores, auth |
 | backend-testing | Pruebas del backend |
 | database-architect | Esquema, migraciones, triggers |
-| devops-gcp-automation | Docker, CI, Google Cloud |
+| devops-gcp-automation | Docker, CI/CD, Terraform, Google Cloud |
 | frontend-engineer-react | React, Vite, Tailwind |
 | inventory-transactions | Movimientos, stock, bloqueos |
 | sequelize-orm | Convenciones del ORM |

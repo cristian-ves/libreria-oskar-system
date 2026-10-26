@@ -2,7 +2,7 @@
 # El bucket del estado ya existe (versionado) y no lo gestiona esta configuración.
 
 terraform {
-  # Cloud Shell trae 1.17.0; los bloques import con for_each requieren >= 1.7
+  # Probado con Terraform 1.17.0 (instalado a mano en Cloud Shell); los bloques import con for_each requieren >= 1.7
   required_version = ">= 1.7"
 
   required_providers {

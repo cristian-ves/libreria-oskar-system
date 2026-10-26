@@ -57,7 +57,7 @@ El frontend no tiene pruebas automatizadas; se verifica con `npm run frontend:bu
 
 ## Trabajo en equipo
 
-- Las ramas nuevas salen de `develop` y se integran en `develop`. El workflow de despliegue está en `app/.github/workflows/deploy.yml`, pero GitHub no lo ejecuta desde esa ubicación (solo lee `.github/workflows` en la raíz del repo), sus rutas suponen que `app/` es la raíz, no está verificado y será rehecho. No fusionar ni empujar a `main` sin acuerdo.
+- Las ramas nuevas salen de `develop` y se integran en `develop`. Todo push a `main` despliega a producción (Cloud Run y Firebase Hosting) con `.github/workflows/deploy.yml` (raíz del repo), incluso si solo cambia documentación; por eso no se fusiona ni se empuja a `main` sin acuerdo. Cómo funciona y cómo volver atrás: `app/docs/RUNBOOK.md` §4, §5 y §12; infraestructura en `infra/` (Terraform, ver `infra/README.md`).
 - Reparto vigente por tema: (1) CRUD administrativo de usuarios y categorías; (2) edición de libros ya registrados (fijar precio), ventas, paginación y escáner de cámara.
 - Migraciones: la 004 es la de ventas (ya aplicada al repositorio); los cambios de esquema nuevos usan la 005 en adelante, reflejados también en `app/database/schema.sql` y en los modelos.
 - Archivos compartidos con riesgo de conflicto (trae `develop` antes de editarlos y mantén el cambio mínimo): `backend/src/routes/index.js`, `backend/src/models/index.js`, `frontend/src/App.jsx`, `frontend/src/components/Navbar.jsx`, `database/schema.sql` y `docs/PROJECT_SPECS.md` (rutas dentro de `app/`).

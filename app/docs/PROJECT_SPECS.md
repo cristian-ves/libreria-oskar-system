@@ -93,7 +93,7 @@
 ### 1.2 Versión de Node.js Requerida
 - **Campo `engines` en `package.json`**: No existe en ninguno de los tres archivos `package.json`.
 - **Versión de Node en Contenedor (`Dockerfile`)**: `Node 22` (`FROM node:22-alpine`).
-- **Versión de Node en Pipeline CI (`deploy.yml`)**: `Node 22` (`node-version: 22`).
+- **Versión de Node en los workflows** (`.github/workflows/ci.yml` y `.github/workflows/deploy.yml`, raíz del repo): `Node 22` (`node-version: 22`).
 
 ---
 
@@ -127,10 +127,6 @@ app/
 │       │   └── SKILL.md (25)
 │       └── sequelize-orm/
 │           └── SKILL.md (23)
-├── .github/
-│   ├── DEPLOYMENT_GUIDE.md (115)
-│   └── workflows/
-│       └── deploy.yml (150)
 ├── backend/
 │   ├── .env.example (66)
 │   ├── Dockerfile (61)
@@ -372,7 +368,8 @@ app/
 │       ├── 010_dos_factores.sql (29)
 │       └── 011_recuperacion_contrasena.sql (18)
 ├── docs/
-│   ├── PROJECT_SPECS.md (1693)
+│   ├── PROJECT_SPECS.md (1732)
+│   ├── RUNBOOK.md (637)
 │   └── roadmap/
 │       ├── auth-2fa/
 │       │   └── SKILL.md (20)
@@ -579,6 +576,8 @@ app/
             ├── VentaDetalle.jsx (88)
             └── Ventas.jsx (55)
 ```
+
+Fuera de `app/`, en la raíz del repositorio (mismo conteo con `wc -l`): `.github/workflows/ci.yml` (114), `.github/workflows/deploy.yml` (155) e `infra/` (Terraform, 14 archivos: `README.md` (85), `base_datos.tf` (67), `cloud_run.tf` (216), `cuentas_servicio.tf` (21), `identidad_github.tf` (25), `imports.tf` (118), `outputs.tf` (26), `permisos.tf` (72), `registro_imagenes.tf` (15), `secretos.tf` (23), `terraform.tf` (24), `variables.tf` (55), `.gitignore` (10) y `.terraform.lock.hcl` (22)). La carpeta `app/.github/` ya no existe.
 
 ### 2.2 Archivos de más de 250 Líneas
 
@@ -795,6 +794,8 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `SEED_ADMIN_PASSWORD` | String | Contraseña del Administrador. En producción solo se exige (y se valida con `utils/passwordPolicy.js`) cuando el usuario no existe; nunca se modifica uno existente. Fuera de producción es la contraseña de `admin@libreriaoskar.com` y se reinicia en cada ejecución | Fuera de producción: `Admin123!`; en producción: sin valor |
 | `SEED_EMPLEADO_PASSWORD` | String | Contraseña de `empleado@libreriaoskar.com` en el seed (sin cambios) | Fuera de producción: `Empleado123!`; en producción: sin valor (el seed solo avisa) |
 
+- **Producción (Cloud Run)**: el servicio y el Job `oskar-migrar` reciben el mismo entorno común: `DB_HOST` (socket `/cloudsql/...`), `DB_PORT`, `DB_USER`, `DB_NAME`, `CORS_ORIGINS`, `FRONTEND_URL`, `MAIL_USER`, `TRUST_PROXY=1`, `LOGIN_RATE_LIMIT=100`, y desde Secret Manager `DB_PASSWORD`, `JWT_SECRET`, `TWO_FACTOR_ENCRYPTION_KEY` y `MAIL_PASSWORD`; el Job suma `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD` (secreto `admin-password`). Lo declara Terraform en `infra/cloud_run.tf:11-38`; `NODE_ENV`, `PORT` y `MIGRATIONS_DIR` vienen de la imagen. Tabla de consecuencias en `docs/RUNBOOK.md` §3.
+
 - **Correo (`src/config/mail.config.js`)**: `leerConfigCorreo(entorno, nodeEnv)` es una función pura; `env.js` la invoca y expone el resultado como `env.mail` (`proveedor`, `host`, `port`, `user`, `password`, `from`, `faltantes`). Con `smtp` y `MAIL_USER`/`MAIL_PASSWORD` ausentes no lanza: `env.js` emite un `[WARN CONFIG]` que nombra las variables faltantes (nunca valores) y los envíos fallan registrados.
 - **2FA (`src/config/twoFactor.config.js`)**: `leerConfigDosFactores(entorno, nodeEnv)` es una función pura (estilo `mail.config.js`); `env.js` expone `env.twoFactor` con `enforced`, `encryptionKey` (Buffer), `claveDesarrollo` y las constantes: emisor `Librería Oskar`, 6 dígitos, periodo 30 s, SHA-1, tolerancia ±1 paso, token temporal de 600 s, 5 intentos, bloqueo de 15 min y 10 códigos de respaldo. `enforced` se lee en cada login (las pruebas lo cambian y lo restauran).
 - **Recuperación de contraseña (`src/config/recuperacion.config.js`)**: `leerConfigRecuperacion(entorno, nodeEnv)` es una función pura (estilo `mail.config.js`); `env.js` expone `env.recuperacion` con `frontendUrl` (o `null`), `faltantes` y las constantes: vencimiento 30 min, enfriamiento 2 min, `recuperarMax` 5, `restablecerMax` 10 y ventana de 15 min. En producción sin `FRONTEND_URL` no lanza: `env.js` emite un `[WARN CONFIG]` que nombra la variable y `POST /api/auth/recuperar` responde igual sin enviar nada (registra `[RECUPERACION]`).
@@ -813,7 +814,7 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
   5. Enrutador `/api`: Montaje de `src/routes/index.js`. `POST /api/auth/login` usa un rate limiter por `req.ip` (10 por 15 minutos por defecto, configurable), con 429 `{ status: 'fail', message }`. Los registros vencidos se purgan periódicamente; el limitador en memoria se reinicia al reiniciar cada proceso. Despliegues con varias réplicas requieren un almacén compartido antes de escalar.
   6. Manejador 404 y `errorHandler` centralizado con 4 argumentos `(err, req, res, next)`.
 
-`TRUST_PROXY` debe configurarse al número exacto de proxies confiables entre cliente y aplicación. La topología de despliegue aún no está definida; mantener `0` mientras no se conozca. Si Cloud Run/ingress queda como único salto directo, verificar la cadena real y configurar `1`; no usar `true` ni `*`.
+`TRUST_PROXY` debe configurarse al número exacto de proxies confiables entre cliente y aplicación. En producción (Firebase Hosting → Cloud Run) está en `1`, junto con `LOGIN_RATE_LIMIT=100`, de forma provisional y decidido mirando `X-Forwarded-For` (`infra/cloud_run.tf:19-20`; `docs/RUNBOOK.md` §2 y §10); el valor por defecto del código sigue siendo `0`. No usar `true` ni `*`.
 
 ### 4.3 Tabla Completa de Endpoints
 
@@ -1506,34 +1507,31 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 - **Arranque y cierre del backend**: `server.js` espera la BD con `esperarBaseDatos()` (reintentos en producción, ver §4.2) antes de escuchar y, ante `SIGINT`/`SIGTERM`, cierra el servidor HTTP y luego `sequelize.close()` (ver §4.2).
 
 ### 7.3 Workflows CI/CD
-#### CI (GitHub Actions)
-- **Archivo**: `.github/workflows/ci.yml` en la raíz del repositorio (ubicación que GitHub sí lee). Sin despliegue, sin publicación de imágenes y sin `secrets.*`. Permisos `contents: read`; `concurrency` con grupo `ci-${{ github.ref }}` y `cancel-in-progress`.
-- **Disparadores**: `push` en todas las ramas (`branches: ['**']`) y `workflow_dispatch`.
+Ambos viven en `.github/workflows/` en la raíz del repositorio (la única ubicación que GitHub lee).
+
+#### CI (`.github/workflows/ci.yml`)
+- **Alcance**: sin despliegue, sin publicación de imágenes y sin `secrets.*`. Permisos `contents: read`; `concurrency` con grupo `ci-${{ github.workflow }}-${{ github.ref }}` y `cancel-in-progress: true`.
+- **Disparadores**: `push` en todas las ramas (`branches: ['**']`), `workflow_dispatch` y `workflow_call` (lo reutiliza el despliegue). Al ser llamado, `github.workflow` es el del workflow que llama, así que el CI dentro del despliegue y el CI propio del mismo push a `main` caen en grupos distintos y no se cancelan entre sí (por lectura del YAML; no observado en las corridas): un push a `main` ejecuta el CI dos veces.
 - **Jobs independientes** (`ubuntu-latest`, Node 22, caché npm por `package-lock.json` de `app/backend` o `app/frontend`):
   - `pruebas-backend`: servicio `postgres:15-alpine` con BD `libreria_oskar_test` (puerto 5432); aplica `app/database/schema.sql` con `psql`, ejecuta `npm ci` en `app/backend` y `npm test` desde `app/` con `TEST_DB_HOST=127.0.0.1`, `TEST_DB_PORT=5432`, `TEST_DB_USER` y `TEST_DB_PASSWORD`. No define `NODE_ENV`: `run-tests.js` lo fija en `test`.
   - `build-frontend`: `npm ci` en `app/frontend` y `npm run frontend:build` desde `app/`.
   - `build-imagen-backend`: `docker build -f backend/Dockerfile -t oskar-api:ci .` desde `app/` y comprueba que `$MIGRATIONS_DIR` lista los `.sql`; sin push ni login.
-- **NO verificado**: la ejecución real en GitHub, el comportamiento de las pruebas con Node 22 (la línea base se midió con Node v24.18.0) y los tiempos de ejecución.
+- **Ejecución real**: el job `ci` de la primera corrida del despliegue (commit `a29735a`) terminó en verde (dato del usuario, no verificado por el agente). **NO verificado**: los tiempos de ejecución.
 
-#### Despliegue (`app/.github/workflows/deploy.yml`, obsoleto y sin ejecutarse)
-- **Estado**: ese workflow construye la imagen con contexto `backend` (`--file backend/Dockerfile backend`), por lo que quedará obsoleto frente al Dockerfile actual (contexto `app/`) al rehacerlo. El archivo está en `app/.github/workflows/deploy.yml`, pero GitHub solo ejecuta workflows ubicados en `.github/workflows` en la raíz del repositorio, por lo que hoy NO se ejecuta. Además sus rutas (`backend/`, `database/`) suponen que `app/` es la raíz. Su funcionamiento no está verificado y será rehecho. Lo que sigue describe el contenido del archivo, no un comportamiento comprobado.
-- **Disparadores declarados**: `push` a la rama `main` o ejecución manual `workflow_dispatch` (sin efecto mientras el archivo siga en esa ubicación).
-- **Variables y Secretos**: `GCP_PROJECT_ID`, `GCP_SA_KEY`, `CLOUD_SQL_CONNECTION_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `GOOGLE_BOOKS_API_KEY`.
-- **Job 1: `test-and-verify` (CI)**:
-  - Ejecuta en `ubuntu-latest`.
-  - Levanta contenedor de servicio PostgreSQL 15 en puerto 5432.
-  - Configura Node 22 (`setup-node@v4`).
-  - Aplica `database/schema.sql` usando `psql`.
-  - Ejecuta `npm ci` y `npm test` en `backend/`.
-- **Job 2: `build-and-deploy` (CD)**:
-  - Requiere aprobación del Job 1 (`needs: test-and-verify`).
-  - Autentica en Google Cloud vía `google-github-actions/auth@v2` con credenciales de cuenta de servicio.
-  - Configura Docker para Google Artifact Registry (`GAR_LOCATION`).
-  - Construye la imagen Docker del backend con tags `:commit-sha` y `:latest`, y la publica en Artifact Registry.
-  - Despliega en Google Cloud Run (`google-github-actions/deploy-cloudrun@v2`) con `--allow-unauthenticated`, conexión a Cloud SQL vía socket `/cloudsql/...` y variables de entorno productivas.
+#### Despliegue continuo (`.github/workflows/deploy.yml`)
+- **Nombre y disparadores**: workflow `Despliegue`; `push` a `main` y `workflow_dispatch`. Concurrencia `despliegue-produccion` con `cancel-in-progress: false` (un despliegue a la vez; el siguiente espera). Permisos globales `contents: read`.
+- **Autenticación**: Workload Identity Federation, sin secretos ni llaves JSON. Proveedor `github-oskar` del pool `github`, que solo acepta tokens de este repositorio en `refs/heads/main` (`infra/identidad_github.tf:20`); cuenta `oskar-deployer` con Cloud Run Developer, Firebase Hosting Admin, Service Usage Consumer, Artifact Registry Writer (solo el repositorio `oskar`) y Service Account User sobre `oskar-api` (`infra/permisos.tf`). Cada job que toca Google Cloud pide `id-token: write` y se autentica por su cuenta (el token OIDC dura 5 minutos).
+- **3 jobs encadenados** (`needs`):
+  1. `ci`: llama a `ci.yml` con `workflow_call`.
+  2. `backend` (`ubuntu-latest`, 30 min): construye la imagen desde `app/` con `-f backend/Dockerfile` y la publica en `us-central1-docker.pkg.dev/libreria-oskar-seminario/oskar/api` con el tag de 7 caracteres del commit; guarda `status.latestReadyRevisionName`; actualiza el Job `oskar-migrar` con la imagen y lo ejecuta con `--wait` (migraciones y seed antes que el servicio); actualiza `libreria-oskar-api`, manda el tráfico con `--to-latest` y hace la prueba de humo `GET /api/health` (debe contener `"status":"healthy"`) contra la URL directa de Cloud Run. Si falla después de actualizar el servicio, el paso `Volver a la revisión previa` devuelve el 100 % del tráfico a la revisión guardada y el job queda fallido. Limitación anotada en el YAML: si el tráfico estaba fijado a mano a otra revisión, `latestReadyRevisionName` no es la que servía.
+  3. `frontend` (`ubuntu-latest`, 20 min): `npm ci --prefix frontend`, `npm run frontend:build`, `npx --yes firebase-tools deploy --only hosting --project libreria-oskar-seminario` (sitio de `app/firebase.json`) y prueba de humo por `https://libreria-oskar.web.app/api/health`. Sin rollback automático: se vuelve atrás desde la consola de Firebase (`docs/RUNBOOK.md` §5.2).
+- **Ejecución real**: primera corrida con el push de `a29735a` a `main`. Verificado en la nube: revisión nueva `libreria-oskar-api-00003-6kw`, servicio y Job con la imagen `:a29735a`, `/api/health` `healthy` con la base conectada, y `terraform plan` en `No changes` después. El estado verde de los jobs lo reportó el usuario.
+- **Limitación conocida**: todo push a `main` lanza el despliegue completo, incluso si solo cambia documentación (mejora pendiente: filtrar por rutas).
+- **NO verificado / no probado**: el rollback automático (nunca se ha visto dispararse) y el lanzamiento manual (`workflow_dispatch`).
+- **Archivos retirados**: `app/.github/workflows/deploy.yml` y `app/.github/DEPLOYMENT_GUIDE.md` se borraron por obsoletos (nunca se ejecutaron).
 
-### 7.4 Firebase Hosting (preparado, sin desplegar)
-- **Archivos**: `app/firebase.json` (bloque `hosting`) y `app/.firebaserc` (proyecto `default` = `libreria-oskar-seminario`). El `.gitignore` de la raíz del repo ignora `.firebase/` y `firebase-debug.log*`. No se ejecutó ningún comando de `firebase` ni `gcloud`.
+### 7.4 Firebase Hosting
+- **Archivos**: `app/firebase.json` (bloque `hosting`) y `app/.firebaserc` (proyecto `default` = `libreria-oskar-seminario`). El `.gitignore` de la raíz del repo ignora `.firebase/` y `firebase-debug.log*`. Se publica con `firebase-tools deploy --only hosting` desde el job `frontend` del despliegue continuo (§7.3) o a mano (`docs/RUNBOOK.md` §4.4).
 - **Contenido servido**: `public` = `frontend/dist` (salida por defecto de Vite; `vite.config.js` no define `build.outDir` ni `base`).
 - **Reescrituras (el orden importa)**: Hosting aplica la primera que coincide. 1) `/api/**` → servicio de Cloud Run `libreria-oskar-api`, región `us-central1`, sin `pinTag`; 2) `**` → `/index.html` (comodín del SPA para `react-router-dom`). Si el comodín fuera primero, capturaría también `/api/**` y devolvería el HTML del SPA en lugar de llegar al backend.
 - **Rutas relativas**: el frontend llama siempre a `/api/...` con `fetch` relativo (`services/api/client.js`) y no existe ningún `VITE_*` de URL de API, por lo que no necesita variables de entorno en el build: en desarrollo Vite proxea `/api` a `localhost:3000` y en producción lo hace la reescritura de Hosting.
@@ -1541,7 +1539,14 @@ Los componentes específicos de cada vista viven en `features/<feature>/componen
 - **Cabeceras (el orden importa)**: 1) `**` con `Cache-Control: no-cache`; 2) `/assets/**` con `Cache-Control: public, max-age=31536000, immutable` (el build deja allí los archivos con hash, incluido el `.wasm`); 3) `**/*.wasm` con `Content-Type: application/wasm` (el lector de respaldo del escáner, `zxing_reader-*.wasm`, lo requiere para compilarse en streaming). Firebase compara la `source` con la ruta ORIGINAL de la petición, sin considerar las reescrituras, así que la antigua regla `/index.html` no cubría las rutas del SPA (`/`, `/catalogo`), que se servían con `cache-control: max-age=3600` (medido por el usuario en producción); esa regla se eliminó por redundante. `**` va primera para que, si gana la última regla coincidente, `/assets/**` la reemplace. **NO verificado**: la precedencia entre reglas que coinciden con la misma clave no está documentada (un reporte en firebase-tools sugiere que gana la última); se comprobará con `curl -sI` sobre `/`, `/catalogo` y un archivo de `/assets/` tras desplegar. Comprobado con `npm run frontend:build` (2026-10-25): `dist/` contiene `index.html` y `assets/` con `index-*.js`, `index-*.css`, `polyfill-*.js`, `logo-*.jpg` y `zxing_reader-*.wasm`.
 - **Sin CSP ni otras cabeceras de seguridad**: se omitieron a propósito, porque podrían bloquear la cámara o el wasm. Queda como mejora futura.
 - **Requisito previo**: el servicio de Cloud Run `libreria-oskar-api` debe existir antes de desplegar el hosting; si no existe, el despliegue de la configuración falla.
-- **NO verificado**: el despliegue real a Firebase Hosting, que Hosting reenvíe correctamente las cabeceras de la API y el comportamiento del `.wasm` servido desde Hosting.
+- **Desplegado**: el sitio está publicado y la prueba de humo del CD pasa por la reescritura `/api/**` hasta Cloud Run (primera corrida en verde, dato del usuario). **NO verificado**: que Hosting reenvíe correctamente las cabeceras de la API y el comportamiento del `.wasm` servido desde Hosting.
+
+### 7.5 Infraestructura como código (`infra/`, Terraform)
+- **Archivos**: 14 en `infra/` (lista y líneas en §2.1). Terraform 1.17.0 (`required_version = ">= 1.7"`); proveedor `hashicorp/google ~> 8.0`, bloqueado en 8.8.1 por `.terraform.lock.hcl`. Estado remoto en el bucket GCS `libreria-oskar-seminario-tfstate` (versionado, no gestionado por esta configuración), prefijo `libreria-oskar`.
+- **Qué describe**: cuentas `oskar-api` y `oskar-deployer`, pool y proveedor WIF, los 5 secretos (solo el contenedor), el repositorio Docker `oskar`, la instancia `oskar-db` y la base `libreria_oskar`, el servicio `libreria-oskar-api`, el Job `oskar-migrar` y permisos IAM (`*_iam_member`, no autoritativos).
+- **Estado**: se importaron 27 recursos con `apply` (único cambio: `deletion_policy = "PREVENT"` en la base, atributo propio de Terraform) y el `plan` siguiente dio `No changes`. Los bloques de `imports.tf` se conservan como registro de IDs.
+- **Ejecución**: a mano desde Cloud Shell; el CD no ejecuta Terraform. Ignora la imagen, el tráfico y `client`/`client_version` de Cloud Run (`ignore_changes` en `infra/cloud_run.tf`) para no pelear con el CD.
+- **No administra**: usuarios de la BD, valores de secretos, base `postgres`, APIs, cuentas por defecto, roles de personas, sitio de Hosting (solo existe en `google-beta`) y escaneo de vulnerabilidades. Detalle y procedimiento en `infra/README.md` y `docs/RUNBOOK.md` §12.
 
 ---
 
@@ -1629,6 +1634,7 @@ Cada ítem cita su archivo como evidencia. Resueltos y retirados de esta secció
 | **2FA: no verificado** | — | Compatibilidad con apps TOTP reales, Node 22 en el contenedor (las pruebas corrieron con Node 24.18.0), varias instancias del backend, equivalencia `pg_dump` de `schema.sql` frente a BD anterior + 010 e interfaz: flujo contra el backend real, app de autenticación real, enlace `otpauth://` en un celular, copiado en HTTP por IP, descarga del `.txt`, aspecto y lectores de pantalla (solo se verificó que compila). |
 | **Recuperación de contraseña: límites conocidos** | `backend/src/services/recuperacion.service.js`, `backend/src/middlewares/rateLimitRecuperacion.js`, `backend/src/utils/sesionVigente.js` | (1) Tiempo de respuesta: el correo no se espera, pero si la cuenta existe y está activa hay un UPDATE extra, una diferencia pequeña y medible. (2) Relojes: `password_cambiada_en` usa el reloj de la app y el vencimiento del enlace el de la BD; con varias instancias desfasadas, un JWT emitido por una instancia atrasada justo después del cambio podría rechazarse (o uno anterior aceptarse) por el desfase. (3) Estricto: un JWT emitido en el mismo segundo del cambio se rechaza (falla cerrada). (4) Sin límite por cuenta: los límites son solo por IP, en memoria (por proceso; se pierden al reiniciar y cada réplica cuenta por separado) y con `TRUST_PROXY=0` detrás de un proxy todos compartirían el contador; el único freno por cuenta es el enfriamiento de 2 min. (5) Entrega real por Gmail/Cloud Run no verificada; sin `FRONTEND_URL` en producción no se envía nada. (6) No existe cambio de contraseña con sesión iniciada ni script de emergencia para fijarla. (7) Interfaz: `clasificarErrorRestablecer` distingue el enlace terminal por el texto exacto del backend (si cambia, se tratará como error de contraseña y el usuario reintentará); recargar `/restablecer` pierde el token por diseño (el fragmento se borra de la URL; el enlace del correo sigue vigente hasta usarse o vencer); si el navegador tiene sesión local de esa cuenta, tras el éxito la navegación completa a `/login` la revalida con `/api/auth/me`; la interfaz no limita por cuenta, y tras un 429 el formulario sigue usable. Sin prueba automática de estas pantallas. Prueba manual: dato aportado por el usuario, no verificado por el agente (2026-10-24: flujo completo, ver §6.12); sin verificar en otros navegadores, lectores de pantalla ni modo oscuro. |
 | **Correos HTML y logo en línea sin verificar en clientes reales** | `backend/src/services/mail/plantillas.js`, `backend/src/services/mail/logo.js`, `backend/src/assets/logo-correo.png` | El HTML solo se revisó en Chromium sin cabeza con la vista previa local (`npm run correo:vista-previa`), donde el logo va como `data:`. El usuario lo verificó a mano el 2026-10-24 en Gmail (logo circular y en línea, enlace con la IP de la red y correo de aviso) y que el enlace abre desde Gmail en su celular (Xiaomi, Android); dato aportado por el usuario, no verificado por el agente. No verificados: Outlook, otros clientes de correo y navegadores, lectores de pantalla, modo oscuro (se declara `color-scheme: light`, pero cada cliente decide), en Outlook, que el logo se muestre en línea sin aparecer como adjunto ni bloqueado, y la entrega por SMTP desde un entorno desplegado. El PNG (144×144, 8 782 bytes, paleta de 128 colores, esquinas con alfa 0) se generó a mano desde `frontend/src/assets/logo.jpg` con Pillow: recorte del disco (centro 193.6, 188.9; radio 193 px, con una franja superior de 8 px rellena replicando la fila del borde), máscara circular con borde suave de 1 px y cuantización con libimagequant; si cambia `logo.jpg` no se actualiza solo. |
+| **Despliegue completo en cada push a `main`** | `.github/workflows/deploy.yml` | El disparador es `push` a `main` sin filtro de rutas: un cambio solo de documentación reconstruye y publica backend y frontend. Mejora pendiente: filtrar por rutas. |
 | **Placeholder del modal de salida desactualizado** | `frontend/src/features/inventario/components/ModalSalidaInventario.jsx` | El placeholder del motivo sugiere "Venta en mostrador" aunque ahora existe el módulo de ventas (que registra sus propias salidas). |
 
 ---
@@ -1716,8 +1722,9 @@ La prioridad de fuentes de información para agentes y desarrolladores se rige p
 | `app/AGENTS.md` | Reglas de arquitectura y comportamiento para agentes. | Alineado con la estructura actual (14 modelos; 2FA implementado). |
 | `app/backend/README.md` | Puesta en marcha y mapa del backend. | Reescrito; remite a esta especificación. `migrate`, `correo:probar` y `reset-2fa` se corren con `npm --prefix backend run ...` desde `app/`. |
 | `app/frontend/README.md` | Puesta en marcha y mapa del frontend. | Reescrito; remite a esta especificación. |
-| `app/.github/DEPLOYMENT_GUIDE.md` | Manual de despliegue en Google Cloud. | No revisado en esta actualización (fuera de alcance); el despliegue está planeado, no ejecutado. |
-| `app/docs/PROJECT_SPECS.md` | Fuente de verdad técnica. | Verificada contra el código el 2026-10-22; §2.1, §2.2, §4.9 y §9 reverificados por script el 2026-10-24. |
+| `app/docs/RUNBOOK.md` | Despliegue y operación en Google Cloud (CD, despliegue manual, rollback, respaldos, secretos, Terraform). | Actualizado el 2026-10-25 con el despliegue continuo y Terraform (sección 12); los procedimientos llevan marca de estado. |
+| `infra/README.md` (raíz del repo) | Cómo correr Terraform, qué gestiona y qué no. | Actualizado el 2026-10-25: estado importado, `plan` esperado `No changes`. |
+| `app/docs/PROJECT_SPECS.md` | Fuente de verdad técnica. | Verificada contra el código el 2026-10-22; §2.1, §2.2, §4.9 y §9 reverificados por script el 2026-10-24; §7.3-§7.5 y las entradas de despliegue de §2.1 actualizadas el 2026-10-25. |
 | `app/docs/roadmap/auth-2fa/SKILL.md` | Spec de 2FA TOTP. | Implementado (cabecera verificada el 2026-10-24, remite a §4.6); el punto 6 recoge la política real y una sección anota las diferencias con lo planeado. |
 | `app/docs/roadmap/catalog-employee-crud/SKILL.md` | Spec de CRUD de catálogo y empleados. | Implementado (CRUD de usuarios y categorías; edición/baja de libros aparte, también implementada). La cabecera se actualizó el 2026-10-24 y anota las diferencias entre el diseño y el código. |
 | `app/docs/roadmap/inventory-email-alerts/SKILL.md` | Spec de alertas de inventario por correo. | No implementado. |
