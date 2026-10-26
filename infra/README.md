@@ -1,6 +1,6 @@
 # Infraestructura como código — Librería Oskar
 
-Terraform que describe lo que **ya existe** en Google Cloud (proyecto `libreria-oskar-seminario`, región `us-central1`). Se escribió a mano para importarlo sin cambiar nada. **Ya se importó**: un `apply` registró los 27 recursos en el estado (el único cambio fue `deletion_policy = "PREVENT"` en la base, un atributo propio de Terraform) y el `plan` siguiente, también tras la primera corrida del despliegue continuo, dio `No changes`.
+Terraform que describe lo que **ya existe** en Google Cloud (proyecto `libreria-oskar-seminario`, región `us-central1`) y contiene las altas pendientes del Job de alertas. La base se importó sin cambios de infraestructura: un `apply` registró los 27 recursos actuales en el estado (el único cambio fue `deletion_policy = "PREVENT"` en la base, un atributo propio de Terraform) y el `plan` siguiente dio `No changes` antes de agregar los recursos de alertas.
 
 **El CD no ejecuta Terraform.** Se corre a mano desde Cloud Shell (abajo).
 
@@ -8,13 +8,13 @@ Terraform que describe lo que **ya existe** en Google Cloud (proyecto `libreria-
 |---|---|
 | `terraform.tf` | Versión de Terraform, proveedor `hashicorp/google ~> 8.0`, estado remoto en GCS |
 | `variables.tf` | Valores públicos (proyecto, región, URLs, correo remitente, imagen inicial) |
-| `cuentas_servicio.tf` | `oskar-api` y `oskar-deployer` |
+| `cuentas_servicio.tf` | `oskar-api`, `oskar-alertas` y `oskar-deployer` |
 | `identidad_github.tf` | Pool `github` y proveedor `github-oskar` (WIF) |
 | `secretos.tf` | Los 5 secretos de Secret Manager (solo el contenedor) |
 | `registro_imagenes.tf` | Repositorio Docker `oskar` |
 | `base_datos.tf` | Instancia `oskar-db` y base `libreria_oskar` |
-| `cloud_run.tf` | Servicio `libreria-oskar-api` y Job `oskar-migrar` |
-| `permisos.tf` | Permisos IAM, todos `*_iam_member` (no autoritativos) |
+| `cloud_run.tf` | Servicio `libreria-oskar-api`, Job `oskar-migrar` y Job `oskar-alertas-inventario` |
+| `permisos.tf` | Permisos IAM, todos `*_iam_member` (no autoritativos); la cuenta del Job de alertas recibe solo Cloud SQL Client y acceso a `db-password`/`mail-password` |
 | `imports.tf` | Un bloque `import` por recurso existente (ya aplicados; quedan como registro de IDs) |
 | `outputs.tf` | URL del servicio, conexión de Cloud SQL, datos del CD |
 | `.terraform.lock.hcl` | Versión exacta del proveedor (`hashicorp/google` 8.8.1); se versiona |
@@ -35,7 +35,7 @@ terraform plan              # esperado: "No changes. Your infrastructure matches
 `terraform apply` solo se corre cuando se cambió un `.tf` a propósito y el `plan` muestra exactamente ese cambio y nada más.
 
 - Si `plan` muestra cambios (`~`), **no hagas `apply`**: el HCL no refleja la nube. Ajusta el `.tf` (o lleva la salida del plan a quien lo mantiene) y repite.
-- Con el estado ya importado no se espera ningún cambio: cualquier `+`, `~` o `-` que no venga de un `.tf` editado es una diferencia real (alguien tocó la consola o el HCL no refleja la nube).
+- Con el estado ya importado, acepta solo las altas de Job, cuenta de servicio y permisos de alertas que este cambio agrega; cualquier otra diferencia `+`, `~` o `-` requiere revisión antes de aplicar.
 - `.terraform.lock.hcl` lo genera `terraform init` y se versiona: fija la versión exacta del proveedor.
 - Los bloques de `imports.tf` se quedan como documentación de los IDs de importación: con los recursos ya en el estado, Terraform los ignora y no importan, cambian ni borran nada. Solo hay que quitarlos al reconstruir desde cero (paso 3 de abajo).
 
@@ -43,7 +43,7 @@ terraform plan              # esperado: "No changes. Your infrastructure matches
 
 El CD (`.github/workflows/deploy.yml`) es el que despliega versiones y **no ejecuta Terraform** (ningún paso del workflow lo invoca); Terraform se corre a mano. No se pelean:
 
-- **Imagen** del servicio y del Job: la cambia el CD en cada despliegue (`gcloud run jobs update --image` y `gcloud run services update --image`). Terraform la ignora (`ignore_changes`); `var.imagen_inicial` solo cuenta al crear desde cero.
+- **Imagen** del servicio y de los Jobs: la cambia el CD en cada despliegue (`gcloud run jobs update --image` y `gcloud run services update --image`). Terraform la ignora (`ignore_changes`); `var.imagen_inicial` solo cuenta al crear desde cero. Si el Job de alertas aún no existe, el workflow omite su actualización con una advertencia; después de crearlo mediante Terraform, vuelve a ejecutar el workflow para ponerle la imagen vigente antes de configurar Scheduler.
 - **Tráfico** del servicio: el CD lo manda a la última revisión o lo fija a la anterior en un rollback. Terraform lo ignora.
 - **`client` / `client_version`**: los rellena `gcloud` en cada despliegue. Terraform los ignora.
 - Todo lo demás (entorno, recursos, sondeo, escalado, cuentas, permisos) **lo manda Terraform**: un cambio hecho a mano en la consola aparecerá como diferencia en el siguiente `plan`, y un `apply` lo revertirá.

@@ -31,6 +31,8 @@ flowchart LR
     HOST["Firebase Hosting<br/>sitio libreria-oskar<br/>regla: /api/** va a Cloud Run<br/>el resto sirve la SPA"]
     RUN["Cloud Run servicio<br/>libreria-oskar-api<br/>min 0 / max 1 instancia"]
     JOB["Cloud Run Job<br/>oskar-migrar<br/>migraciones y seed"]
+    ALERTS["Cloud Run Job<br/>oskar-alertas-inventario<br/>reporte diario"]
+    SCHED["Cloud Scheduler<br/>07:00 America/Guatemala"]
     SQL[("Cloud SQL<br/>oskar-db PostgreSQL 15")]
     SEC["Secret Manager<br/>db-password, jwt-secret,<br/>two-factor-key, mail-password,<br/>admin-password"]
     AR["Artifact Registry<br/>oskar/api (imagen Docker)"]
@@ -43,9 +45,12 @@ flowchart LR
     HOST -->|"reescritura /api/**"| RUN
     RUN -->|"socket /cloudsql/..."| SQL
     JOB -->|"socket /cloudsql/..."| SQL
+    ALERTS -->|"socket /cloudsql/..."| SQL
+    SCHED -->|"ejecuta el Job"| ALERTS
     RUN -.->|"lee al arrancar"| SEC
     JOB -.->|"lee al arrancar"| SEC
     RUN -->|"correos de recuperación"| MAIL
+    ALERTS -->|"correos de stock mínimo"| MAIL
     GH -->|"docker push"| AR
     GH -->|"run jobs update y execute"| JOB
     GH -->|"run services update --image"| RUN
@@ -78,6 +83,8 @@ Las flechas que salen de GitHub Actions son el camino normal: el workflow "Despl
 | Proyecto | `libreria-oskar-seminario` | Contenedor de todo lo demás. Región `us-central1`. |
 | Cloud Run servicio | `libreria-oskar-api` | Ejecuta el backend. Cuenta de servicio `oskar-api` (la identidad con la que el servicio pide permisos). `--min-instances 0 --max-instances 1`. Se conecta a la BD por el socket `/cloudsql/libreria-oskar-seminario:us-central1:oskar-db`. |
 | Cloud Run Job | `oskar-migrar` | Misma imagen que el servicio. Ejecuta `node src/database/migrate.js && node src/database/seed.js`. Lo actualiza y lo ejecuta el CD en cada despliegue, antes de tocar el servicio; también se puede lanzar a mano. |
+| Cloud Run Job | `oskar-alertas-inventario` | Declarado en Terraform, pendiente de aplicar. Misma imagen, ejecuta `node src/scripts/enviar-alertas-inventario.js`; sin endpoints HTTP. |
+| Cloud Scheduler | `oskar-alertas-inventario-diario` (nombre sugerido) | Pendiente de crear por Alejandro. Frecuencia: 07:00, zona `America/Guatemala`. |
 | Cloud SQL | `oskar-db` | PostgreSQL 15, máquina `db-f1-micro`, base `libreria_oskar`, usuario `oskar_app`. Respaldo automático diario (ventana de 4 h desde las 08:00 UTC), se conservan 7. |
 | Secret Manager | `db-password`, `jwt-secret`, `two-factor-key`, `mail-password`, `admin-password` | Guarda las claves; ver sección 3. |
 | Artifact Registry | `us-central1-docker.pkg.dev/libreria-oskar-seminario/oskar/api` | Almacén de imágenes. La etiqueta (tag) son los 7 primeros caracteres del commit (`.github/workflows/deploy.yml:53-54`). La vigente cambia con cada despliegue: cómo consultarla en la sección 12.2. |
@@ -107,12 +114,12 @@ Una **variable de entorno** es un valor que el programa lee al arrancar. Un **se
 | Secreto | Variable | Servicio | Job | Qué pasa si falta |
 |---|---|---|---|---|
 | `db-password` | `DB_PASSWORD` | sí | sí | **No hay error claro de configuración**: el código usa una contraseña por defecto (`backend/src/config/env.js:49`) y la conexión a PostgreSQL falla por credenciales (código `28P01`, tratado como fatal, sin reintentos: `backend/src/database/esperarBaseDatos.js:23`). `/api/health` responde 503 y el Job termina con error. |
-| `jwt-secret` | `JWT_SECRET` | sí | sí | En producción el proceso **no arranca** (`backend/src/config/env.js:15-18`). Se carga al importar la configuración, así que también afecta al Job. |
-| `two-factor-key` | `TWO_FACTOR_ENCRYPTION_KEY` | sí | sí | En producción el proceso **no arranca** (`backend/src/config/twoFactor.config.js:36`). Debe ser de 64 caracteres hexadecimales (32 bytes), si no, tampoco arranca (`twoFactor.config.js:41-42`). |
-| `mail-password` | `MAIL_PASSWORD` | sí | sí | El proceso arranca, pero con `MAIL_PROVIDER=smtp` (valor por defecto en producción) los correos fallan: solo se imprime un aviso (`backend/src/config/mail.config.js:41-42`, `backend/src/config/env.js:26-28`). Afecta a "olvidé mi contraseña". |
+| `jwt-secret` | `JWT_SECRET` | sí | `oskar-migrar` sí; alertas no | API y Job de migraciones lo requieren. El Job de alertas usa el perfil batch y no carga JWT. |
+| `two-factor-key` | `TWO_FACTOR_ENCRYPTION_KEY` | sí | `oskar-migrar` sí; alertas no | API y Job de migraciones lo requieren. No es necesario para alertas. |
+| `mail-password` | `MAIL_PASSWORD` | sí | sí | Gmail SMTP para recuperación y reportes. El Job de alertas registra fallos del transporte. |
 | `admin-password` | `SEED_ADMIN_PASSWORD` | no | sí | Solo la usa el Job, y solo si el Administrador central **aún no existe**: sin ella (o si no cumple la política de contraseñas) `seed.js` falla (`backend/src/database/seed.js:35-38`). |
 
-> **Nota: el Job necesita el mismo entorno que el servicio.** Tanto `migrate.js` como `seed.js` y `reset-2fa.js` importan la configuración (`backend/src/config/sequelize.js:2` carga `./env`), y `env.js` lanza error en producción si faltan `JWT_SECRET` (`env.js:15-18`), `TWO_FACTOR_ENCRYPTION_KEY` (`twoFactor.config.js:36`) o `CORS_ORIGINS` (`security.config.js:17`). Por eso el Job no basta con sus propios secretos: debe tener también `JWT_SECRET`, `TWO_FACTOR_ENCRYPTION_KEY`, `CORS_ORIGINS` y las variables `DB_*` (`DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_PORT`), además de `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD`. En la configuración actual el Job recibe **todo** el entorno común del servicio (`DB_*`, `CORS_ORIGINS`, `FRONTEND_URL`, `MAIL_USER`, `TRUST_PROXY`, `LOGIN_RATE_LIMIT` y los secretos `DB_PASSWORD`, `JWT_SECRET`, `TWO_FACTOR_ENCRYPTION_KEY`, `MAIL_PASSWORD`) más `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD` (`infra/cloud_run.tf:11-38`).
+> **Entornos de Jobs separados.** `oskar-migrar` conserva su entorno común y variables del seed. `oskar-alertas-inventario` usa `APP_PROCESS_MODE=alertas-inventario`, `DB_*`, `MAIL_USER`, `DB_PASSWORD` y `MAIL_PASSWORD`; no recibe JWT, llave 2FA, CORS ni secretos del seed. `config/env.js` omite validaciones HTTP solo en el perfil batch; `server.js` lo rechaza.
 
 > **Nota: el entorno lo manda Terraform.** Las variables y secretos del servicio y del Job están declarados en `infra/cloud_run.tf`. Un cambio hecho a mano (consola o `gcloud ... --update-env-vars`) aparecerá como diferencia en el siguiente `terraform plan`, y un `apply` lo revertiría (`infra/README.md`, "Relación con el despliegue continuo"). Cambia el `.tf` y aplícalo (sección 12.3).
 
@@ -137,6 +144,9 @@ Una **variable de entorno** es un valor que el programa lee al arrancar. Un **se
 | `TRUST_PROXY`, `LOGIN_RATE_LIMIT` | Configuración del servicio y del Job (`infra/cloud_run.tf:19-20`) | Provisionales: `1` y `100`. Sin ellas: 0 y 10 (`security.config.js:33-34`); con 0 el limitador vería la IP del proxy de Google y todos los usuarios compartirían el mismo contador. |
 | `TWO_FACTOR_ENFORCED` | Opcional | Por defecto está **activo** en producción: el segundo factor es obligatorio para Administrador y Empleado (`twoFactor.config.js:25`). |
 | `DB_CONNECT_MAX_WAIT_MS` | Opcional | Por defecto, en producción, el servidor y los scripts reintentan conectar hasta 120 000 ms (`backend/src/database/esperarBaseDatos.js:17, 26-28`). |
+| `APP_PROCESS_MODE` | Terraform del Job de alertas | `alertas-inventario`; omite configuración exclusiva del servidor, sin cambiar los requisitos de la API. |
+
+El Job consulta `usuarios` activos con rol `Administrador`, valida cada correo y envía un mensaje individual. Usa el transporte existente (`MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASSWORD`, `MAIL_FROM`); por defecto SMTP es `smtp.gmail.com:587`. No requiere credenciales nuevas.
 
 **Dónde ver los nombres de los secretos** (sin valores):
 
@@ -203,6 +213,8 @@ gcloud run jobs update oskar-migrar --region us-central1 --image $IMG
 gcloud run jobs execute oskar-migrar --region us-central1 --wait
 ```
 Marca: **Ejecutado en producción** (los dos comandos los corre el CD en cada despliegue, `deploy.yml:76-80`; en la primera corrida el Job quedó con la imagen `:a29735a`). Si el Job termina con error, **no sigas**: revisa la sección 9 (logs) y la sección 6.
+
+El workflow también actualiza la imagen del Job `oskar-alertas-inventario`, pero no lo ejecuta. Si todavía no existe, consulta su lista y omite ese paso con una advertencia; los errores de autenticación o de `gcloud` siguen deteniendo el despliegue. Para el primer despliegue, Alejandro debe revisar y aplicar Terraform para crear Job y cuenta de servicio, y luego volver a ejecutar el workflow para que el Job use la imagen con el script actual. Después puede configurar Cloud Scheduler. Terraform no crea Scheduler.
 
 ### 4.3 Actualizar el servicio
 
@@ -503,7 +515,64 @@ Ver sección 4.5: `curl -s https://libreria-oskar.web.app/api/health`. `healthy`
 | Login responde 429 "Demasiados intentos" | Se superó `LOGIN_RATE_LIMIT` en la ventana de 15 min (`rateLimit.js:27-29`, `security.config.js:35`) | Esperar o reiniciar el servicio (los contadores viven en memoria) |
 | Nadie recibe correos | `MAIL_PASSWORD`/`MAIL_USER`/`FRONTEND_URL` faltan o la contraseña de aplicación fue revocada | Logs al arrancar (`[WARN CONFIG]`) |
 
-### 9.4 Restablecer el 2FA de un usuario en la nube (`reset-2fa`) y administrador bloqueado
+### 9.4 Alertas automáticas de inventario
+
+El proceso diario detecta libros activos con `stock_actual <= stock_minimo`, incluye todas las bodegas y conserva el snapshot de ese día. Envía un correo separado a cada Administrador activo. No cambia stock ni crea movimientos.
+
+**Ejecución y prueba local segura.** Desde `app/`, con PostgreSQL de pruebas iniciado (`docker compose --profile test up -d db-test`) y schema actual aplicado:
+
+```bash
+NODE_ENV=test TEST_DB_HOST=127.0.0.1 TEST_DB_PORT=5435 TEST_DB_USER=postgres TEST_DB_PASSWORD=postgres npm --prefix backend run alertas:inventario -- --dry-run
+```
+
+`--dry-run` consulta datos y muestra un resumen JSON con alertas y conteos; no escribe reportes/entregas ni envía correos. Con `NODE_ENV=test`, el transporte de correo es consola aunque se quite el flag; las pruebas automatizadas también inyectan SMTP simulado. No usar datos de producción para la prueba local.
+
+**Ejecución manual del Job.** Cloud Shell (bash), solo después de crear el Job y aplicar la migración 020:
+
+```bash
+gcloud run jobs execute oskar-alertas-inventario --region us-central1 --wait
+```
+
+Una ejecución normal es idempotente por día: entregas `enviado` no se reenvían; fallos SMTP reintentables se limitan a tres intentos persistidos. Un resultado `incierto` (por ejemplo, corte durante la sesión SMTP) nunca se reintenta automáticamente. No existe garantía "exactamente una vez": SMTP puede aceptar el correo antes de que PostgreSQL confirme el resultado.
+
+**Scheduler e IAM para Alejandro.** Crear una cuenta de servicio dedicada para Scheduler y darle `roles/run.invoker` únicamente sobre el Job. La identidad que crea el trigger necesita `iam.serviceAccounts.actAs` sobre esa cuenta. Habilitar `cloudscheduler.googleapis.com`. Ejemplo desde Cloud Shell (la cuenta y el trigger son recursos nuevos; revisar proyecto y permisos antes de correrlo):
+
+```bash
+gcloud iam service-accounts create oskar-alertas-scheduler --display-name="Invoca el Job diario de alertas"
+gcloud services enable cloudscheduler.googleapis.com
+gcloud run jobs add-iam-policy-binding oskar-alertas-inventario --region us-central1 --member="serviceAccount:oskar-alertas-scheduler@libreria-oskar-seminario.iam.gserviceaccount.com" --role="roles/run.invoker"
+gcloud scheduler jobs create http oskar-alertas-inventario-diario --location us-central1 --schedule="0 7 * * *" --time-zone="America/Guatemala" --uri="https://run.googleapis.com/v2/projects/libreria-oskar-seminario/locations/us-central1/jobs/oskar-alertas-inventario:run" --http-method=POST --oauth-service-account-email="oskar-alertas-scheduler@libreria-oskar-seminario.iam.gserviceaccount.com"
+```
+
+El Job usa Cloud SQL por `/cloudsql/libreria-oskar-seminario:us-central1:oskar-db`, timeout 600 s, una tarea y un reintento de tarea de Cloud Run. Corre como `oskar-alertas`, con `roles/cloudsql.client` y acceso de Secret Manager únicamente a `db-password` y `mail-password`. Gmail usa `MAIL_USER` y `MAIL_PASSWORD`; `MAIL_HOST`, `MAIL_PORT` y `MAIL_FROM` son opcionales (`smtp.gmail.com`, `587` y `MAIL_USER` por defecto). No necesita JWT, 2FA ni secretos del seed. El ejemplo de Scheduler sigue la [guía oficial de Cloud Run Jobs programados](https://docs.cloud.google.com/run/docs/execute/jobs-on-schedule).
+
+**Comprobaciones de base de datos previas al primer Job.** Sin modificar datos, confirma en la base `libreria_oskar` que la extensión y la función UUID existen, y que la cuenta de migraciones puede crear tablas en `public`:
+
+```sql
+SELECT extname FROM pg_extension WHERE extname = 'uuid-ossp';
+SELECT to_regprocedure('uuid_generate_v4()') IS NOT NULL AS uuid_v4_disponible;
+SELECT has_schema_privilege('oskar_app', 'public', 'CREATE') AS puede_crear_en_public;
+```
+
+La migración 020 crea ambas tablas con `oskar_app` desde `oskar-migrar`; esa misma cuenta será dueña de las tablas y el Job la usará para consultar/actualizar sus registros. Cloud SQL PostgreSQL 15 soporta `uuid-ossp`, pero la extensión debe estar habilitada en la base. Si las consultas no confirman esas condiciones, detener el primer Job y resolver los permisos/extensión con el DBA (la cuenta `oskar_app` no debe recibir privilegios de superusuario).
+
+**Leer resultados y recuperar.** Revisa Cloud Run → Jobs → `oskar-alertas-inventario` → ejecución → logs. Cada ejecución imprime JSON con `fecha_local`, estado, número de alertas, envíos, fallos e inciertos; no registra direcciones. Consulta de solo lectura en Cloud SQL Studio:
+
+```sql
+SELECT r.fecha_local, r.estado AS estado_reporte, r.cantidad_alertas,
+       e.nombre_administrador, e.estado AS estado_entrega, e.intentos,
+       e.enviado_en, e.error
+FROM alertas_inventario_reportes r
+LEFT JOIN alertas_inventario_entregas e ON e.reporte_id = r.id
+WHERE r.fecha_local = (CURRENT_TIMESTAMP AT TIME ZONE 'America/Guatemala')::date
+ORDER BY e.nombre_administrador;
+```
+
+Ante `fallido`, corrige SMTP/datos y vuelve a ejecutar el Job: solo se reclaman pendientes o fallos clasificados como seguros y dentro del límite. Ante `incierto`, compara primero con Gmail (carpeta Enviados y registros disponibles); si no se puede confirmar la aceptación, deja la entrega en revisión y no la restablezcas automáticamente a pendiente. Si se confirma que no fue aceptada, un DBA autorizado puede rearmar esa entrega de forma controlada antes de reejecutar.
+
+Marca de los comandos de ejecución de Cloud Run/Scheduler: **No ejecutados por esta implementación**. Alejandro debe aplicar Terraform y configurar Scheduler tras revisar el plan.
+
+### 9.5 Restablecer el 2FA de un usuario en la nube (`reset-2fa`) y administrador bloqueado
 
 El **2FA** (verificación en dos pasos) pide, además de la contraseña, un código de 6 dígitos de una app autenticadora. Es obligatorio para Administrador y Empleado en producción. Si alguien pierde el teléfono, o si cambió la llave `two-factor-key`, hay que restablecerlo.
 
@@ -639,9 +708,9 @@ cd ~/oskar/infra
 terraform init              # descarga el proveedor y conecta con el estado en GCS
 terraform fmt -check        # formato
 terraform validate          # sintaxis y esquema
-terraform plan              # esperado: "No changes"
+terraform plan              # para esta tarea: 1 Job nuevo de alertas, sujeto a revisión
 ```
-Marca: **Ejecutado en producción**. Si `plan` muestra cambios que no vienen de un `.tf` editado a propósito, **no hagas `apply`**: alguien cambió algo en la consola o el HCL no refleja la nube. `terraform apply` solo se corre cuando se editó un `.tf` a propósito y el `plan` muestra exactamente ese cambio. Los bloques `import` de `infra/imports.tf` se quedan como registro de los IDs y ya no hacen nada.
+Marca: el procedimiento base fue **Ejecutado en producción**; el cambio de alertas está **pendiente de revisión**. Este plan debe mostrar el Job `oskar-alertas-inventario` nuevo y ninguna diferencia inesperada. No ejecutar `apply` hasta que Alejandro confirme que el plan contiene solo cambios aprobados. Los bloques `import` de `infra/imports.tf` se quedan como registro de los IDs y ya no hacen nada.
 
 **Por qué no se pelea con el CD.** Cada uno tiene su parte:
 

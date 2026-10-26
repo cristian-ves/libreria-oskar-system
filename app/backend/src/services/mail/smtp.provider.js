@@ -41,7 +41,7 @@ function crearProveedorSmtp(config, { crearTransporte = crearTransporteNodemaile
           filename: a.nombre, content: a.contenido, contentType: a.tipo, cid: a.cid, contentDisposition: 'inline',
         }));
       }
-      await transporter.sendMail(correo);
+      return transporter.sendMail(correo);
     },
     async verificar() {
       exigirConfig();

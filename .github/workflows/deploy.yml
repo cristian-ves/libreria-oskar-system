@@ -79,6 +79,17 @@ jobs:
       - name: Ejecutar migraciones y seed
         run: gcloud run jobs execute oskar-migrar --region us-central1 --wait
 
+      # Job independiente: se actualiza con la imagen, pero Scheduler lo ejecuta.
+      - name: Actualizar el Job de alertas de inventario
+        run: |
+          JOB_NAME="oskar-alertas-inventario"
+          JOBS=$(gcloud run jobs list --region us-central1 --filter="name=${JOB_NAME}" --format="value(name)")
+          if [[ "$JOBS" == "$JOB_NAME" ]]; then
+            gcloud run jobs update "$JOB_NAME" --region us-central1 --image "$IMG"
+          else
+            echo "::warning::No existe ${JOB_NAME}; se omite su actualización. Terraform debe crearlo antes de configurar Cloud Scheduler."
+          fi
+
       - name: Actualizar el servicio
         id: servicio
         run: gcloud run services update libreria-oskar-api --region us-central1 --image "$IMG"

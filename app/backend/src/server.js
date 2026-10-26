@@ -1,5 +1,8 @@
-const app = require('./app');
 const env = require('./config/env');
+if (env.APP_PROCESS_MODE !== 'api') {
+  throw new Error('El servidor HTTP requiere APP_PROCESS_MODE=api o la variable sin definir.');
+}
+const app = require('./app');
 const { sequelize } = require('./config/sequelize');
 const { esperarBaseDatos } = require('./database/esperarBaseDatos');
 

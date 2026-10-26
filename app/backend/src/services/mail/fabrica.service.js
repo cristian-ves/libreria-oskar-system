@@ -101,6 +101,43 @@ function crearServicioCorreo({
     }
   }
 
+  // Un intento para procesos persistentes que controlan sus reintentos en BD.
+  // No programa los reintentos en memoria usados por recuperación de contraseña.
+  async function enviarUnaVez(entrada) {
+    const validacion = validarMensaje(entrada);
+    if (!validacion.ok) return { ok: false, intentos: 0, reintentable: false, incierto: false, motivo: validacion.detalle };
+    try {
+      const info = await intentar(validacion.mensaje);
+      // Nodemailer puede resolver sendMail aunque todos los destinatarios fueran rechazados.
+      // Este Job envía a una sola persona, así que verifica aceptación SMTP efectiva.
+      if (info && Array.isArray(info.rejected) && info.rejected.length > 0
+        && (!Array.isArray(info.accepted) || info.accepted.length === 0)) {
+        const responseCode = Number(String(info.response || '').match(/\b([45]\d\d)\b/)?.[1] || 0);
+        const error = new Error('El servidor SMTP rechazó el destinatario.');
+        error.code = 'EENVELOPE';
+        error.command = 'RCPT TO';
+        error.responseCode = responseCode;
+        throw error;
+      }
+      return { ok: true, intentos: 1, reintentable: false, incierto: false };
+    } catch (error) {
+      const codigo = Number(error && error.responseCode);
+      const codigoError = error && error.code;
+      const comando = String(error && error.command || '').toUpperCase();
+      const antesDeAceptar = ['ECONNECTION', 'ECONNREFUSED', 'EDNS', 'ENOTFOUND'].includes(codigoError)
+        || (['ETIMEDOUT', 'ESOCKET', 'ECONNRESET'].includes(codigoError)
+          && ['CONN', 'CONNECT', 'AUTH', 'MAIL FROM', 'RCPT TO'].some((stage) => comando.includes(stage)));
+      const reintentable = !esPermanente(error) && (antesDeAceptar || (codigo >= 400 && codigo < 500));
+      const incierto = Boolean(error && error.incierto)
+        || (!reintentable && !esPermanente(error));
+      return {
+        ok: false, intentos: 1, incierto,
+        reintentable,
+        motivo: sanitizar(error),
+      };
+    }
+  }
+
   async function verificar() {
     try {
       await proveedor.verificar();
@@ -121,7 +158,7 @@ function crearServicioCorreo({
     }
   }
 
-  const servicio = { enviar, verificar, esperarPendientes };
+  const servicio = { enviar, enviarUnaVez, verificar, esperarPendientes };
   if (proveedor.bandeja) {
     servicio.bandeja = proveedor.bandeja;
     servicio.vaciarBandeja = () => proveedor.vaciarBandeja();

@@ -244,8 +244,8 @@ test('Salida con venta_id: el trigger descuenta stock y se guarda venta_id', asy
   assert.equal((await Inventario.findByPk(inventario.id)).stock_actual, 2);
 });
 
-test('Los 14 modelos se inicializan y Venta carga sus asociaciones', async () => {
-  assert.equal(Object.keys(sequelize.models).length, 14);
+test('Los 16 modelos se inicializan y Venta carga sus asociaciones', async () => {
+  assert.equal(Object.keys(sequelize.models).length, 16);
   assert.ok(sequelize.models.Venta && sequelize.models.VentaDetalle);
 
   const venta = await Venta.findOne({

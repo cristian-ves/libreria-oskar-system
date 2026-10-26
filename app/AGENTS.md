@@ -6,7 +6,7 @@ Sistema web de inventario interno + catálogo informativo de libros. Sin carrito
 - Frontend: React 18, Vite 5, Tailwind 3 (paleta `oskar`), lucide-react, html5-qrcode, react-router-dom 6. JSX, sin TypeScript. En `app/frontend/src/`:
   `views/` (orquestadores delgados), `components/` y `components/ui/`, `context/`, `features/{catalogo,categorias,inventario,libros,registrar-libro,reportes,seguridad,usuarios,ventas}/{components,hooks}`, `hooks/`, `services/api/`, `utils/`.
 - Frontend, reglas: todo HTTP sale de `services/api/` (`apiFetch` inyecta el JWT y ante 401 con token limpia la sesión y va a `/login`; `auth.api.js`, `catalogo.api.js`, `dosFactores.api.js` y `recuperacion.api.js` usan `fetch` directo a propósito; `dosFactores.api.js` en los pasos con token temporal y `recuperacion.api.js` en endpoints públicos sin sesión, donde un 401 no debe cerrar la sesión). Roles solo vía `utils/roles.js`; token solo vía `utils/tokenStorage.js`. Las vistas no contienen lógica de datos: va en hooks de la feature.
-- Backend: Node 22, Express 4, CommonJS, en `app/backend/src/`: `routes → controllers → services → repositories → models` (más `config/`, `middlewares/`, `utils/`, `database/`). Sequelize 6.37 sobre PostgreSQL, 14 modelos.
+- Backend: Node 22, Express 4, CommonJS, en `app/backend/src/`: `routes → controllers → services → repositories → models` (más `config/`, `middlewares/`, `utils/`, `database/`). Sequelize 6.37 sobre PostgreSQL, 16 modelos.
 - Backend, fachadas: `services/libro.service.js` (sobre `services/libro/*`), `repositories/inventario.repository.js` (sobre `repositories/inventario/*`) y `middlewares/validator.js` (sobre `middlewares/validators/*`) son fachadas. Los consumidores importan la fachada, nunca los módulos internos. `routes/index.js` solo cablea; los handlers viven en controladores.
 - Utilidades compartidas: `utils/isbn.js`, `utils/uuid.js`, `utils/slug.js`, `utils/errors.js`. No reimplementes validación de ISBN/UUID.
 - BD: PostgreSQL con UUID. `app/database/schema.sql` es la fuente de verdad; migraciones en `app/database/migrations/`.
@@ -69,13 +69,15 @@ Sistema web de inventario interno + catálogo informativo de libros. Sin carrito
 
 ## Trabajo en equipo
 - Ramas nuevas desde `develop`; se integran en `develop`. Todo push a `main` despliega a producción (Cloud Run y Firebase Hosting) con `.github/workflows/deploy.yml` (raíz del repo), incluso si solo cambia documentación; por eso no se fusiona ni se empuja a `main` sin acuerdo. Cómo funciona y cómo volver atrás: `app/docs/RUNBOOK.md` §4, §5 y §12; infraestructura en `infra/` (Terraform, ver `infra/README.md`).
-- Migraciones: existen 002, 003, 004 (ventas), 010 (2FA) y 011 (recuperación de contraseña). Reparto de números nuevos: 005-009 para el otro desarrollador y 010-019 para seguridad. Todo cambio de esquema se refleja también en `database/schema.sql` y en los modelos, siempre con autorización explícita.
+- Migraciones: existen 002, 003, 004 (ventas), 010 (2FA), 011 (recuperación de contraseña) y 020 (alertas de inventario). 005-009 estaban asignadas al otro desarrollador; 010-019 se usaron para seguridad. Todo cambio de esquema se refleja también en `database/schema.sql` y en los modelos, siempre con autorización explícita.
 - Archivos compartidos con riesgo de conflicto: `backend/src/routes/index.js`, `backend/src/models/index.js`, `frontend/src/App.jsx`, `frontend/src/components/Navbar.jsx`, `database/schema.sql`, `docs/PROJECT_SPECS.md`. Trae `develop` antes de editarlos y mantén el cambio mínimo.
 - Todo endpoint, servicio o repositorio nuevo trae pruebas en `backend/tests/` (con `db-test` arriba) y no debe romper las existentes.
 - Ya implementados: CRUD admin de usuarios y categorías, edición/baja de libros, ventas y reportes con exportación Excel/PDF.
 
-## Roadmap (NO implementado)
-Alertas de inventario por correo (existe `services/mail/`, que hoy solo usan la recuperación de contraseña y el script `probar-correo.js`). No las asumas existentes. Spec en `app/docs/roadmap/inventory-email-alerts`; catalog-employee-crud, ventas y auth-2fa quedan allí como referencia de diseño ya implementada.
+## Jobs
+- `oskar-alertas-inventario` ejecuta alertas diarias desde `backend/src/scripts/enviar-alertas-inventario.js`; el código/Terraform están preparados, pero el Job y Scheduler requieren configuración/aplicación autorizada en Google Cloud.
+- Gmail SMTP no es transaccional: una entrega ambigua queda en revisión y no se reintenta automáticamente. No alteres los estados inciertos sin verificación.
+- La especificación de diseño original está en `app/docs/roadmap/inventory-email-alerts`; catalog-employee-crud, ventas y auth-2fa permanecen como referencia de diseño ya implementada.
 
 ## Skills activas (`app/.agents/skills/<nombre>/SKILL.md`)
 | Skill | Úsala para |

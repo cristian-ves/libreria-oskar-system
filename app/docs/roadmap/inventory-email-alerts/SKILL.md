@@ -3,7 +3,7 @@ name: inventory-email-alerts
 description: Implementar alertas por correo de desabastecimiento y libros sin precio sin spam ni consultas destructivas.
 ---
 
-> **ESTADO: NO IMPLEMENTADO (roadmap).** Esta skill describe una función planificada que aún no existe en el código. No usar como instrucción de trabajo hasta su implementación.
+> **ESTADO: IMPLEMENTADO EN BACKEND.** El proceso, persistencia y pruebas están en código. El aprovisionamiento del Job en Cloud Run y Cloud Scheduler permanece pendiente; este documento conserva el diseño original como referencia.
 
 # Alertas por correo de inventario
 

@@ -28,6 +28,14 @@ resource "google_project_iam_member" "proyecto" {
   member   = each.value.member
 }
 
+# Nuevo principal: fuera de local.permisos_proyecto para no convertir el
+# bloque import existente en un intento de importar una vinculación aún ausente.
+resource "google_project_iam_member" "alertas_cloudsql_client" {
+  project = var.project_id
+  role    = "roles/cloudsql.client"
+  member  = "serviceAccount:${google_service_account.alertas_inventario.email}"
+}
+
 # --- Secretos: solo oskar-api los lee, cada uno por separado ---------------
 
 resource "google_secret_manager_secret_iam_member" "api_lee_secretos" {
@@ -35,6 +43,14 @@ resource "google_secret_manager_secret_iam_member" "api_lee_secretos" {
   secret_id = each.value.secret_id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.api.email}"
+}
+
+# El Job solo consume la contraseña de DB y la credencial Gmail.
+resource "google_secret_manager_secret_iam_member" "alertas_lee_secretos" {
+  for_each  = toset(["db-password", "mail-password"])
+  secret_id = google_secret_manager_secret.secretos[each.key].secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.alertas_inventario.email}"
 }
 
 # --- Servicio público: la SPA llega por el rewrite de Firebase Hosting ------
@@ -67,6 +83,13 @@ resource "google_service_account_iam_member" "github_usa_deployer" {
 # oskar-deployer puede desplegar revisiones que corren como oskar-api
 resource "google_service_account_iam_member" "deployer_actua_como_api" {
   service_account_id = google_service_account.api.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.deployer.email}"
+}
+
+# gcloud jobs update debe poder conservar la identidad de ejecución del Job.
+resource "google_service_account_iam_member" "deployer_actua_como_alertas" {
+  service_account_id = google_service_account.alertas_inventario.name
   role               = "roles/iam.serviceAccountUser"
   member             = "serviceAccount:${google_service_account.deployer.email}"
 }

@@ -15,6 +15,11 @@ function validarCuerpo(nombre, valor) {
   return null;
 }
 
+function esDireccionValida(valor) {
+  return typeof valor === 'string' && valor.length <= 254 && !CRLF.test(valor)
+    && DIRECCION.test(valor.trim());
+}
+
 // Adjuntos en línea (imágenes referenciadas con cid:). Devuelve { lista } o { error }.
 function validarAdjuntos(adjuntos) {
   if (adjuntos === undefined || adjuntos === null) return { lista: undefined };
@@ -72,4 +77,4 @@ function validarMensaje(entrada) {
   };
 }
 
-module.exports = { validarMensaje };
+module.exports = { validarMensaje, esDireccionValida };

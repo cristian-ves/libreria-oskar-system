@@ -605,12 +605,12 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 - **Fuente de verdad**: `app/database/schema.sql` es la fuente de verdad declarada para nombres de tablas, columnas, restricciones, UUIDs y triggers.
 - **Mecanismo de migraciones**: Directorio `app/database/migrations/` ejecutado secuencialmente por `app/backend/src/database/migrate.js`, registrando ejecuciones en la tabla `schema_migrations`.
 - **Diferencias entre `schema.sql` y modelos Sequelize**:
-  - No hay divergencias estructurales: los 14 modelos definidos en `src/models/` mapean exactamente las 14 tablas del DDL.
+  - No hay divergencias estructurales: los modelos definidos en `src/models/` mapean las tablas del DDL.
   - La migración `002_categorias.sql` ya está integrada en el `schema.sql` principal.
   - `schema.sql` siembra las **20 categorías** (las 6 originales y las 14 de la migración `003_categorias_adicionales.sql`, con `ON CONFLICT (nombre) DO NOTHING`). Una BD creada desde cero con `schema.sql` ya equivale a aplicar `schema.sql + 002 + 003`. Las migraciones 002 y 003 permanecen como scripts idempotentes válidos para BDs ya existentes.
   - La migración `004_ventas.sql` (secuencia `ventas_numero_seq`, tablas `ventas` y `venta_detalles`, columna `movimientos_inventario.venta_id` e índices) es idempotente y su DDL es el mismo que `schema.sql`: una BD nueva equivale a la BD anterior + 004. La API de ventas (crear, listar, consultar y anular) existe desde el segundo commit de la serie y la interfaz (`/ventas`, `/ventas/nueva`, `/ventas/:id`) desde el tercero.
   - La migración `010_dos_factores.sql` (columnas `dos_factores_intentos`, `dos_factores_bloqueado_hasta` y `dos_factores_ultimo_paso` al final de `usuarios`, tabla `codigos_respaldo_2fa` e índice `idx_codigos_respaldo_2fa_usuario_id`) es idempotente y su DDL es el mismo que `schema.sql`, con las columnas en el mismo orden. Aplicada dos veces a `libreria_oskar_test` sin errores (la segunda la omite `schema_migrations`; re-ejecutar su SQL dentro de una transacción revertida tampoco falla). La equivalencia por `pg_dump --schema-only` no está verificada. El rango 010-019 queda reservado para el 2FA.
-  - La migración `011_recuperacion_contrasena.sql` (columnas `token_recuperacion_expira` y `password_cambiada_en` al final de `usuarios`, después de las de 010 y en el mismo orden, e índice único parcial `idx_usuarios_token_recuperacion`) es idempotente y su DDL es el mismo que `schema.sql`. Reutiliza la columna existente `token_recuperacion` para el SHA-256 del token (64 hexadecimales en `VARCHAR(255)`). Aplicada dos veces a `libreria_oskar_test` (la segunda la omite `schema_migrations`; re-ejecutar su SQL en una transacción revertida tampoco falla). No crea tablas: siguen 14. La equivalencia por `pg_dump --schema-only` no está verificada.
+  - La migración `011_recuperacion_contrasena.sql` (columnas `token_recuperacion_expira` y `password_cambiada_en` al final de `usuarios`, después de las de 010 y en el mismo orden, e índice único parcial `idx_usuarios_token_recuperacion`) es idempotente y su DDL es el mismo que `schema.sql`. Reutiliza la columna existente `token_recuperacion` para el SHA-256 del token (64 hexadecimales en `VARCHAR(255)`). La migración `020_alertas_stock_minimo.sql` agrega las tablas de reportes y entregas diarios; el DDL equivalente está en `schema.sql`.
   - La tabla `schema_migrations` es creada exclusivamente en runtime por `migrate.js` y no forma parte del `schema.sql` estático.
 
 ### 3.2 Catálogo de Tablas y Columnas Clave
@@ -703,6 +703,12 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `venta_detalles` | `cantidad` | `INT` | NOT NULL, CHECK (`cantidad > 0`) |
 | `venta_detalles` | `precio_unitario` | `NUMERIC(10,2)` | NOT NULL, CHECK (`precio_unitario > 0`) (snapshot del precio) |
 | `venta_detalles` | `subtotal` | `NUMERIC(10,2)` | NOT NULL, `ck_venta_detalles_subtotal`: `subtotal = cantidad * precio_unitario` |
+| `alertas_inventario_reportes` | `fecha_local` | `DATE` | UNIQUE; fecha calendario de `America/Guatemala` |
+| `alertas_inventario_reportes` | `estado`, `snapshot`, `cantidad_alertas` | `VARCHAR(24)`, `JSONB`, `INTEGER` | Estado validado; snapshot diario y conteo no negativo |
+| `alertas_inventario_reportes` | `iniciado_en`, `finalizado_en`, `error`, lease | `TIMESTAMPTZ`, `TEXT`, `UUID`, `TIMESTAMPTZ` | Seguimiento de ejecución, errores y lease |
+| `alertas_inventario_entregas` | `reporte_id`, `administrador_id` | `UUID`, `UUID` | FK al reporte; UNIQUE por reporte y administrador |
+| `alertas_inventario_entregas` | `correo_electronico`, `nombre_administrador` | `VARCHAR(254)`, `VARCHAR(150)` | Snapshot histórico, sin FK a usuarios |
+| `alertas_inventario_entregas` | `estado`, `intentos`, `reintento_seguro`, `enviado_en`, `error`, lease | Varios | Resultado, intentos limitados y recuperación conservadora |
 
 ### 3.3 Enums y Tipos Categóricos
 - **Enums nativos en Postgres**: No existe ningún tipo `CREATE TYPE ... AS ENUM`.
@@ -745,6 +751,8 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `idx_ventas_usuario_id` | `ventas` | `usuario_id` | B-Tree |
 | `idx_venta_detalles_libro_id` | `venta_detalles` | `libro_id` | B-Tree |
 | `idx_movimientos_venta_id` | `movimientos_inventario` | `venta_id` | Parcial: `WHERE venta_id IS NOT NULL` |
+| `idx_alertas_entregas_pendientes` | `alertas_inventario_entregas` | `reporte_id, estado, lease_hasta` | Búsqueda/reclamo de entregas |
+| `idx_alertas_reportes_estado_fecha` | `alertas_inventario_reportes` | `estado, fecha_local DESC` | Consulta de reportes |
 
 ### 3.6 Detalle Específico de Movimientos de Inventario
 - **Nombre de columna para motivo**: La columna se llama exactamente `motivo_detalle` (tipo `TEXT`).
@@ -768,6 +776,7 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `DB_NAME` | String | Nombre de la base de datos de negocio | `libreria_oskar` |
 | `DATABASE_URL` | String | URI de conexión completa a PostgreSQL | `undefined` |
 | `DB_CONNECT_MAX_WAIT_MS` | Número (entero 0-600000, ms) | Tiempo máximo que `server.js`, `migrate.js` y `seed.js` esperan a la BD al arrancar, reintentando. Lo lee `database/esperarBaseDatos.js` directamente de `process.env` (no pasa por `config/env.js`); un valor inválido lanza Error sin mostrar el valor | `120000` en producción; `0` (un solo intento) en los demás entornos |
+| `APP_PROCESS_MODE=alertas-inventario` | String | Perfil del proceso batch; omite validaciones propias de HTTP, JWT, 2FA y recuperación. El servidor HTTP rechaza este perfil | Job/script |
 | `TEST_DB_HOST` | String | Host de base de pruebas aislada | `localhost` |
 | `TEST_DB_PORT` | Número | Puerto de base de pruebas | `5435` |
 | `TEST_DB_USER` | String | Usuario de base de pruebas | `postgres` |
@@ -785,16 +794,16 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `GOOGLE_BOOKS_API_KEY` | String | API Key opcional de Google Books | `null` |
 | `DIAS_STOCK_OBSOLETO` | Número | Umbral de días sin salidas para clasificar stock muerto | `90` |
 | `SEQUELIZE_LOGGING` | Booleano | Si habilita salida de queries SQL a consola | `false` |
-| `CORS_ORIGINS` | Lista CSV de orígenes HTTP(S) | Orígenes autorizados por CORS; obligatoria en producción | Ausente: permisivo solo en desarrollo; producción falla al iniciar. Compose: `http://localhost:5173,http://localhost:4173` (sobreescribible) |
+| `CORS_ORIGINS` | Lista CSV de orígenes HTTP(S) | Orígenes autorizados por CORS de la API; obligatoria en producción | Ausente: permisivo solo en desarrollo; API y `oskar-migrar` fallan en producción. El perfil de alertas no levanta HTTP ni procesa CORS. |
 | `TRUST_PROXY` | Entero no negativo | Número exacto de saltos proxy confiables para `req.ip` | `0` (no confiar en `X-Forwarded-For`) |
 | `LOGIN_RATE_LIMIT` | Entero positivo | Intentos por IP permitidos en login | `10` |
 | `LOGIN_RATE_WINDOW_MS` | Entero positivo en milisegundos | Ventana del limitador de login | `900000` (15 minutos) |
-| `FRONTEND_URL` | Origen HTTP(S) sin ruta ni barra final | Base del enlace de recuperación de contraseña (`{FRONTEND_URL}/restablecer#token=…`). Valor inválido lanza Error sin mostrarlo. Con `NODE_ENV=test` se ignora | `http://localhost:5173` fuera de producción; en producción, si falta, `[WARN CONFIG]` y no se envían enlaces. Compose: `http://localhost:5173` (sobreescribible) |
+| `FRONTEND_URL` | Origen HTTP(S) sin ruta ni barra final | Base del enlace de recuperación (`{FRONTEND_URL}/restablecer#token=…`). Solo se usa en API/migraciones, no por alertas. Valor inválido lanza Error sin mostrarlo. Con `NODE_ENV=test` se ignora | `http://localhost:5173` fuera de producción; en producción, si falta, `[WARN CONFIG]` y no se envían enlaces. Compose: `http://localhost:5173` (sobreescribible) |
 | `SEED_ADMIN_EMAIL` | String (correo, máx. 150) | Solo el seed y solo con `NODE_ENV=production`: correo del Administrador central. Obligatoria en producción, sin valor por defecto; se normaliza con `trim()` y minúsculas y, si falta o es inválida, el seed falla antes de abrir la transacción | Sin valor |
 | `SEED_ADMIN_PASSWORD` | String | Contraseña del Administrador. En producción solo se exige (y se valida con `utils/passwordPolicy.js`) cuando el usuario no existe; nunca se modifica uno existente. Fuera de producción es la contraseña de `admin@libreriaoskar.com` y se reinicia en cada ejecución | Fuera de producción: `Admin123!`; en producción: sin valor |
 | `SEED_EMPLEADO_PASSWORD` | String | Contraseña de `empleado@libreriaoskar.com` en el seed (sin cambios) | Fuera de producción: `Empleado123!`; en producción: sin valor (el seed solo avisa) |
 
-- **Producción (Cloud Run)**: el servicio y el Job `oskar-migrar` reciben el mismo entorno común: `DB_HOST` (socket `/cloudsql/...`), `DB_PORT`, `DB_USER`, `DB_NAME`, `CORS_ORIGINS`, `FRONTEND_URL`, `MAIL_USER`, `TRUST_PROXY=1`, `LOGIN_RATE_LIMIT=100`, y desde Secret Manager `DB_PASSWORD`, `JWT_SECRET`, `TWO_FACTOR_ENCRYPTION_KEY` y `MAIL_PASSWORD`; el Job suma `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD` (secreto `admin-password`). Lo declara Terraform en `infra/cloud_run.tf:11-38`; `NODE_ENV`, `PORT` y `MIGRATIONS_DIR` vienen de la imagen. Tabla de consecuencias en `docs/RUNBOOK.md` §3.
+- **Producción (Cloud Run)**: API y `oskar-migrar` mantienen su entorno actual. `oskar-alertas-inventario` recibe `DB_HOST` (socket `/cloudsql/...`), `DB_PORT`, `DB_USER`, `DB_NAME`, `MAIL_USER`, `APP_PROCESS_MODE=alertas-inventario` y los secretos `DB_PASSWORD`/`MAIL_PASSWORD`. El perfil batch omite requisitos de JWT, CORS, 2FA y recuperación; las validaciones de la API no cambian.
 
 - **Correo (`src/config/mail.config.js`)**: `leerConfigCorreo(entorno, nodeEnv)` es una función pura; `env.js` la invoca y expone el resultado como `env.mail` (`proveedor`, `host`, `port`, `user`, `password`, `from`, `faltantes`). Con `smtp` y `MAIL_USER`/`MAIL_PASSWORD` ausentes no lanza: `env.js` emite un `[WARN CONFIG]` que nombra las variables faltantes (nunca valores) y los envíos fallan registrados.
 - **2FA (`src/config/twoFactor.config.js`)**: `leerConfigDosFactores(entorno, nodeEnv)` es una función pura (estilo `mail.config.js`); `env.js` expone `env.twoFactor` con `enforced`, `encryptionKey` (Buffer), `claveDesarrollo` y las constantes: emisor `Librería Oskar`, 6 dígitos, periodo 30 s, SHA-1, tolerancia ±1 paso, token temporal de 600 s, 5 intentos, bloqueo de 15 min y 10 códigos de respaldo. `enforced` se lee en cada login (las pruebas lo cambian y lo restauran).
@@ -906,8 +915,12 @@ Lista generada con `find` + `wc -l` sobre código, pruebas y SQL (`*.js`, `*.jsx
 | `Venta` | `venta.model.js` | `ventas` | `belongsTo(models.Bodega, { as: 'bodega' })`, `belongsTo(models.Usuario, { as: 'vendedor', foreignKey: 'usuario_id' })`, `belongsTo(models.Usuario, { as: 'anulador', foreignKey: 'anulada_por' })`, `hasMany(models.VentaDetalle, { as: 'detalles', foreignKey: 'venta_id' })`, `hasMany(models.MovimientoInventario, { as: 'movimientos', foreignKey: 'venta_id' })`. `numero` usa `defaultValue: literal("nextval('ventas_numero_seq')")`; los importes DECIMAL llegan como string. | No existe |
 | `VentaDetalle` | `ventaDetalle.model.js` | `venta_detalles` | `belongsTo(models.Venta, { as: 'venta', foreignKey: 'venta_id' })`, `belongsTo(models.Libro, { as: 'libro', foreignKey: 'libro_id' })` | No existe |
 | `CodigoRespaldo` | `codigoRespaldo.model.js` | `codigos_respaldo_2fa` | `belongsTo(models.Usuario, { as: 'usuario', foreignKey: 'usuario_id', onDelete: 'CASCADE' })`. `timestamps: false`. | No existe |
+| `AlertaInventarioReporte` | `alertaInventarioReporte.model.js` | `alertas_inventario_reportes` | `hasMany(models.AlertaInventarioEntrega, { as: 'entregas' })` | No existe |
+| `AlertaInventarioEntrega` | `alertaInventarioEntrega.model.js` | `alertas_inventario_entregas` | `belongsTo(models.AlertaInventarioReporte, { as: 'reporte' })`; snapshot de destinatario sin FK de usuario | No existe |
 
-Son 14 modelos (`tests/ventasEsquema.test.js` comprueba `Object.keys(sequelize.models).length === 14`).
+Son 16 modelos (`tests/ventasEsquema.test.js` comprueba `Object.keys(sequelize.models).length === 16`).
+
+`alertasInventario.service.js` fija un snapshot diario de libros activos con `stock_actual <= stock_minimo` y envía un mensaje individual por administrador activo. Usa bloqueos breves y lease por entrega, sin transacción abierta durante SMTP. Estados de reporte: `procesando`, `completado`, `sin_alertas`, `sin_administradores`, `fallido`, `incierto`; estados de entrega: `pendiente`, `procesando`, `enviado`, `fallido`, `incierto`. Gmail SMTP no ofrece idempotencia transaccional: una aceptación sin persistencia confirmada queda incierta y no se reintenta automáticamente.
 
 ### 4.5 Firmas por Capa, Transacciones y Control de Concurrencia
 
@@ -1070,7 +1083,9 @@ Todos son instancias de clase exportadas (`module.exports = new XController()`).
 | `tests/googleBooks.test.js` | 10 | Unitaria / Mock | No requiere | Timeouts, errores 429/500, fallback a OpenLibrary y catálogo de contingencia (mock de `global.fetch`). |
 | `tests/sugerenciaRelleno.test.js` | 7 | Unitaria / Mock | No requiere | `relleno` de `buscarPorIsbn` en las rutas Google (parcial, `imageLinks` vacío, completa), OpenLibrary (parcial, completa, autor no resuelto) y catálogo de respaldo (con y sin portada), con `global.fetch` simulado. |
 | `tests/consultarSugerencia.test.js` | 9 | Integración / End-to-End | `libreria_oskar_test` | `consultarLibro` con `buscarPorIsbn` simulado (relleno, sin relleno, sin la propiedad, sin mutar, caché real, `sugerencia: null`, libro existente) y `POST /api/libros/consultar` por HTTP: 401, 403, 400 y 200 con la forma nueva. |
-| `tests/sequelize.test.js` | 5 | Integración | `libreria_oskar_test` | Conectividad ORM y definición de los 13 modelos. |
+| `tests/sequelize.test.js` | 5 | Integración | `libreria_oskar_test` | Conectividad ORM y definición de modelos Sequelize. |
+| `tests/alertasInventario.service.test.js` | 11 | Unitaria / Mock | No requiere | Fecha Guatemala, dry-run, HTML escapado, envíos individuales, deduplicación, respuesta SMTP efectiva, reintentos seguros, inciertos y cierre de conexión. |
+| `tests/alertasInventarioRepository.test.js` | 3 | Integración | `libreria_oskar_test` | Stock menor/igual/cero, mínimo cero, inactivos, >10 alertas, bodegas, administradores y reclamos concurrentes. |
 | `tests/repositories.test.js` | 5 | Integración | `libreria_oskar_test` | `CategoriaRepository`, `AutorRepository`, `EditorialRepository`. |
 | `tests/usuarioRepository.test.js` | 5 | Integración | `libreria_oskar_test` | Búsqueda por email/UUID, exclusión de credenciales, transacciones. |
 | `tests/usuariosCrud.test.js` | 7 | End-to-End | `libreria_oskar_test` | CRUD administrativo de usuarios: contrato del GET (con opción de inactivos), auth y RBAC, alta con email normalizado sin datos sensibles, edición con protección de campos y del rol propio, activar/desactivar (tokens de cuentas desactivadas fallan, sin auto desactivación) y último Administrador protegido ante desactivaciones concurrentes. |
@@ -1520,10 +1535,10 @@ Ambos viven en `.github/workflows/` en la raíz del repositorio (la única ubica
 
 #### Despliegue continuo (`.github/workflows/deploy.yml`)
 - **Nombre y disparadores**: workflow `Despliegue`; `push` a `main` y `workflow_dispatch`. Concurrencia `despliegue-produccion` con `cancel-in-progress: false` (un despliegue a la vez; el siguiente espera). Permisos globales `contents: read`.
-- **Autenticación**: Workload Identity Federation, sin secretos ni llaves JSON. Proveedor `github-oskar` del pool `github`, que solo acepta tokens de este repositorio en `refs/heads/main` (`infra/identidad_github.tf:20`); cuenta `oskar-deployer` con Cloud Run Developer, Firebase Hosting Admin, Service Usage Consumer, Artifact Registry Writer (solo el repositorio `oskar`) y Service Account User sobre `oskar-api` (`infra/permisos.tf`). Cada job que toca Google Cloud pide `id-token: write` y se autentica por su cuenta (el token OIDC dura 5 minutos).
+- **Autenticación**: Workload Identity Federation, sin secretos ni llaves JSON. Proveedor `github-oskar` del pool `github`, que solo acepta tokens de este repositorio en `refs/heads/main` (`infra/identidad_github.tf:20`); cuenta `oskar-deployer` con Cloud Run Developer, Firebase Hosting Admin, Service Usage Consumer, Artifact Registry Writer (solo el repositorio `oskar`) y Service Account User sobre `oskar-api` y `oskar-alertas` (`infra/permisos.tf`). Cada job que toca Google Cloud pide `id-token: write` y se autentica por su cuenta (el token OIDC dura 5 minutos).
 - **3 jobs encadenados** (`needs`):
   1. `ci`: llama a `ci.yml` con `workflow_call`.
-  2. `backend` (`ubuntu-latest`, 30 min): construye la imagen desde `app/` con `-f backend/Dockerfile` y la publica en `us-central1-docker.pkg.dev/libreria-oskar-seminario/oskar/api` con el tag de 7 caracteres del commit; guarda `status.latestReadyRevisionName`; actualiza el Job `oskar-migrar` con la imagen y lo ejecuta con `--wait` (migraciones y seed antes que el servicio); actualiza `libreria-oskar-api`, manda el tráfico con `--to-latest` y hace la prueba de humo `GET /api/health` (debe contener `"status":"healthy"`) contra la URL directa de Cloud Run. Si falla después de actualizar el servicio, el paso `Volver a la revisión previa` devuelve el 100 % del tráfico a la revisión guardada y el job queda fallido. Limitación anotada en el YAML: si el tráfico estaba fijado a mano a otra revisión, `latestReadyRevisionName` no es la que servía.
+  2. `backend` (`ubuntu-latest`, 30 min): construye y publica la imagen desde `app/`, guarda `status.latestReadyRevisionName`, actualiza/ejecuta `oskar-migrar`, actualiza `oskar-alertas-inventario` si ya existe (si aún no está creado, emite una advertencia y omite solo ese paso), actualiza `libreria-oskar-api`, mueve el tráfico y hace prueba de humo `GET /api/health`. En el primer alta, Terraform crea el Job; luego se vuelve a ejecutar el workflow para actualizarlo a la imagen que incluye el script. Si falla después de actualizar el servicio, el paso `Volver a la revisión previa` devuelve el tráfico a la revisión guardada y el job queda fallido. Si el tráfico estaba fijado a mano a otra revisión, `latestReadyRevisionName` no es la que servía.
   3. `frontend` (`ubuntu-latest`, 20 min): `npm ci --prefix frontend`, `npm run frontend:build`, `npx --yes firebase-tools deploy --only hosting --project libreria-oskar-seminario` (sitio de `app/firebase.json`) y prueba de humo por `https://libreria-oskar.web.app/api/health`. Sin rollback automático: se vuelve atrás desde la consola de Firebase (`docs/RUNBOOK.md` §5.2).
 - **Ejecución real**: primera corrida con el push de `a29735a` a `main`. Verificado en la nube: revisión nueva `libreria-oskar-api-00003-6kw`, servicio y Job con la imagen `:a29735a`, `/api/health` `healthy` con la base conectada, y `terraform plan` en `No changes` después. El estado verde de los jobs lo reportó el usuario.
 - **Limitación conocida**: todo push a `main` lanza el despliegue completo, incluso si solo cambia documentación (mejora pendiente: filtrar por rutas).
@@ -1543,8 +1558,8 @@ Ambos viven en `.github/workflows/` en la raíz del repositorio (la única ubica
 
 ### 7.5 Infraestructura como código (`infra/`, Terraform)
 - **Archivos**: 14 en `infra/` (lista y líneas en §2.1). Terraform 1.17.0 (`required_version = ">= 1.7"`); proveedor `hashicorp/google ~> 8.0`, bloqueado en 8.8.1 por `.terraform.lock.hcl`. Estado remoto en el bucket GCS `libreria-oskar-seminario-tfstate` (versionado, no gestionado por esta configuración), prefijo `libreria-oskar`.
-- **Qué describe**: cuentas `oskar-api` y `oskar-deployer`, pool y proveedor WIF, los 5 secretos (solo el contenedor), el repositorio Docker `oskar`, la instancia `oskar-db` y la base `libreria_oskar`, el servicio `libreria-oskar-api`, el Job `oskar-migrar` y permisos IAM (`*_iam_member`, no autoritativos).
-- **Estado**: se importaron 27 recursos con `apply` (único cambio: `deletion_policy = "PREVENT"` en la base, atributo propio de Terraform) y el `plan` siguiente dio `No changes`. Los bloques de `imports.tf` se conservan como registro de IDs.
+- **Qué describe**: cuentas `oskar-api`, `oskar-alertas` y `oskar-deployer`, pool y proveedor WIF, secretos, el repositorio Docker `oskar`, la instancia `oskar-db` y base `libreria_oskar`, el servicio `libreria-oskar-api`, Jobs `oskar-migrar` y `oskar-alertas-inventario`, y permisos IAM (`*_iam_member`, no autoritativos). `oskar-alertas` solo tiene Cloud SQL Client y acceso a `db-password`/`mail-password`; Scheduler lo configura Alejandro fuera de Terraform.
+- **Estado**: el estado remoto conocido contiene 27 recursos importados y el plan previo dio `No changes`. Este cambio declara adicionalmente el Job de alertas; queda pendiente revisar/aplicar el plan y registrar ese recurso. Los bloques de `imports.tf` se conservan como registro de IDs.
 - **Ejecución**: a mano desde Cloud Shell; el CD no ejecuta Terraform. Ignora la imagen, el tráfico y `client`/`client_version` de Cloud Run (`ignore_changes` en `infra/cloud_run.tf`) para no pelear con el CD.
 - **No administra**: usuarios de la BD, valores de secretos, base `postgres`, APIs, cuentas por defecto, roles de personas, sitio de Hosting (solo existe en `google-beta`) y escaneo de vulnerabilidades. Detalle y procedimiento en `infra/README.md` y `docs/RUNBOOK.md` §12.
 
@@ -1644,9 +1659,9 @@ Cada ítem cita su archivo como evidencia. Resueltos y retirados de esta secció
 1. **Autenticación de Dos Factores (2FA)**:
    - AGENTS.md la da por implementada en «Seguridad»; diseño de referencia en `app/docs/roadmap/auth-2fa/`.
    - **Estado real**: backend implementado (alta con QR, verificación TOTP y de respaldo, anti-reutilización, bloqueo, restablecimiento y script `reset-2fa`; ver §4.6 y §6.2). Interfaz implementada (login en dos pasos, alta con QR y códigos de respaldo, `/cuenta/seguridad`), pendiente de prueba manual; sin botón de restablecer. El 2FA no se recupera por correo: se restablece por `POST /api/auth/2fa/usuarios/:id/restablecer` (Administrador, otro usuario) o con `npm run reset-2fa`, y ese restablecimiento no invalida los JWT ya emitidos (siguen válidos hasta que expiren; `dosFactores.repository.js#restablecer` no escribe `password_cambiada_en`). Lo que sí invalida los JWT anteriores (de sesión y temporales del 2FA) es restablecer la contraseña por correo (§6.12); no hay lista de revocación.
-2. **Notificaciones por Correo de Desabastecimiento y Libros Sin Precio**:
-   - Roadmap; spec en `app/docs/roadmap/inventory-email-alerts/`.
-   - **Estado real**: Existe el módulo de correo `services/mail/` (`mail.service.js`, dependencia `nodemailer`); hoy solo lo consume la recuperación de contraseña (`recuperacion.service.js`). La plantilla HTML base (`services/mail/plantillas.js`) y el logo en línea (`services/mail/logo.js`) quedan disponibles para reutilizarlos. Las alertas de inventario siguen sin implementar y no hay tareas programadas.
+2. **Alertas por correo de stock mínimo**:
+   - Diseño original en `app/docs/roadmap/inventory-email-alerts/`.
+   - **Estado real**: Implementado el Job `oskar-alertas-inventario`, persistencia idempotente, correo HTML/texto y script `--dry-run`. Terraform declara el Job; su aplicación en GCP y el Scheduler diario siguen pendientes de Alejandro. Alertas de libros sin precio no forman parte de esta implementación.
 3. **CRUD Administrativo de Catálogo y Empleados**:
    - Diseño en `app/docs/roadmap/catalog-employee-crud/` (su cabecera ya dice "IMPLEMENTADO", verificado el 2026-10-24). Los CRUD de usuarios/categorías están integrados; la gestión administrativa de libros también cuenta con backend y vista protegida.
    - **Estado real**: El CRUD administrativo de usuarios está disponible en `GET/POST/PUT/PATCH /api/usuarios` y la vista protegida `/usuarios`. La gestión de libros está disponible en `/libros/gestion`, respaldada por `GET /api/libros/admin`, `PUT /api/libros/:id` y `PATCH /api/libros/:id/activo`; el precio conserva su endpoint independiente `PATCH /api/libros/:id/precio`.
@@ -1709,7 +1724,7 @@ La prioridad de fuentes de información para agentes y desarrolladores se rige p
 > **Regla de oro**: Ante cualquier discrepancia entre documentación, agentes o especificaciones, **el código fuente y la base de datos mandan**.
 
 ### 12.2 Estado de Archivos y Configuración de Agentes
-- **`app/AGENTS.md`**: guía concisa que se carga en cada sesión. Describe la estructura real (14 modelos), los roles, las reglas de persistencia e inventario, el 2FA como implementado en «Seguridad» (política y puntero a §4.6), da por implementados el CRUD admin de usuarios y categorías, la edición/baja de libros, ventas y reportes, y deja solo las alertas de inventario por correo como "Roadmap (NO implementado)" (`app/docs/roadmap/`).
+- **`app/AGENTS.md`**: guía concisa que se carga en cada sesión. Describe la estructura real (16 modelos), roles, persistencia e inventario, autenticación, ventas, reportes y el Job de alertas; su aprovisionamiento Cloud Run/Scheduler queda pendiente.
 - **7 skills activas (`app/.agents/skills/`)**: `backend-engineer-nodejs`, `backend-testing`, `database-architect`, `devops-gcp-automation`, `frontend-engineer-react`, `inventory-transactions`, `sequelize-orm`. Las skills de funciones no implementadas viven como especificaciones en `app/docs/roadmap/`; `auth-2fa` sigue allí como referencia de diseño ya implementada.
 - **Carga en Claude Code**: Claude Code lee `AGENTS.md` mediante un `CLAUDE.md` local que contiene `@AGENTS.md`, y las skills mediante un symlink `.claude/skills`. Esa configuración es local y no está versionada (`CLAUDE.md` y `.claude/` aparecen como no rastreados en `git status`).
 
@@ -1719,7 +1734,7 @@ La prioridad de fuentes de información para agentes y desarrolladores se rige p
 |---|---|---|
 | `README.md` (raíz del repo) | Qué es el sistema, cómo arrancarlo y roles. | Reescrito; remite a esta especificación. |
 | `documentacion/estructura-paqueteria.md` | Capas y carpetas del backend y del frontend. | Reescrito; sin conteos de líneas. |
-| `app/AGENTS.md` | Reglas de arquitectura y comportamiento para agentes. | Alineado con la estructura actual (14 modelos; 2FA implementado). |
+| `app/AGENTS.md` | Reglas de arquitectura y comportamiento para agentes. | Alineado con la estructura actual (16 modelos; alertas implementadas en código). |
 | `app/backend/README.md` | Puesta en marcha y mapa del backend. | Reescrito; remite a esta especificación. `migrate`, `correo:probar` y `reset-2fa` se corren con `npm --prefix backend run ...` desde `app/`. |
 | `app/frontend/README.md` | Puesta en marcha y mapa del frontend. | Reescrito; remite a esta especificación. |
 | `app/docs/RUNBOOK.md` | Despliegue y operación en Google Cloud (CD, despliegue manual, rollback, respaldos, secretos, Terraform). | Actualizado el 2026-10-25 con el despliegue continuo y Terraform (sección 12); los procedimientos llevan marca de estado. |
@@ -1727,6 +1742,6 @@ La prioridad de fuentes de información para agentes y desarrolladores se rige p
 | `app/docs/PROJECT_SPECS.md` | Fuente de verdad técnica. | Verificada contra el código el 2026-10-22; §2.1, §2.2, §4.9 y §9 reverificados por script el 2026-10-24; §7.3-§7.5 y las entradas de despliegue de §2.1 actualizadas el 2026-10-25. |
 | `app/docs/roadmap/auth-2fa/SKILL.md` | Spec de 2FA TOTP. | Implementado (cabecera verificada el 2026-10-24, remite a §4.6); el punto 6 recoge la política real y una sección anota las diferencias con lo planeado. |
 | `app/docs/roadmap/catalog-employee-crud/SKILL.md` | Spec de CRUD de catálogo y empleados. | Implementado (CRUD de usuarios y categorías; edición/baja de libros aparte, también implementada). La cabecera se actualizó el 2026-10-24 y anota las diferencias entre el diseño y el código. |
-| `app/docs/roadmap/inventory-email-alerts/SKILL.md` | Spec de alertas de inventario por correo. | No implementado. |
+| `app/docs/roadmap/inventory-email-alerts/SKILL.md` | Diseño original de alertas por correo. | Implementado en backend; aprovisionamiento GCP pendiente. |
 | `app/docs/roadmap/ventas/SPEC.md` | Documento de diseño del módulo de ventas. | Esquema, API e interfaz creados; reportes en un módulo aparte. Incluye las secciones "API implementada (backend)" e "Interfaz implementada". |
 | `app/.agents/skills/*/SKILL.md` (7) | Directrices por dominio de ingeniería. | Revisadas el 2026-10-22; correcciones puntuales donde contradecían la estructura real (2FA implementado en `backend-engineer-nodejs` y `frontend-engineer-react`, 2026-10-24). |

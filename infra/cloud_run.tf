@@ -36,6 +36,21 @@ locals {
   entorno_secreto_job = concat(local.entorno_secreto_comun, [
     { name = "SEED_ADMIN_PASSWORD", secret = "admin-password" },
   ])
+
+  # El Job de alertas no levanta HTTP: solo necesita PostgreSQL y Gmail SMTP.
+  entorno_alertas_inventario = [
+    { name = "DB_HOST", value = "/cloudsql/${local.sql_connection_name}" },
+    { name = "DB_PORT", value = "5432" },
+    { name = "DB_USER", value = "oskar_app" },
+    { name = "DB_NAME", value = "libreria_oskar" },
+    { name = "MAIL_USER", value = var.mail_user },
+    { name = "APP_PROCESS_MODE", value = "alertas-inventario" },
+  ]
+
+  entorno_secreto_alertas_inventario = [
+    { name = "DB_PASSWORD", secret = "db-password" },
+    { name = "MAIL_PASSWORD", secret = "mail-password" },
+  ]
 }
 
 resource "google_cloud_run_v2_service" "api" {
@@ -210,6 +225,78 @@ resource "google_cloud_run_v2_job" "migrar" {
     ignore_changes = [
       template[0].template[0].containers[0].image, # la cambia el CD antes de las migraciones
       client,                                      # lo rellena gcloud (jobs update)
+      client_version,
+    ]
+  }
+}
+
+resource "google_cloud_run_v2_job" "alertas_inventario" {
+  name     = "oskar-alertas-inventario"
+  location = var.region
+
+  deletion_protection = true
+
+  template {
+    task_count = 1
+
+    template {
+      service_account       = google_service_account.alertas_inventario.email
+      execution_environment = "EXECUTION_ENVIRONMENT_GEN2"
+      timeout               = "600s"
+      max_retries           = 1
+
+      containers {
+        image   = var.imagen_inicial
+        command = ["node"]
+        args    = ["src/scripts/enviar-alertas-inventario.js"]
+
+        resources {
+          limits = {
+            cpu    = "1000m"
+            memory = "512Mi"
+          }
+        }
+
+        dynamic "env" {
+          for_each = local.entorno_alertas_inventario
+          content {
+            name  = env.value.name
+            value = env.value.value
+          }
+        }
+
+        dynamic "env" {
+          for_each = local.entorno_secreto_alertas_inventario
+          content {
+            name = env.value.name
+            value_source {
+              secret_key_ref {
+                secret  = google_secret_manager_secret.secretos[env.value.secret].secret_id
+                version = "latest"
+              }
+            }
+          }
+        }
+
+        volume_mounts {
+          name       = "cloudsql"
+          mount_path = "/cloudsql"
+        }
+      }
+
+      volumes {
+        name = "cloudsql"
+        cloud_sql_instance {
+          instances = [google_sql_database_instance.oskar_db.connection_name]
+        }
+      }
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [
+      template[0].template[0].containers[0].image,
+      client,
       client_version,
     ]
   }
