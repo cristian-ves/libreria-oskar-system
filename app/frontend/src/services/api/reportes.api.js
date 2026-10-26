@@ -8,7 +8,12 @@ const ENDPOINTS = {
   'inventario-valorizado': '/api/reportes/inventario-valorizado',
   kardex: '/api/reportes/kardex',
   ventas: '/api/reportes/ventas',
+  'stock-obsoleto': '/api/reportes/stock-obsoleto',
 };
+
+export function consultarOpcionesStockObsoleto(options = {}) {
+  return apiFetch('/api/reportes/stock-obsoleto/opciones', options);
+}
 
 function queryString(params) {
   const query = new URLSearchParams();

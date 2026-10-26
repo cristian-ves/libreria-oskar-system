@@ -8,6 +8,7 @@ import SelectorReporte from '../features/reportes/components/SelectorReporte';
 import TablaReporte from '../features/reportes/components/TablaReporte';
 import useReportes from '../features/reportes/hooks/useReportes';
 import { COLUMNAS } from '../features/reportes/reportes.config';
+import AccionesStockObsoleto from '../features/reportes/components/AccionesStockObsoleto';
 
 function construirSecciones(tipo, data) {
   if (!data) return [];
@@ -30,6 +31,7 @@ function construirSecciones(tipo, data) {
   ];
   if (tipo === 'kardex') return [{ titulo: 'Movimientos de inventario', columnas: COLUMNAS.kardex, filas: data.movimientos || [] }];
   if (tipo === 'ventas') return [{ titulo: 'Ventas filtradas', columnas: COLUMNAS.ventas, filas: data.ventas || [] }];
+  if (tipo === 'stock-obsoleto') return [{ titulo: 'Inventario sin rotación comercial', columnas: COLUMNAS.stockObsoleto, filas: data.registros || [] }];
   return [];
 }
 
@@ -53,13 +55,14 @@ export default function Reportes() {
       </div>
       <div><h2 className="text-xl font-extrabold text-[#252525]">{state.reporte.titulo}</h2><p className="mt-1 text-sm text-gray-500">{state.reporte.descripcion}</p></div>
 
-      <FiltrosReporte reporte={state.reporte} filtros={state.filtros} onChange={state.cambiarFiltro} categorias={state.categorias} bodegas={state.bodegas} vendedores={state.vendedores} disabled={state.cargando || Boolean(state.formatoExportando)} busquedaLibro={state.busquedaLibro} setBusquedaLibro={state.setBusquedaLibro} librosDisponibles={state.librosDisponibles} libroSeleccionado={state.libroSeleccionado} seleccionarLibro={state.seleccionarLibro} errorBusquedaLibro={state.errorBusquedaLibro} />
+      <FiltrosReporte reporte={state.reporte} filtros={state.filtros} onChange={state.cambiarFiltro} categorias={state.categorias} bodegas={state.bodegas} sucursales={state.sucursales} vendedores={state.vendedores} disabled={state.cargando || Boolean(state.formatoExportando)} busquedaLibro={state.busquedaLibro} setBusquedaLibro={state.setBusquedaLibro} librosDisponibles={state.librosDisponibles} libroSeleccionado={state.libroSeleccionado} seleccionarLibro={state.seleccionarLibro} errorBusquedaLibro={state.errorBusquedaLibro} />
       {state.catalogosError && <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900" role="status">No se pudieron cargar algunas opciones de filtro. Puedes consultar sin seleccionar esas opciones o recargar la página.</p>}
       {state.validationError && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800" role="alert">{state.validationError}</p>}
       {errorVisible && <div className="space-y-2"><ErrorBox error={errorVisible} /><button type="button" onClick={state.errorExportacion ? () => state.exportar(state.errorExportacion.formato || 'xlsx') : state.recargar} className="min-h-10 rounded-xl bg-[#e19922] px-4 text-sm font-bold text-[#252525] hover:bg-[#b07c19] hover:text-white">{state.errorExportacion ? `Reintentar descarga ${(state.errorExportacion.formato || 'xlsx').toUpperCase()}` : 'Reintentar consulta'}</button></div>}
 
       {state.datos && !state.cargando && <ResumenReporte tipo={state.tipo} datos={state.datos} />}
       {!state.validationError && <TablaReporte secciones={secciones} cargando={state.cargando} />}
+      {state.tipo === 'stock-obsoleto' && !state.cargando && <AccionesStockObsoleto registros={state.datos?.registros || []} onComplete={state.recargar} />}
       {state.reporte.limite && state.datos?.total > 0 && <Paginacion
         paginaActual={state.pagina} totalResultados={state.total} tamanoPagina={state.limit}
         opcionesTamano={state.tipo === 'libros-mas-vendidos' ? [10, 25, 50, 100, 200] : [20, 50, 100, 200]}

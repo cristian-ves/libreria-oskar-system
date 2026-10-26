@@ -9,7 +9,7 @@ function EstadoBadge({ bajo_stock, obsoleto }) {
   if (obsoleto) {
     return (
       <span className="inline-flex items-center text-[10px] font-bold px-2.5 py-0.5 rounded-md bg-red-600 text-white">
-        Obsoleto
+        Sin salidas
       </span>
     );
   }

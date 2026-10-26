@@ -34,7 +34,7 @@ Sistema web de inventario interno + catálogo informativo de libros. Sin carrito
 - El backend registra movimientos en `movimientos_inventario`; el trigger `tg_movimientos_inventario_stock` actualiza `stock_actual`. Nunca lo modifiques directo (solo se inicializa en 0 al crear el inventario).
 - Tipos válidos: Ingreso, Salida, Ajuste, Ajuste Auditoria.
 - `UNIQUE (libro_id, bodega_id)`; sin stock negativo; conserva `inventarioRepository.findByIdForUpdate` y los bloqueos pesimistas.
-- Bajo stock = `stock_actual <= stock_minimo`. Stock obsoleto = sin salidas en `DIAS_STOCK_OBSOLETO` (90 por defecto).
+- Bajo stock = `stock_actual <= stock_minimo`. El filtro/KPI heredado de inventario llamado `obsoleto` significa existencias positivas y sin movimientos de tipo Salida durante `DIAS_STOCK_OBSOLETO` (90 por defecto). El reporte administrativo `/reportes` > Stock obsoleto mide ventas completadas por libro y bodega (180 días predeterminados); conserva ambos significados explícitamente.
 - No cambies cálculos de alertas ni formatos de reportes sin requerimiento.
 
 ## Seguridad

@@ -42,6 +42,19 @@ class ReportesController {
     catch (error) { return next(error); }
   }
 
+  async stockObsoleto(req, res, next) {
+    try {
+      const { diasSinVenta = '180', q, categoriaId, bodegaId, sucursalId, libroActivo = 'activo', limit = '50', offset = '0' } = req.query;
+      const data = await reportesService.generarStockObsoleto({ diasSinVenta: Number(diasSinVenta), q: q?.trim() || null, categoriaId, bodegaId, sucursalId, libroActivo, limit: Number(limit), offset: Number(offset) });
+      return res.status(200).json({ status: 'success', data });
+    } catch (error) { return next(error); }
+  }
+
+  async opcionesStockObsoleto(req, res, next) {
+    try { return res.status(200).json({ status: 'success', data: { sucursales: await reportesService.listarSucursalesActivas() } }); }
+    catch (error) { return next(error); }
+  }
+
   async inventarioValorizado(req, res, next) {
     try {
       const { libroId, categoriaId, bodegaId, limit = '50', offset = '0' } = req.query;

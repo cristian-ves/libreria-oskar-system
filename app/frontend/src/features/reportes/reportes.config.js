@@ -6,11 +6,12 @@ export const REPORTES = [
   { id: 'inventario-valorizado', titulo: 'Inventario valorizado', descripcion: 'Existencias por libro y bodega, con agregados por categoría y bodega.', filtros: ['bodegaId', 'categoriaId', 'libroId'], datos: 'registros', limite: 50 },
   { id: 'kardex', titulo: 'Kardex', descripcion: 'Movimientos históricos con filtros de libro, bodega, tipo y fecha.', filtros: ['desde', 'hasta', 'bodegaId', 'categoriaId', 'libroId', 'tipo'], datos: 'movimientos', limite: 50 },
   { id: 'ventas', titulo: 'Listado de ventas', descripcion: 'Ventas filtradas con importes originales y datos de anulación.', filtros: ['desde', 'hasta', 'estado', 'vendedorId', 'metodoPago'], datos: 'ventas', limite: 50 },
+  { id: 'stock-obsoleto', titulo: 'Stock obsoleto', descripcion: 'Inventarios con existencias y sin ventas comerciales completadas durante el período seleccionado.', filtros: ['q', 'categoriaId', 'sucursalId', 'bodegaId', 'diasSinVenta', 'libroActivo'], datos: 'registros', limite: 50 },
 ];
 
 export const FILTROS_VACIOS = {
   fecha: '', desde: '', hasta: '', bodegaId: '', categoriaId: '', libroId: '', tipo: '',
-  estado: '', vendedorId: '', metodoPago: '',
+  estado: '', vendedorId: '', metodoPago: '', q: '', diasSinVenta: '180', libroActivo: 'activo', sucursalId: '',
 };
 
 export const COLUMNAS = {
@@ -26,4 +27,5 @@ export const COLUMNAS = {
   totalBodega: [ ['Bodega', 'bodega'], ['Registros', 'registros', 'number'], ['Existencias', 'existencias', 'number'], ['Valor total', 'valor_total', 'money'] ],
   kardex: [ ['Fecha', 'fecha_movimiento', 'date'], ['Tipo', 'tipo'], ['Libro', 'titulo'], ['ISBN', 'isbn'], ['Bodega', 'bodega_nombre'], ['Sucursal', 'sucursal_nombre'], ['Cantidad / valor de ajuste', 'cantidad', 'number'], ['Usuario', 'usuario_nombre'], ['Motivo', 'motivo_detalle'], ['Venta relacionada', 'venta_id'] ],
   ventas: [ ['Código', 'codigo'], ['Fecha', 'fecha', 'date'], ['Vendedor', 'vendedor'], ['Estado', 'estado'], ['Método de pago', 'metodo_pago'], ['Subtotal', 'subtotal', 'money'], ['Descuento', 'descuento', 'money'], ['Total original', 'total', 'money'], ['Anulada en', 'anulada_en', 'date'], ['Motivo de anulación', 'motivo_anulacion'] ],
+  stockObsoleto: [ ['Libro', 'titulo'], ['ISBN', 'isbn'], ['Categoría', 'categoria'], ['Sucursal', 'sucursal'], ['Bodega', 'bodega'], ['Existencias', 'existencias', 'number'], ['Última venta', 'ultima_venta', 'date'], ['Días sin rotación', 'dias_sin_rotacion', 'number'], ['Precio vigente', 'precio_vigente', 'money'], ['Libro', 'libro_activo', 'active'] ],
 };

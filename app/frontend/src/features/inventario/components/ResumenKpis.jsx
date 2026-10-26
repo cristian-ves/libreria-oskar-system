@@ -60,7 +60,7 @@ export default function ResumenKpis({ resumen, loadingResumen, setActiveTab, set
           </span>
         </button>
 
-        {/* Obsoletos */}
+        {/* Inventario sin movimientos de salida; el reporte Stock obsoleto usa ventas comerciales. */}
         <button
           type="button"
           onClick={() => {
@@ -70,14 +70,14 @@ export default function ResumenKpis({ resumen, loadingResumen, setActiveTab, set
           className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 text-left transition-all duration-200 cursor-pointer group flex flex-col justify-between"
         >
           <div className="flex items-center justify-between text-gray-500 mb-2">
-            <span className="text-xs font-semibold group-hover:text-gray-900 transition-colors">Obsoletos</span>
+            <span className="text-xs font-semibold group-hover:text-gray-900 transition-colors">Sin salidas</span>
             <Clock className="w-4 h-4 text-gray-500" />
           </div>
           <p className="text-2xl font-extrabold text-[#252525] font-mono">
             {loadingResumen ? '...' : resumen.obsoletos}
           </p>
           <span className="text-[11px] text-gray-500 group-hover:text-[#252525] transition-colors font-medium">
-            Sin rotación reciente →
+            Sin movimientos de salida en la ventana configurada →
           </span>
         </button>
 

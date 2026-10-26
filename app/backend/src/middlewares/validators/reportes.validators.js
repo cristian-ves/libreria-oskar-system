@@ -51,4 +51,21 @@ function validarPaginacion(query, errors) {
   }
 }
 
-module.exports = { validateReporteInventario, validateReporteKardex };
+function validateStockObsoleto(req, res, next) {
+  const query = req.query && typeof req.query === 'object' ? req.query : {};
+  const errors = [];
+  for (const key of ['categoriaId', 'bodegaId', 'sucursalId']) {
+    if (query[key] !== undefined && (typeof query[key] !== 'string' || !UUID_REGEX.test(query[key]))) errors.push(`El parámetro "${key}" debe ser un UUID válido.`);
+  }
+  if (query.diasSinVenta !== undefined && (typeof query.diasSinVenta !== 'string' || !/^\d+$/.test(query.diasSinVenta)
+    || !Number.isSafeInteger(Number(query.diasSinVenta)) || Number(query.diasSinVenta) < 1 || Number(query.diasSinVenta) > 3650)) {
+    errors.push('El parámetro "diasSinVenta" debe ser un entero entre 1 y 3650.');
+  }
+  if (query.q !== undefined && (typeof query.q !== 'string' || query.q.trim().length > 120)) errors.push('El parámetro "q" debe ser texto de hasta 120 caracteres.');
+  if (query.libroActivo !== undefined && !['activo', 'inactivo', 'todos'].includes(query.libroActivo)) errors.push('El parámetro "libroActivo" debe ser activo, inactivo o todos.');
+  validarPaginacion(query, errors);
+  if (errors.length) return next(new ValidationError('Parámetros inválidos para el reporte de stock obsoleto.', errors));
+  return next();
+}
+
+module.exports = { validateReporteInventario, validateReporteKardex, validateStockObsoleto };
