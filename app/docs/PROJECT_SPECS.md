@@ -8,9 +8,9 @@
 
 | Clave | Valor | Fuente de verificación |
 |---|---|---|
-| **Fecha de actualización** | 2026-10-22 | `date +%F` |
-| **Rama actual** | `actualizar-documentacion` | `git status -sb` |
-| **Hash del commit** | `38fd90f` | `git rev-parse --short HEAD` (commit previo a esta documentación) |
+| **Fecha de actualización** | 2026-10-26 | `date +%F` |
+| **Rama actual** | `develop` | `git status -sb` |
+| **Hash del commit** | `9a612b4` | `git rev-parse --short HEAD` (commit previo a esta documentación) |
 | **ORM utilizado** | Sequelize | `app/backend/package.json` |
 | **Versión exacta del ORM** | `^6.37.8` | `app/backend/package.json` (`dependencies.sequelize`) |
 | **Motor de base de datos** | PostgreSQL (Sequelize sobre el driver `pg`) | `app/database/schema.sql`, `app/backend/package.json` |
@@ -1763,6 +1763,12 @@ La prioridad de fuentes de información para agentes y desarrolladores se rige p
 | `app/backend/README.md` | Puesta en marcha y mapa del backend. | Reescrito; remite a esta especificación. `migrate`, `correo:probar` y `reset-2fa` se corren con `npm --prefix backend run ...` desde `app/`. |
 | `app/frontend/README.md` | Puesta en marcha y mapa del frontend. | Reescrito; remite a esta especificación. |
 | `app/docs/RUNBOOK.md` | Despliegue y operación en Google Cloud (CD, despliegue manual, rollback, respaldos, secretos, Terraform). | Actualizado el 2026-10-25 con el despliegue continuo y Terraform (sección 12); los procedimientos llevan marca de estado. |
+| `app/docs/PRUEBAS_ACEPTACION.md` | Checklist de aceptación por rol (73 casos) para ejecutar en producción sobre una copia fuera del repo. | Creado el 2026-10-26; el original se mantiene sin marcar. |
+| `app/docs/GUIA_RESPALDOS.md` | Guía para el dueño: respaldos, exportación, restauración y cierre del piloto. | Exportación ejecutada en producción el 2026-10-26; restauración e importación sin probar; PITR no activado. |
+| `app/docs/ESCALABILIDAD.md` | Plan de escalabilidad: procesos, migraciones y tecnologías nuevas. | Entregable de la Fase 3 redactado por el equipo; no verificado contra el código. |
+| `app/docs/manuales/` | Manual Técnico y Manual de Usuario de la Fase 3 (PDF). | Entregables de la Fase 3; no verificados contra el código. |
+| `app/docs/GESTION_SUCURSALES.md` | Gestión de sucursales y bodegas. | Implementado (migración 021, PR #14). |
+| `app/docs/stock-obsoleto.md` | Reporte y gestión de stock obsoleto. | Implementado (migración 022, PR #15). |
 | `infra/README.md` (raíz del repo) | Cómo correr Terraform, qué gestiona y qué no. | Actualizado el 2026-10-25: estado importado, `plan` esperado `No changes`. |
 | `app/docs/PROJECT_SPECS.md` | Fuente de verdad técnica. | Verificada contra el código el 2026-10-22; §2.1, §2.2, §4.9 y §9 reverificados por script el 2026-10-24; §7.3-§7.5 y las entradas de despliegue de §2.1 actualizadas el 2026-10-25. |
 | `app/docs/roadmap/auth-2fa/SKILL.md` | Spec de 2FA TOTP. | Implementado (cabecera verificada el 2026-10-24, remite a §4.6); el punto 6 recoge la política real y una sección anota las diferencias con lo planeado. |
