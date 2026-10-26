@@ -7,10 +7,11 @@ on:
   push:
     branches: ['**']
   workflow_dispatch:
+  workflow_call:
 
 # Cancela ejecuciones anteriores de la misma rama/referencia
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:

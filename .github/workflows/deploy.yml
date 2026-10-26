@@ -1,0 +1,155 @@
+# Despliegue continuo de Librería Oskar en Google Cloud.
+# Automatiza las secciones 4 y 5.1 de app/docs/RUNBOOK.md: imagen → migraciones → servicio → frontend.
+# Autenticación sin llave (Workload Identity Federation): no usa secretos ni llaves JSON.
+# El proveedor WIF solo acepta tokens de cristian-ves/libreria-oskar-system en refs/heads/main.
+name: Despliegue
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Un solo despliegue a la vez; el siguiente espera en vez de cortar uno a medias
+concurrency:
+  group: despliegue-produccion
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: Integración continua
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
+  backend:
+    name: Backend (Cloud Run)
+    needs: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Clonar el repositorio
+        uses: actions/checkout@v4
+
+      # El token OIDC dura 5 minutos: cada job se autentica por su cuenta
+      - name: Autenticar en Google Cloud (WIF)
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: projects/916083567697/locations/global/workloadIdentityPools/github/providers/github-oskar
+          service_account: oskar-deployer@libreria-oskar-seminario.iam.gserviceaccount.com
+
+      - name: Configurar gcloud
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: Configurar Docker para Artifact Registry
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      # Tag = 7 primeros caracteres del commit, igual que el runbook
+      - name: Definir la imagen
+        run: echo "IMG=us-central1-docker.pkg.dev/libreria-oskar-seminario/oskar/api:${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
+      # Mismo contexto (app/) y -f que el job build-imagen-backend de ci.yml
+      - name: Construir la imagen
+        working-directory: app
+        run: docker build -f backend/Dockerfile -t "$IMG" .
+
+      - name: Publicar la imagen
+        run: docker push "$IMG"
+
+      # Se guarda antes de cambiar nada, para el rollback.
+      # Limitación: si el tráfico estaba fijado a otra revisión por un rollback manual,
+      # latestReadyRevisionName no es la que estaba sirviendo.
+      - name: Guardar la revisión vigente
+        id: previa
+        run: |
+          REV=$(gcloud run services describe libreria-oskar-api --region us-central1 --format="value(status.latestReadyRevisionName)")
+          echo "Revisión vigente: $REV"
+          echo "revision=$REV" >> "$GITHUB_OUTPUT"
+
+      # Migraciones ANTES del servicio: el código nuevo nunca ve una base vieja.
+      # Las migraciones no se revierten (runbook 5.1).
+      - name: Actualizar el Job de migraciones
+        run: gcloud run jobs update oskar-migrar --region us-central1 --image "$IMG"
+
+      - name: Ejecutar migraciones y seed
+        run: gcloud run jobs execute oskar-migrar --region us-central1 --wait
+
+      - name: Actualizar el servicio
+        id: servicio
+        run: gcloud run services update libreria-oskar-api --region us-central1 --image "$IMG"
+
+      # Tras un rollback el tráfico queda fijado y la revisión nueva recibiría 0 %
+      - name: Enviar el tráfico a la revisión nueva
+        run: gcloud run services update-traffic libreria-oskar-api --region us-central1 --to-latest
+
+      # Contra la URL directa de Cloud Run; health.controller.js responde "status":"healthy" con HTTP 200
+      - name: Prueba de humo del backend
+        run: |
+          URL=$(gcloud run services describe libreria-oskar-api --region us-central1 --format="value(status.url)")
+          BODY=$(curl -fsS --retry 5 --retry-delay 10 --retry-all-errors --max-time 30 "$URL/api/health")
+          echo "$BODY"
+          echo "$BODY" | grep -q '"status":"healthy"'
+
+      # Solo si el servicio ya cambió; el job sigue marcado como fallido
+      - name: Volver a la revisión previa
+        if: failure() && steps.servicio.outcome == 'success' && steps.previa.outputs.revision != ''
+        env:
+          REVISION_PREVIA: ${{ steps.previa.outputs.revision }}
+        run: gcloud run services update-traffic libreria-oskar-api --region us-central1 --to-revisions "$REVISION_PREVIA=100"
+
+  # Si este job falla NO hay rollback automático de Hosting:
+  # se hace desde la consola de Firebase (runbook sección 5.2).
+  frontend:
+    name: Frontend (Firebase Hosting)
+    needs: backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Clonar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/frontend/package-lock.json
+
+      - name: Instalar dependencias del frontend
+        working-directory: app
+        run: npm ci --prefix frontend
+
+      - name: Construir el frontend
+        working-directory: app
+        run: npm run frontend:build
+
+      # Justo antes del deploy, porque el token OIDC dura 5 minutos
+      - name: Autenticar en Google Cloud (WIF)
+        id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: projects/916083567697/locations/global/workloadIdentityPools/github/providers/github-oskar
+          service_account: oskar-deployer@libreria-oskar-seminario.iam.gserviceaccount.com
+          create_credentials_file: true
+
+      # El sitio (libreria-oskar) sale de app/firebase.json
+      - name: Publicar en Firebase Hosting
+        working-directory: app
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
+        run: npx --yes firebase-tools deploy --only hosting --project libreria-oskar-seminario
+
+      # Pasa por Hosting y por el rewrite /api/** hacia Cloud Run
+      - name: Prueba de humo del sitio
+        run: |
+          BODY=$(curl -fsS --retry 5 --retry-delay 10 --retry-all-errors --max-time 30 https://libreria-oskar.web.app/api/health)
+          echo "$BODY"
+          echo "$BODY" | grep -q '"status":"healthy"'
