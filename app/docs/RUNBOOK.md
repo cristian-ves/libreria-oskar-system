@@ -708,7 +708,7 @@ cd ~/oskar/infra
 terraform init              # descarga el proveedor y conecta con el estado en GCS
 terraform fmt -check        # formato
 terraform validate          # sintaxis y esquema
-terraform plan              # para esta tarea: 1 Job nuevo de alertas, sujeto a revisión
+terraform plan              # para esta tarea: 6 recursos nuevos (cuenta oskar-alertas, sus permisos y el Job), sujeto a revisión
 ```
 Marca: el procedimiento base fue **Ejecutado en producción**; el cambio de alertas está **pendiente de revisión**. Este plan debe mostrar el Job `oskar-alertas-inventario` nuevo y ninguna diferencia inesperada. No ejecutar `apply` hasta que Alejandro confirme que el plan contiene solo cambios aprobados. Los bloques `import` de `infra/imports.tf` se quedan como registro de los IDs y ya no hacen nada.
 

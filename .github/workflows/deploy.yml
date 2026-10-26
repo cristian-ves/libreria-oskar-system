@@ -83,8 +83,9 @@ jobs:
       - name: Actualizar el Job de alertas de inventario
         run: |
           JOB_NAME="oskar-alertas-inventario"
-          JOBS=$(gcloud run jobs list --region us-central1 --filter="name=${JOB_NAME}" --format="value(name)")
-          if [[ "$JOBS" == "$JOB_NAME" ]]; then
+          # En gcloud run jobs list el nombre es metadata.name; la clave "name" no existe y devuelve vacío.
+          JOBS=$(gcloud run jobs list --region us-central1 --format="value(metadata.name)")
+          if grep -Fxq "$JOB_NAME" <<< "$JOBS"; then
             gcloud run jobs update "$JOB_NAME" --region us-central1 --image "$IMG"
           else
             echo "::warning::No existe ${JOB_NAME}; se omite su actualización. Terraform debe crearlo antes de configurar Cloud Scheduler."
