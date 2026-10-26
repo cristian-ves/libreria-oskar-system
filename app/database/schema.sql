@@ -351,6 +351,11 @@ CREATE INDEX IF NOT EXISTS idx_ventas_estado_fecha ON ventas(estado, creado_en D
 CREATE INDEX IF NOT EXISTS idx_ventas_usuario_id ON ventas(usuario_id);
 CREATE INDEX IF NOT EXISTS idx_venta_detalles_libro_id ON venta_detalles(libro_id);
 CREATE INDEX IF NOT EXISTS idx_movimientos_venta_id ON movimientos_inventario(venta_id) WHERE venta_id IS NOT NULL;
+-- Índices analíticos del reporte de rotación comercial (migración 022).
+CREATE INDEX IF NOT EXISTS idx_ventas_bodega_estado_fecha ON ventas (bodega_id, estado, creado_en DESC);
+CREATE INDEX IF NOT EXISTS idx_venta_detalles_libro_venta ON venta_detalles (libro_id, venta_id);
+CREATE INDEX IF NOT EXISTS idx_movimientos_ingreso_inventario_fecha
+    ON movimientos_inventario (inventario_id, fecha_movimiento) WHERE venta_id IS NULL;
 
 -- ============================================================================
 -- 7. DATOS MAESTROS Y SEMILLAS INICIALES (SEEDS)

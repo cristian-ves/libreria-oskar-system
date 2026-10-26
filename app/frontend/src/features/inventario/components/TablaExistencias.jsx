@@ -32,7 +32,7 @@ export default function TablaExistencias({
             { id: 'todos', label: 'Todos' },
             { id: 'en_stock', label: 'En stock' },
             { id: 'bajo_stock', label: 'Bajo stock' },
-            { id: 'obsoleto', label: 'Obsoleto' },
+            { id: 'obsoleto', label: 'Sin salidas' },
           ].map((chip) => (
             <button
               key={chip.id}

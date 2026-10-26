@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { consultarReporte, descargarReporte } from '../../../services/api/reportes.api';
+import { consultarOpcionesStockObsoleto, consultarReporte, descargarReporte } from '../../../services/api/reportes.api';
 import { getCategorias } from '../../../services/api/categorias.api';
 import { getBodegas } from '../../../services/api/bodegas.api';
 import { getUsuarios } from '../../../services/api/usuarios.api';
@@ -32,6 +32,7 @@ function validarFiltros(reporte, filtros) {
   if (['resumen-periodo'].includes(reporte.id) && (!filtros.desde || !filtros.hasta)) return 'Indica las fechas inicial y final.';
   const usaRango = ['libros-mas-vendidos', 'reposicion', 'kardex', 'ventas'].includes(reporte.id);
   if (usaRango && filtros.desde && filtros.hasta && filtros.desde > filtros.hasta) return 'La fecha inicial no puede ser posterior a la fecha final.';
+  if (reporte.id === 'stock-obsoleto' && (!/^\d+$/.test(filtros.diasSinVenta) || Number(filtros.diasSinVenta) < 1 || Number(filtros.diasSinVenta) > 3650)) return 'El período debe ser un entero entre 1 y 3650 días.';
   return '';
 }
 
@@ -51,7 +52,7 @@ function nombreDescarga(header, tipo, formato) {
 
 export default function useReportes() {
   const [tipo, setTipo] = useState(REPORTES[0].id);
-  const [filtros, setFiltros] = useState(() => ({ ...FILTROS_VACIOS, fecha: hoyGuatemala(), desde: hoyGuatemala(), hasta: hoyGuatemala() }));
+  const [filtros, setFiltros] = useState(() => ({ ...FILTROS_VACIOS, fecha: hoyGuatemala(), desde: hoyGuatemala(), hasta: hoyGuatemala(), diasSinVenta: '180', libroActivo: 'activo' }));
   const [limit, setLimit] = useState(10);
   const [pagina, setPagina] = useState(1);
   const [datos, setDatos] = useState(null);
@@ -61,6 +62,7 @@ export default function useReportes() {
   const [errorExportacion, setErrorExportacion] = useState(null);
   const [categorias, setCategorias] = useState([]);
   const [bodegas, setBodegas] = useState([]);
+  const [sucursales, setSucursales] = useState([]);
   const [vendedores, setVendedores] = useState([]);
   const [busquedaLibro, setBusquedaLibro] = useState('');
   const [librosDisponibles, setLibrosDisponibles] = useState([]);
@@ -82,10 +84,12 @@ export default function useReportes() {
       getCategorias({ signal: controller.signal }).then((res) => leerJson(res, 'No se pudieron cargar las categorías.')),
       getBodegas({ signal: controller.signal }).then((res) => leerJson(res, 'No se pudieron cargar las bodegas.')),
       getUsuarios({ incluirInactivos: true, signal: controller.signal }).then((res) => leerJson(res, 'No se pudieron cargar los vendedores.')),
-    ]).then(([cats, bodegasData, usuarios]) => {
+      consultarOpcionesStockObsoleto({ signal: controller.signal }).then((res) => leerJson(res, 'No se pudieron cargar las sucursales.')),
+    ]).then(([cats, bodegasData, usuarios, opcionesStock]) => {
       if (!mounted) return;
       setCategorias(Array.isArray(cats) ? cats : []);
       setBodegas(Array.isArray(bodegasData) ? bodegasData : []);
+      setSucursales(Array.isArray(opcionesStock?.sucursales) ? opcionesStock.sucursales : []);
       setVendedores(Array.isArray(usuarios) ? usuarios.filter((user) => user.rol_nombre === 'Administrador' || user.rol_nombre === 'Empleado') : []);
     }).catch((err) => { if (mounted && err.name !== 'AbortError') setCatalogosError(err.message); });
     return () => { mounted = false; controller.abort(); };
@@ -191,7 +195,7 @@ export default function useReportes() {
     tipo, reporte, cambiarTipo, filtros, cambiarFiltro, datos, cargando, error, validationError,
     limit, pagina, total: Number(datos?.total || 0), offset, cambiarPagina: setPagina,
     cambiarLimit: (value) => { setLimit(value); setPagina(1); }, recargar: () => setVersion((actual) => actual + 1),
-    exportar, formatoExportando, errorExportacion, categorias, bodegas, vendedores, catalogosError,
+    exportar, formatoExportando, errorExportacion, categorias, bodegas, sucursales, vendedores, catalogosError,
     busquedaLibro, setBusquedaLibro, librosDisponibles, libroSeleccionado, seleccionarLibro, errorBusquedaLibro,
   };
 }

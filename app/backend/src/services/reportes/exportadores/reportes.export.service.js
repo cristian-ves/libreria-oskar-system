@@ -12,6 +12,7 @@ const TYPE_CONFIG = {
   'inventario-valorizado': { titulo: 'Inventario valorizado', slug: 'inventario-valorizado', filtros: ['libroId', 'categoriaId', 'bodegaId'], metodo: 'generarInventarioValorizado', claveFilas: 'registros' },
   kardex: { titulo: 'Kardex', slug: 'kardex', filtros: ['libroId', 'categoriaId', 'bodegaId', 'tipo', 'desde', 'hasta'], metodo: 'generarKardex', claveFilas: 'movimientos' },
   ventas: { titulo: 'Listado de ventas', slug: 'ventas', filtros: ['desde', 'hasta', 'estado', 'vendedorId', 'metodoPago'], metodo: 'generarVentas', claveFilas: 'ventas' },
+  'stock-obsoleto': { titulo: 'Inventario sin rotación comercial', slug: 'stock-obsoleto', filtros: ['diasSinVenta', 'q', 'categoriaId', 'bodegaId', 'sucursalId', 'libroActivo'], metodo: 'generarStockObsoleto', claveFilas: 'registros' },
 };
 
 const col = (titulo, clave, tipo = 'text', peso) => ({ titulo, clave, tipo, ...(peso ? { peso } : {}) });
@@ -148,6 +149,26 @@ async function prepararVentas(params, maxRegistros) {
   };
 }
 
+async function prepararStockObsoleto(params, maxRegistros) {
+  const filtros = { diasSinVenta: params.diasSinVenta || '180', ...params };
+  const { filas, primera, total } = await obtenerTodasLasFilas(reportesService.generarStockObsoleto, filtros, 'registros', maxRegistros);
+  return {
+    filtros: primera.filtros,
+    secciones: [{
+      titulo: 'Inventario sin rotación comercial',
+      columnas: [
+        col('Libro', 'titulo', 'text', 2.4), col('ISBN', 'isbn'), col('Categoría', 'categoria'),
+        col('Sucursal', 'sucursal'), col('Bodega', 'bodega'), col('Existencias', 'existencias', 'integer'),
+        col('Última venta completada', 'ultima_venta', 'datetime'), col('Referencia sin ventas', 'fecha_referencia', 'datetime'),
+        col('Días sin rotación', 'dias_sin_rotacion', 'integer'), col('Precio vigente (Q)', 'precio_vigente', 'money'),
+        col('Libro activo', 'libro_activo', 'boolean'),
+      ], filas,
+    }],
+    notas: [primera.criterio, `Período evaluado: ${filtros.diasSinVenta} días. El precio es de venta vigente, no representa costo ni capital inmovilizado.`, `Registros exportados: ${total}.`],
+    total,
+  };
+}
+
 const PREPARADORES = {
   'corte-caja': prepararCorte,
   'resumen-periodo': prepararResumen,
@@ -156,6 +177,7 @@ const PREPARADORES = {
   'inventario-valorizado': prepararInventario,
   kardex: prepararKardex,
   ventas: prepararVentas,
+  'stock-obsoleto': prepararStockObsoleto,
 };
 
 async function prepararExportacion(tipo, query, maxRegistros = MAX_EXPORT_ROWS) {

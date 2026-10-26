@@ -8,6 +8,7 @@ const {
   validateReposicion,
   validateVentasReporte,
 } = require('./reportesVentas.validators');
+const { validateStockObsoleto } = require('./reportes.validators');
 
 const VALIDADORES = {
   'corte-caja': validateCorteCaja,
@@ -17,6 +18,7 @@ const VALIDADORES = {
   'inventario-valorizado': validateReporteInventario,
   kardex: validateReporteKardex,
   ventas: validateVentasReporte,
+  'stock-obsoleto': validateStockObsoleto,
 };
 function validateReporteExportacion(req, res, next) {
   const tipo = req.params && req.params.tipo;

@@ -34,6 +34,9 @@ export default function ResumenReporte({ tipo, datos }) {
   } else if (tipo === 'ventas') {
     tarjetas = [['Ventas filtradas', datos.total], ['Página', `${Math.floor((datos.offset || 0) / (datos.limit || 50)) + 1} de ${Math.max(1, Math.ceil((datos.total || 0) / (datos.limit || 50)))}`]];
     notas = ['Se conservan ventas completadas y anuladas con los importes históricos originales.'];
+  } else if (tipo === 'stock-obsoleto') {
+    tarjetas = [['Inventarios sin rotación', datos.total], ['Existencias en resultados', datos.resumen?.existencias_filtradas], ['Período evaluado', `${datos.filtros?.diasSinVenta || 180} días`], ['Página', `${Math.floor((datos.offset || 0) / (datos.limit || 50)) + 1} de ${Math.max(1, Math.ceil((datos.total || 0) / (datos.limit || 50)))}`]];
+    notas = [datos.criterio, 'La última venta se mide por libro y bodega. El inventario inactivo/operativo se determina por el estado actual de libro, bodega y sucursal.', 'El precio vigente es un precio de venta y no se usa para estimar costo ni capital inmovilizado.'];
   }
 
   return <section aria-label="Resumen del reporte" className="space-y-3">

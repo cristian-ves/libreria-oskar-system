@@ -37,7 +37,7 @@ async function levantarApi(env) {
   const postVenta = (body, token = tokens.empleado) => api('POST', '/ventas', { token, body });
   const cerrar = () => new Promise((resolve) => server.close(resolve));
 
-  return { api, tokens, cuerpo, postVenta, cerrar };
+  return { api, tokens, cuerpo, postVenta, cerrar, baseUrl };
 }
 
 module.exports = { levantarApi };
