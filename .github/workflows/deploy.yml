@@ -6,7 +6,7 @@ name: Despliegue
 
 on:
   push:
-    branches: [main]
+    branches: [test]
   workflow_dispatch:
 
 # Un solo despliegue a la vez; el siguiente espera en vez de cortar uno a medias
